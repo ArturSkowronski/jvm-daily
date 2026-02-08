@@ -1,4 +1,19 @@
+# Gradle
+.gradle
 build/
-.gradle/
-.idea/
+
+# IntelliJ IDEA
+.idea
+*.iws
+*.iml
+*.ipr
 out/
+
+# Kotlin
+.kotlin
+
+# macOS
+.DS_Store
+
+# Local configuration
+local.properties
