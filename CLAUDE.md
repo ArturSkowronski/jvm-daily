@@ -15,7 +15,7 @@
 - **Build:** Gradle (Kotlin DSL)
 - **JVM:** 21
 - **AI Agents:** Koog Agents (`ai.koog:koog-agents-jvm`)
-- **Database:** DuckDB (via Exposed)
+- **Database:** DuckDB (via JDBC)
 - **HTTP:** Ktor Client
 - **Serialization:** kotlinx.serialization
 - **Testing:** JUnit 5 + kotlin-test
