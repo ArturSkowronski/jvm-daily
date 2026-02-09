@@ -18,18 +18,19 @@ fun main() = runBlocking {
     println("Sources directory: $sourcesDir")
 
     val connection = DuckDbConnectionFactory.persistent(dbPath)
-    val repository = DuckDbArticleRepository(connection)
+    val repository = DuckDbArticleRepository(connection).use { connection ->  
+        val repository = DuckDbArticleRepository(connection)  
 
-    val sourceRegistry = SourceRegistry().apply {
-        register(MarkdownFileSource(Path.of(sourcesDir)))
+        val sourceRegistry = SourceRegistry().apply {  
+            register(MarkdownFileSource(Path.of(sourcesDir)))  
+        }  
+
+        val workflowRunner = WorkflowRunner().apply {  
+            register(IngressWorkflow(sourceRegistry, repository))  
+        }  
+
+        workflowRunner.run("ingress")  
+
+        println("Articles in DB: ${repository.count()}")  
     }
-
-    val workflowRunner = WorkflowRunner().apply {
-        register(IngressWorkflow(sourceRegistry, repository))
-    }
-
-    workflowRunner.run("ingress")
-
-    println("Articles in DB: ${repository.count()}")
-    connection.close()
 }
