@@ -35,13 +35,23 @@ dependencies {
 // Apply a specific Java toolchain to ease working on different environments.
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
+        languageVersion = JavaLanguageVersion.of(25)
     }
 }
 
 application {
     // Define the main class for the application.
     mainClass = "jvm.daily.AppKt"
+}
+
+tasks.withType<JavaCompile>().configureEach {
+    options.release.set(24)
+}
+
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_24)
+    }
 }
 
 tasks.named<Test>("test") {
