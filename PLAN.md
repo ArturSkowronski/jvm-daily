@@ -528,7 +528,7 @@ tags: [spring-boot, kotlin, virtual-threads, graalvm, jdk-25]
 | **Discord** | JDA (Java Discord API) | Mature, well-documented |
 | **AI/LLM** | Koog Agents (already in project) + Anthropic SDK | Multi-model support |
 | **Scheduling** | Quartz lub kotlinx-coroutines-scheduled | Cron-like scheduling |
-| **Database** | SQLite (via Exposed) lub PostgreSQL | Store raw data + generated issues |
+| **Database** | DuckDB (via plain JDBC) | Embedded, OLAP-optimized, zero infrastructure |
 | **Config** | HOCON (Typesafe Config) lub YAML | Source lists, prompts, settings |
 
 ### 6.2 Frontend / Website
