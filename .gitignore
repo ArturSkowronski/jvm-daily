@@ -17,3 +17,7 @@ out/
 
 # Local configuration
 local.properties
+
+# DuckDB database files
+*.duckdb
+*.duckdb.wal
