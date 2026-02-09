@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "WebFetch(domain:news.smol.ai)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:podcast.scrimba.com)",
+      "WebFetch(domain:buttondown.com)",
+      "WebFetch(domain:www.heavybit.com)",
+      "WebFetch(domain:x.com)",
+      "WebFetch(domain:www.latent.space)",
+      "Bash(git checkout:*)",
+      "mcp__context7__resolve-library-id",
+      "WebFetch(domain:duckdb.org)",
+      "mcp__context7__query-docs",
+      "Bash(./gradlew build:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(gh pr create:*)"
+    ]
+  }
+}
