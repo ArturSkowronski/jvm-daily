@@ -21,3 +21,6 @@ local.properties
 # DuckDB database files
 *.duckdb
 *.duckdb.wal
+
+# Ingress logs
+logs/

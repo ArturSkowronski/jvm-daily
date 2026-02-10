@@ -14,14 +14,29 @@ class IngressWorkflow(
         val sources = sourceRegistry.all()
         println("[ingress] Starting ingress workflow with ${sources.size} source(s)")
 
-        var totalIngested = 0
+        var totalNew = 0
+        var totalSkipped = 0
+        var totalErrors = 0
+
         for (source in sources) {
             val articles = source.fetch()
-            println("[ingress] Fetched ${articles.size} article(s) from ${source.sourceType}")
-            articleRepository.saveAll(articles)
-            totalIngested += articles.size
+            var newCount = 0
+            var skippedCount = 0
+
+            for (article in articles) {
+                if (articleRepository.existsById(article.id)) {
+                    skippedCount++
+                } else {
+                    articleRepository.save(article)
+                    newCount++
+                }
+            }
+
+            println("[ingress] ${source.sourceType}: ${articles.size} fetched, $newCount new, $skippedCount duplicate")
+            totalNew += newCount
+            totalSkipped += skippedCount
         }
 
-        println("[ingress] Ingress complete. Total articles ingested: $totalIngested")
+        println("[ingress] Done. New: $totalNew, Duplicates: $totalSkipped, Total in DB: ${articleRepository.count()}")
     }
 }

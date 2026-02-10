@@ -79,6 +79,15 @@ class DuckDbArticleRepository(private val connection: Connection) : ArticleRepos
         return results
     }
 
+    override fun existsById(id: String): Boolean {
+        connection.prepareStatement("SELECT 1 FROM articles WHERE id = ?").use { stmt ->
+            stmt.setString(1, id)
+            stmt.executeQuery().use { rs ->
+                return rs.next()
+            }
+        }
+    }
+
     override fun count(): Long {
         connection.createStatement().use { stmt ->
             stmt.executeQuery("SELECT COUNT(*) FROM articles").use { rs ->
