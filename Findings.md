@@ -19,3 +19,11 @@
 - In-memory: `jdbc:duckdb:` — great for tests
 - Persistent: `jdbc:duckdb:path/to/file.duckdb`
 - `INSERT OR REPLACE` works for upserts (SQLite-style syntax supported)
+
+## 2026-02-09 — RSS Source Implementation
+
+- **Rome** (`com.rometools:rome:2.1.0`) is the best RSS/Atom parser for JVM — handles both formats, extracts title, author, description, content, comments
+- **kaml** (`com.charleskorn.kaml:kaml:0.67.0`) works well with kotlinx.serialization for YAML config parsing
+- Rome's `XmlReader(URL)` constructor is deprecated — use `XmlReader(InputStream)` instead via `URL.openStream()`
+- RSS entries without `<link>` or `<title>` are skipped (mapNotNull) — defensive parsing
+- Test RSS feeds with local file:// URIs works perfectly for unit tests without network calls

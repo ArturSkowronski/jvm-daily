@@ -21,6 +21,8 @@ class DuckDbArticleRepository(private val connection: Connection) : ArticleRepos
                     source_type VARCHAR NOT NULL,
                     source_id VARCHAR NOT NULL,
                     url VARCHAR,
+                    author VARCHAR,
+                    comments VARCHAR,
                     ingested_at VARCHAR NOT NULL
                 )
                 """.trimIndent()
@@ -31,8 +33,8 @@ class DuckDbArticleRepository(private val connection: Connection) : ArticleRepos
     override fun save(article: Article) {
         connection.prepareStatement(
             """
-            INSERT OR REPLACE INTO articles (id, title, content, source_type, source_id, url, ingested_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT OR REPLACE INTO articles (id, title, content, source_type, source_id, url, author, comments, ingested_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """.trimIndent()
         ).use { stmt ->
             stmt.setString(1, article.id)
@@ -41,7 +43,9 @@ class DuckDbArticleRepository(private val connection: Connection) : ArticleRepos
             stmt.setString(4, article.sourceType)
             stmt.setString(5, article.sourceId)
             stmt.setString(6, article.url)
-            stmt.setString(7, article.ingestedAt.toString())
+            stmt.setString(7, article.author)
+            stmt.setString(8, article.comments)
+            stmt.setString(9, article.ingestedAt.toString())
             stmt.executeUpdate()
         }
     }
@@ -91,6 +95,8 @@ class DuckDbArticleRepository(private val connection: Connection) : ArticleRepos
         sourceType = getString("source_type"),
         sourceId = getString("source_id"),
         url = getString("url"),
+        author = getString("author"),
+        comments = getString("comments"),
         ingestedAt = Instant.parse(getString("ingested_at")),
     )
 }

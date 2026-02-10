@@ -1,5 +1,6 @@
 plugins {
     alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.kotlin.serialization)
     application
 }
 
@@ -12,6 +13,9 @@ dependencies {
     implementation(libs.duckdb.jdbc)
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.datetime)
+    implementation(libs.kotlinx.serialization.core)
+    implementation(libs.rome)
+    implementation(libs.kaml)
     implementation(libs.guava)
 
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
