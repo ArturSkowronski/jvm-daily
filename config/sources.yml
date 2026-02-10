@@ -1,0 +1,4 @@
+rss:
+  - url: "https://inside.java/feed.xml"
+  - url: "https://spring.io/blog.atom"
+  - url: "https://blog.jetbrains.com/kotlin/feed/"
