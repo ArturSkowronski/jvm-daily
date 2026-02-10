@@ -7,6 +7,8 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.sql.Connection
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class DuckDbArticleRepositoryTest {
 
@@ -59,6 +61,17 @@ class DuckDbArticleRepositoryTest {
     @Test
     fun `count returns zero for empty table`() {
         assertEquals(0, repository.count())
+    }
+
+    @Test
+    fun `existsById returns true for existing article`() {
+        repository.save(createArticle("1", "Title", "Content"))
+        assertTrue(repository.existsById("1"))
+    }
+
+    @Test
+    fun `existsById returns false for missing article`() {
+        assertFalse(repository.existsById("nonexistent"))
     }
 
     @Test

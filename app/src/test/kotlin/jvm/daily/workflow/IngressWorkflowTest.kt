@@ -12,7 +12,7 @@ import kotlin.test.assertEquals
 class IngressWorkflowTest {
 
     @Test
-    fun `ingress saves fetched articles to repository`() = runTest {
+    fun `ingress saves new articles to repository`() = runTest {
         val saved = mutableListOf<Article>()
         val repo = inMemoryRepo(saved)
 
@@ -31,6 +31,31 @@ class IngressWorkflowTest {
         assertEquals(2, saved.size)
         assertEquals("First", saved[0].title)
         assertEquals("Second", saved[1].title)
+    }
+
+    @Test
+    fun `ingress skips duplicate articles`() = runTest {
+        val saved = mutableListOf<Article>()
+        val repo = inMemoryRepo(saved)
+
+        val registry = SourceRegistry().apply {
+            register(stubSource(listOf(article("1", "First"), article("2", "Second"))))
+        }
+
+        val workflow = IngressWorkflow(registry, repo)
+
+        // First run — both are new
+        workflow.execute()
+        assertEquals(2, saved.size)
+
+        // Second run — both already exist, nothing new added
+        val registry2 = SourceRegistry().apply {
+            register(stubSource(listOf(article("1", "First"), article("2", "Second"))))
+        }
+        val workflow2 = IngressWorkflow(registry2, repo)
+        workflow2.execute()
+
+        assertEquals(2, saved.size) // still 2, no duplicates added
     }
 
     @Test
@@ -83,6 +108,7 @@ class IngressWorkflowTest {
         override fun saveAll(articles: List<Article>) { storage.addAll(articles) }
         override fun findAll(): List<Article> = storage.toList()
         override fun findBySourceType(sourceType: String) = storage.filter { it.sourceType == sourceType }
+        override fun existsById(id: String) = storage.any { it.id == id }
         override fun count(): Long = storage.size.toLong()
     }
 }
