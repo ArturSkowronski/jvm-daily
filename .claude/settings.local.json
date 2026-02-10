@@ -28,7 +28,8 @@
       "Bash(gh pr close:*)",
       "Bash(duckdb:*)",
       "Bash(./gradlew:*)",
-      "Bash(git restore:*)"
+      "Bash(git restore:*)",
+      "Bash(LLM_PROVIDER=mock ./gradlew run:*)"
     ]
   }
 }
