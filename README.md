@@ -1,5 +1,9 @@
 # JVM Daily
 
+[![Build](https://github.com/ArturSkowronski/jvm-daily/actions/workflows/gradle.yml/badge.svg)](https://github.com/ArturSkowronski/jvm-daily/actions/workflows/gradle.yml)
+[![RSS Feed Check](https://github.com/ArturSkowronski/jvm-daily/actions/workflows/rss-feed-check.yml/badge.svg)](https://github.com/ArturSkowronski/jvm-daily/actions/workflows/rss-feed-check.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 > Automated daily news aggregator for the JVM ecosystem — inspired by [Latent Space AI News](https://news.smol.ai)
 
 **JVM Daily** aggregates news, blog posts, and articles from 17+ RSS feeds covering Java, Kotlin, Spring, Quarkus, GraalVM, and the broader JVM ecosystem. Built with a plugin-based architecture supporting multi-stage AI workflows powered by Koog Agents.
