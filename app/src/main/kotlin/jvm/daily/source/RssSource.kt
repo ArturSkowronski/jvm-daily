@@ -5,6 +5,7 @@ import com.rometools.rome.io.XmlReader
 import jvm.daily.config.RssFeedConfig
 import jvm.daily.model.Article
 import kotlinx.datetime.Clock
+import java.net.HttpURLConnection
 import java.net.URI
 
 class RssSource(
@@ -20,8 +21,19 @@ class RssSource(
 
     private fun fetchFeed(feedConfig: RssFeedConfig): List<Article> {
         return try {
+            val url = URI(feedConfig.url).toURL()
+            val inputStream = if (url.protocol == "http" || url.protocol == "https") {
+                val connection = url.openConnection() as HttpURLConnection
+                connection.setRequestProperty("User-Agent", "JVM-Daily/1.0")
+                connection.connectTimeout = 15_000
+                connection.readTimeout = 15_000
+                connection.inputStream
+            } else {
+                throw IllegalArgumentException("Unsupported protocol: ${url.protocol}")
+            }
+
             val input = SyndFeedInput()
-            val feed = input.build(XmlReader(URI(feedConfig.url).toURL().openStream()))
+            val feed = input.build(XmlReader(inputStream))
 
             feed.entries.mapNotNull { entry ->
                 val link = entry.link ?: return@mapNotNull null

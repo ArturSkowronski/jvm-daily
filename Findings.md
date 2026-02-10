@@ -27,3 +27,15 @@
 - Rome's `XmlReader(URL)` constructor is deprecated — use `XmlReader(InputStream)` instead via `URL.openStream()`
 - RSS entries without `<link>` or `<title>` are skipped (mapNotNull) — defensive parsing
 - Test RSS feeds with local file:// URIs works perfectly for unit tests without network calls
+
+## 2026-02-10 — RSS Feed Verification (17 feeds from PLAN.md)
+
+- **User-Agent required** — Baeldung (FeedBlitz) and dev.to reject requests without User-Agent header. Set `User-Agent: JVM-Daily/1.0` on all feed requests.
+- **Feed URL corrections from PLAN.md:**
+  - Baeldung: `baeldung.com/feed` → `feeds.feedblitz.com/baeldung` (hosted on FeedBlitz)
+  - Gradle Blog: `blog.gradle.org/feed.xml` → `feed.gradle.org/blog.atom` (different subdomain)
+  - Marco Behler: no RSS on marcobehler.com → `dev.to/feed/marcobehler` (dev.to profile)
+- **All 17 feeds verified working:**
+  - Inside Java, Spring Blog, Kotlin Blog, Baeldung, InfoQ Java, Quarkus Blog, Micronaut Blog, foojay.io, Gradle Blog, JetBrains Blog, Vlad Mihalcea, Thorben Janssen, Marco Behler (dev.to), Adam Bien, DZone Java, Hacker News (JVM-filtered via hnrss.org), GraalVM Blog (Medium)
+- **Hacker News** — no native JVM feed, but `hnrss.org` provides keyword-filtered feeds: `hnrss.org/newest?q=java+OR+kotlin+OR+jvm+OR+spring+OR+graalvm`
+- **GraalVM Blog** — hosted on Medium, feed at `medium.com/feed/graalvm`
