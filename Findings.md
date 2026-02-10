@@ -27,3 +27,25 @@
 - Rome's `XmlReader(URL)` constructor is deprecated — use `XmlReader(InputStream)` instead via `URL.openStream()`
 - RSS entries without `<link>` or `<title>` are skipped (mapNotNull) — defensive parsing
 - Test RSS feeds with local file:// URIs works perfectly for unit tests without network calls
+
+## 2026-02-10 — Processing Pipeline Architecture
+
+-**Multi-stage pipeline inspired by Latent Space AI News:**
+  1. **Enrichment**: Raw articles → ProcessedArticles with LLM summaries, NER entities, topic tags
+  2. **Clustering**: ProcessedArticles → ArticleClusters (cross-source thematic grouping, max 8/day)
+  3. **Compilation**: ArticleClusters → NewsletterIssue (final markdown)
+
+- **ProcessedArticle model** includes:
+  - `normalizedTitle` for deduplication (lowercase, alphanumeric only)
+  - `summary` (LLM-generated, 100-150 words)
+  - `entities` (JDK versions, frameworks, companies, JEPs)
+  - `topics` for clustering (language-updates, framework-releases, performance, etc.)
+  - `engagementScore` (0-100) for prioritization
+
+- **kotlinx.datetime Duration API:**
+  - Use `Duration.Companion.days` instead of `DateTimeUnit.DAY.times()`
+  - `clock.now().minus(7.days)` works correctly
+  - Import: `kotlin.time.Duration.Companion.days`
+
+- **LLMClient abstraction** simplifies AI integration - wraps Koog Agents or direct API calls
+- Response parsing uses simple text format: `SUMMARY: ...\nENTITIES: ...\nTOPICS: ...`

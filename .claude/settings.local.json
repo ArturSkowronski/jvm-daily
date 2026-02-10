@@ -27,7 +27,8 @@
       "Bash(git status:*)",
       "Bash(gh pr close:*)",
       "Bash(duckdb:*)",
-      "Bash(./gradlew:*)"
+      "Bash(./gradlew:*)",
+      "Bash(git restore:*)"
     ]
   }
 }
