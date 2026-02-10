@@ -9,5 +9,7 @@ data class Article(
     val sourceType: String,
     val sourceId: String,
     val url: String? = null,
+    val author: String? = null,
+    val comments: String? = null,
     val ingestedAt: Instant,
 )
