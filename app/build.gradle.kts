@@ -20,6 +20,7 @@ dependencies {
 
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
     testImplementation(libs.junit.jupiter.engine)
+    testImplementation("org.junit.jupiter:junit-jupiter-params:5.10.3")
     testImplementation(libs.kotlinx.coroutines.test)
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
@@ -45,5 +46,15 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach 
 }
 
 tasks.named<Test>("test") {
-    useJUnitPlatform()
+    useJUnitPlatform {
+        excludeTags("integration")
+    }
+}
+
+tasks.register<Test>("integrationTest") {
+    useJUnitPlatform {
+        includeTags("integration")
+    }
+    group = "verification"
+    description = "Runs integration tests (requires network)"
 }
