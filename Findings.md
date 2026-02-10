@@ -49,3 +49,36 @@
 
 - **LLMClient abstraction** simplifies AI integration - wraps Koog Agents or direct API calls
 - Response parsing uses simple text format: `SUMMARY: ...\nENTITIES: ...\nTOPICS: ...`
+
+## 2026-02-10 — Airflow 3 Integration
+
+- **Apache Airflow for workflow orchestration:**
+  - DAG: `jvm_daily_pipeline` runs daily at 7am UTC
+  - Tasks: ingress → check_new_articles → [enrichment → clustering → compilation]
+  - Conditional branching: skips processing if no new articles
+  - Task groups for logical organization
+
+- **Command-line workflow execution:**
+  - `./gradlew run --args="ingress"` - collect articles
+  - `./gradlew run --args="enrichment"` - LLM processing
+  - `./gradlew run --args="clustering"` - thematic grouping
+  - Each workflow is a separate Gradle task for Airflow
+
+- **Environment-based configuration:**
+  - `DUCKDB_PATH` - database file location
+  - `LLM_PROVIDER` - mock/openai/anthropic/koog
+  - `LLM_API_KEY` - API credentials
+  - `LLM_MODEL` - model selection
+  - Airflow Variables for sensitive data (API keys)
+
+- **Docker Compose setup:**
+  - LocalExecutor for simple deployment
+  - PostgreSQL for Airflow metadata
+  - Project mounted at `/jvm-daily` for Gradle access
+  - Web UI at http://localhost:8080
+
+- **Production considerations:**
+  - Retry logic: 2 retries, 5min delay
+  - Timeouts: 30min enrichment, 20min clustering
+  - DuckDB file-level locking requires sequential task execution
+  - Consider CeleryExecutor for parallel processing
