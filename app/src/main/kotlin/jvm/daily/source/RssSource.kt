@@ -29,7 +29,7 @@ class RssSource(
                 connection.readTimeout = 15_000
                 connection.inputStream
             } else {
-                url.openStream()
+                throw IllegalArgumentException("Unsupported protocol: ${url.protocol}")
             }
 
             val input = SyndFeedInput()
