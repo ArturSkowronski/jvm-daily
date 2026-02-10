@@ -18,29 +18,71 @@
 
 ## Quick Start
 
-### Prerequisites
+> 📖 **Detailed guides:** [`QUICKSTART.md`](QUICKSTART.md) | [`airflow/README.md`](airflow/README.md)
 
-- JDK 21+
-- Gradle 8.x (wrapper included)
+### Option 1: Run Workflows Locally (No Airflow)
 
-### Run Ingress
+**Prerequisites:** JDK 21+, Gradle 8.x (wrapper included)
 
 ```bash
-# Run once
-./gradlew run
+# Step 1: Collect articles from RSS feeds
+./gradlew run --args="ingress"
 
-# Via cron (daily at 7am)
-0 7 * * * /path/to/jvm-daily/run-ingress.sh
+# Step 2: Enrich with LLM (summaries, entities, topics)
+./gradlew run --args="enrichment"
+
+# Step 3: Group into thematic clusters
+./gradlew run --args="clustering"
+
+# Explore database
+./gradlew explore
 ```
 
-### Environment Variables
+**Environment Variables:**
 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `DUCKDB_PATH` | `jvm-daily.duckdb` | Database file path |
 | `CONFIG_PATH` | `config/sources.yml` | RSS feed configuration |
-| `SOURCES_DIR` | `sources` | Directory for markdown sources |
-| `LOG_DIR` | `logs` | Log output directory |
+| `LLM_PROVIDER` | `mock` | LLM provider (`mock`, `openai`, `anthropic`) |
+| `LLM_API_KEY` | - | API key for LLM provider |
+| `LLM_MODEL` | `gpt-4` | Model to use |
+
+### Option 2: Run with Airflow Orchestration
+
+**Prerequisites:** Docker or Podman, Docker Compose
+
+```bash
+# 1. Setup Podman machine (if using Podman)
+podman machine init --cpus 2 --memory 4096 --disk-size 20
+podman machine start
+
+# 2. Start Airflow
+cd airflow
+cp .env.example .env
+docker-compose up airflow-init
+docker-compose up -d
+
+# 3. Access UI
+open http://localhost:8080
+# Login: airflow / airflow
+
+# 4. Configure LLM in UI (Admin → Variables)
+#    - llm_provider: mock (or openai, anthropic)
+#    - llm_api_key: your-key
+#    - llm_model: gpt-4
+
+# 5. Enable and trigger DAG 'jvm_daily_pipeline'
+```
+
+**Airflow Features:**
+- 📅 Daily schedule at 7am UTC
+- 🔀 Conditional execution (skip if no new articles)
+- 🔄 Retry logic (2 retries, 5min delay)
+- ⏱️ Timeouts (30min enrichment, 20min clustering)
+- 📊 Web UI for monitoring
+
+**Resource Requirements:** 2 CPUs, 4GB RAM, 20GB disk ([details](airflow/RESOURCES.md))
 
 ## RSS Sources
 
@@ -95,9 +137,10 @@ jvm-daily/
 - **JVM:** 21
 - **Build:** Gradle (Kotlin DSL)
 - **Database:** DuckDB 1.1.3 (via JDBC)
+- **Orchestration:** Apache Airflow 2.8.1 (Docker/Podman)
 - **RSS:** Rome 2.1.0
 - **Config:** kaml 0.67.0 (YAML + kotlinx.serialization)
-- **AI Agents:** Koog 0.6.1 (planned for processing workflow)
+- **AI:** Koog 0.6.1 (LLM abstraction layer)
 - **Testing:** JUnit 5 + kotlin-test
 
 ## Development
@@ -139,9 +182,14 @@ See [`CLAUDE.md`](CLAUDE.md) and [`Agent.md`](Agent.md) for detailed conventions
 - [x] DuckDB storage with deduplication
 - [x] RSS source with 17 feeds
 - [x] Ingress workflow
-- [x] Cron-ready run script
-- [ ] Processing workflow (AI summarization, clustering)
-- [ ] Publishing workflow (newsletter, static site)
+- [x] Enrichment workflow (LLM summaries, entities, topics)
+- [x] Clustering workflow (thematic grouping)
+- [x] Apache Airflow orchestration
+- [x] Command-line workflow execution
+- [ ] Real LLM integration (OpenAI, Anthropic, Koog Agents)
+- [ ] Cluster persistence (save to DuckDB)
+- [ ] Compilation workflow (newsletter generation)
+- [ ] Publishing workflow (static site, email)
 - [ ] Twitter/X source plugin
 - [ ] Reddit source plugin
 - [ ] Discord source plugin
