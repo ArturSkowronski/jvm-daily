@@ -34,6 +34,10 @@ application {
     mainClass = "jvm.daily.AppKt"
 }
 
+tasks.named<JavaExec>("run") {
+    workingDir = rootProject.projectDir
+}
+
 tasks.withType<JavaCompile>().configureEach {
     options.release.set(21)
 }
