@@ -38,6 +38,15 @@ tasks.named<JavaExec>("run") {
     workingDir = rootProject.projectDir
 }
 
+tasks.register<JavaExec>("explore") {
+    description = "Run interactive DuckDB explorer"
+    group = "application"
+    mainClass.set("jvm.daily.ExploreDbKt")
+    classpath = sourceSets["main"].runtimeClasspath
+    workingDir = rootProject.projectDir
+    standardInput = System.`in`
+}
+
 tasks.withType<JavaCompile>().configureEach {
     options.release.set(21)
 }
