@@ -1,0 +1,9 @@
+.git/
+.gradle/
+.claude/
+**/build/
+*.duckdb
+output/
+airflow/logs/
+airflow/.env
+disk-cleanup-report.md

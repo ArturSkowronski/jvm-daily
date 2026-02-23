@@ -1,0 +1,53 @@
+# ── Build stage ───────────────────────────────────────────────────────────────
+FROM eclipse-temurin:21-jdk-jammy AS builder
+WORKDIR /build
+
+# Cache Gradle wrapper and dependencies before copying source
+COPY gradlew gradlew
+COPY gradle/ gradle/
+COPY settings.gradle.kts settings.gradle.kts
+COPY app/build.gradle.kts app/build.gradle.kts
+RUN ./gradlew :app:dependencies --no-daemon -q 2>&1 | tail -1
+
+# Build distribution
+COPY app/src app/src
+RUN ./gradlew :app:installDist --no-daemon -q
+
+# ── Runtime stage ─────────────────────────────────────────────────────────────
+FROM eclipse-temurin:21-jre-jammy
+LABEL org.opencontainers.image.source="https://github.com/askowronski/jvm-daily"
+
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends python3 \
+ && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Gradle distribution (bin/ + lib/)
+COPY --from=builder /build/app/build/install/app/ /app/
+
+# Config and viewer
+COPY config/         /app/config/
+COPY viewer/serve.py /app/viewer/serve.py
+
+COPY entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh /app/bin/app
+
+# Persistent data lives in /data (mount a volume here)
+RUN mkdir -p /data/output
+
+ENV DUCKDB_PATH=/data/jvm-daily.duckdb
+ENV OUTPUT_DIR=/data/output
+ENV JOBRUNR_STORE=/data/jobrunr
+ENV CONFIG_PATH=/app/config/sources.yml
+ENV PIPELINE_CRON="0 7 * * *"
+ENV OUTGRESS_DAYS=1
+ENV DASHBOARD_PORT=8000
+ENV VIEWER_PORT=8888
+
+# JobRunr dashboard | viewer
+EXPOSE 8000 8888
+
+VOLUME /data
+
+CMD ["/app/entrypoint.sh"]
