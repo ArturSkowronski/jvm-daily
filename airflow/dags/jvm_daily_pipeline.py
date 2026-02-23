@@ -5,7 +5,7 @@ Orchestrates the multi-stage processing pipeline:
 1. Ingress: Collect articles from RSS feeds
 2. Enrichment: LLM-based article processing (summaries, entities, topics)
 3. Clustering: Group articles into thematic clusters
-4. Compilation: Generate final newsletter (TODO)
+4. Outgress: Write processed articles to markdown file
 
 Inspired by Latent Space AI News architecture.
 """
@@ -28,10 +28,17 @@ default_args = {
     'retry_delay': timedelta(minutes=5),
 }
 
-# Project root (adjust if needed)
-PROJECT_ROOT = Path(__file__).parent.parent.parent.parent
+# Project root - mounted at /jvm-daily in container (see docker-compose.yml)
+PROJECT_ROOT = Path("/jvm-daily")
 GRADLE_WRAPPER = PROJECT_ROOT / "gradlew"
 DB_PATH = PROJECT_ROOT / "jvm-daily.duckdb"
+
+# Java environment (required for Gradle)
+JAVA_HOME = "/opt/java"
+JAVA_ENV = {
+    'JAVA_HOME': JAVA_HOME,
+    'PATH': f"{JAVA_HOME}/bin:/usr/local/bin:/usr/bin:/bin",
+}
 
 def check_new_articles(**context):
     """
@@ -70,7 +77,7 @@ def check_new_articles(**context):
 with DAG(
     'jvm_daily_pipeline',
     default_args=default_args,
-    description='JVM Daily processing pipeline - ingress, enrichment, clustering',
+    description='JVM Daily processing pipeline - ingress, enrichment, clustering, outgress',
     schedule='0 7 * * *',  # Daily at 7am UTC
     start_date=datetime(2026, 2, 10),
     catchup=False,
@@ -82,6 +89,7 @@ with DAG(
         task_id='ingress',
         bash_command=f'cd {PROJECT_ROOT} && {GRADLE_WRAPPER} run --args="ingress"',
         env={
+            **JAVA_ENV,
             'DUCKDB_PATH': str(DB_PATH),
             'CONFIG_PATH': 'config/sources.yml',
         },
@@ -108,6 +116,7 @@ with DAG(
             task_id='enrichment',
             bash_command=f'cd {PROJECT_ROOT} && {GRADLE_WRAPPER} run --args="enrichment"',
             env={
+                **JAVA_ENV,
                 'DUCKDB_PATH': str(DB_PATH),
                 'LLM_PROVIDER': '{{ var.value.llm_provider }}',
                 'LLM_API_KEY': '{{ var.value.llm_api_key }}',
@@ -121,6 +130,7 @@ with DAG(
             task_id='clustering',
             bash_command=f'cd {PROJECT_ROOT} && {GRADLE_WRAPPER} run --args="clustering"',
             env={
+                **JAVA_ENV,
                 'DUCKDB_PATH': str(DB_PATH),
                 'LLM_PROVIDER': '{{ var.value.llm_provider }}',
                 'LLM_API_KEY': '{{ var.value.llm_api_key }}',
@@ -129,13 +139,19 @@ with DAG(
             execution_timeout=timedelta(minutes=20),
         )
 
-        # Task 3c: Compilation - Generate newsletter (TODO)
-        compilation = BashOperator(
-            task_id='compilation',
-            bash_command='echo "Compilation workflow not yet implemented"',
+        # Task 3c: Outgress - Write processed articles to markdown file
+        outgress = BashOperator(
+            task_id='outgress',
+            bash_command=f'cd {PROJECT_ROOT} && {GRADLE_WRAPPER} run --args="outgress"',
+            env={
+                **JAVA_ENV,
+                'DUCKDB_PATH': str(DB_PATH),
+                'OUTPUT_DIR': str(PROJECT_ROOT / 'output'),
+                'OUTGRESS_DAYS': '1',
+            },
         )
 
-        enrichment >> clustering >> compilation
+        enrichment >> clustering >> outgress
 
     # Task 4: Generate statistics
     generate_stats = PythonOperator(

@@ -8,6 +8,8 @@ kotlinx-datetime = "0.6.1"
 kotlinx-serialization = "1.7.3"
 rome = "2.1.0"
 kaml = "0.67.0"
+jobrunr = "7.3.2"
+h2 = "2.2.224"
 
 [libraries]
 koog-agents = { module = "ai.koog:koog-agents-jvm", version.ref = "koog" }
@@ -20,6 +22,8 @@ kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.
 kotlinx-serialization-core = { module = "org.jetbrains.kotlinx:kotlinx-serialization-core", version.ref = "kotlinx-serialization" }
 rome = { module = "com.rometools:rome", version.ref = "rome" }
 kaml = { module = "com.charleskorn.kaml:kaml", version.ref = "kaml" }
+jobrunr = { module = "org.jobrunr:jobrunr", version.ref = "jobrunr" }
+h2 = { module = "com.h2database:h2", version.ref = "h2" }
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version = "2.2.0" }
