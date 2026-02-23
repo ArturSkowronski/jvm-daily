@@ -1,0 +1,37 @@
+app            = "jvm-daily"
+primary_region = "fra"
+
+# ── Environment (non-sensitive) ───────────────────────────────────────────────
+[env]
+  PIPELINE_CRON  = "0 7 * * *"
+  OUTGRESS_DAYS  = "1"
+  VIEWER_PORT    = "8888"
+  DASHBOARD_PORT = "8000"
+
+# ── Persistent data volume ────────────────────────────────────────────────────
+# Create before first deploy:
+#   fly volumes create jvm_daily_data --size 5 --region fra
+[[mounts]]
+  source      = "jvm_daily_data"
+  destination = "/data"
+
+# ── Public service: article viewer ───────────────────────────────────────────
+# JobRunr dashboard (:8000) is NOT exposed publicly — use: fly proxy 8000
+[http_service]
+  internal_port        = 8888
+  force_https          = true
+  auto_stop_machines   = "off"   # daemon — never stop
+  auto_start_machines  = true
+  min_machines_running = 1
+
+  [[http_service.checks]]
+    grace_period = "15s"
+    interval     = "30s"
+    timeout      = "5s"
+    path         = "/"
+
+# ── VM size ───────────────────────────────────────────────────────────────────
+[[vm]]
+  cpu_kind  = "shared"
+  cpus      = 1
+  memory_mb = 512

@@ -17,6 +17,8 @@ dependencies {
     implementation(libs.rome)
     implementation(libs.kaml)
     implementation(libs.guava)
+    implementation(libs.jobrunr)
+    implementation(libs.h2)
 
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
     testImplementation(libs.junit.jupiter.engine)
