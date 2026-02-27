@@ -28,9 +28,9 @@ Roadmap hardens the existing JVM Daily brownfield pipeline into a reliable JVM W
 **Plans**: 3 plans
 
 Plans:
-- [ ] 01-01: Formalize source adapter contract and extension guide
-- [ ] 01-02: Codify workflow-storage boundaries with focused tests
-- [ ] 01-03: Update architecture documentation and invariants
+- [x] 01-01: Formalize source adapter contract and extension guide
+- [x] 01-02: Codify workflow-storage boundaries with focused tests
+- [x] 01-03: Update architecture documentation and invariants
 
 ### Phase 2: RSS Ingest Reliability
 **Goal**: Daily RSS ingest is robust against partial source failures.
@@ -141,7 +141,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Architecture Guardrails | 0/3 | Complete    | 2026-02-27 |
+| 1. Architecture Guardrails | 3/3 | Complete    | 2026-02-27 |
 | 2. RSS Ingest Reliability | 0/3 | Not started | - |
 | 3. Persistence and Idempotency | 0/3 | Not started | - |
 | 4. Summarization Core | 0/3 | Not started | - |
