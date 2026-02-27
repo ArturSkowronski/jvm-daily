@@ -141,6 +141,18 @@ class DuckDbProcessedArticleRepository(private val connection: Connection) : Pro
         return results
     }
 
+    override fun countFailedSince(since: Instant): Long {
+        connection.prepareStatement(
+            "SELECT COUNT(*) FROM processed_articles WHERE processed_at >= ? AND outcome_status = 'FAILED'"
+        ).use { stmt ->
+            stmt.setString(1, since.toString())
+            stmt.executeQuery().use { rs ->
+                rs.next()
+                return rs.getLong(1)
+            }
+        }
+    }
+
     override fun findFailedRawArticleIds(since: Instant, limit: Int): List<String> {
         if (limit <= 0) return emptyList()
 

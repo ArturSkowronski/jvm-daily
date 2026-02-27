@@ -1,6 +1,7 @@
 package jvm.daily.storage
 
 import jvm.daily.model.Article
+import jvm.daily.model.FeedRunSnapshot
 import kotlinx.datetime.Instant
 import java.sql.Connection
 
@@ -24,6 +25,21 @@ class DuckDbArticleRepository(private val connection: Connection) : ArticleRepos
                     author VARCHAR,
                     comments VARCHAR,
                     ingested_at VARCHAR NOT NULL
+                )
+                """.trimIndent()
+            )
+
+            stmt.execute(
+                """
+                CREATE TABLE IF NOT EXISTS ingest_feed_runs (
+                    run_id VARCHAR NOT NULL,
+                    recorded_at VARCHAR NOT NULL,
+                    source_type VARCHAR NOT NULL,
+                    source_id VARCHAR NOT NULL,
+                    status VARCHAR NOT NULL,
+                    fetched_count INTEGER NOT NULL,
+                    new_count INTEGER NOT NULL,
+                    duplicate_count INTEGER NOT NULL
                 )
                 """.trimIndent()
             )
@@ -91,6 +107,64 @@ class DuckDbArticleRepository(private val connection: Connection) : ArticleRepos
     override fun count(): Long {
         connection.createStatement().use { stmt ->
             stmt.executeQuery("SELECT COUNT(*) FROM articles").use { rs ->
+                rs.next()
+                return rs.getLong(1)
+            }
+        }
+    }
+
+    override fun countSince(since: Instant): Long {
+        connection.prepareStatement("SELECT COUNT(*) FROM articles WHERE ingested_at >= ?").use { stmt ->
+            stmt.setString(1, since.toString())
+            stmt.executeQuery().use { rs ->
+                rs.next()
+                return rs.getLong(1)
+            }
+        }
+    }
+
+    override fun recordFeedRunSnapshots(snapshots: List<FeedRunSnapshot>) {
+        if (snapshots.isEmpty()) return
+        connection.prepareStatement(
+            """
+            INSERT INTO ingest_feed_runs
+            (run_id, recorded_at, source_type, source_id, status, fetched_count, new_count, duplicate_count)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """.trimIndent()
+        ).use { stmt ->
+            snapshots.forEach { s ->
+                stmt.setString(1, s.runId)
+                stmt.setString(2, s.recordedAt.toString())
+                stmt.setString(3, s.sourceType)
+                stmt.setString(4, s.sourceId)
+                stmt.setString(5, s.status.name)
+                stmt.setInt(6, s.fetchedCount)
+                stmt.setInt(7, s.newCount)
+                stmt.setInt(8, s.duplicateCount)
+                stmt.addBatch()
+            }
+            stmt.executeBatch()
+        }
+    }
+
+    override fun sumDuplicateCountSince(since: Instant): Long {
+        connection.prepareStatement(
+            "SELECT COALESCE(SUM(duplicate_count), 0) FROM ingest_feed_runs WHERE recorded_at >= ?"
+        ).use { stmt ->
+            stmt.setString(1, since.toString())
+            stmt.executeQuery().use { rs ->
+                rs.next()
+                return rs.getLong(1)
+            }
+        }
+    }
+
+    override fun countFeedFailuresSince(since: Instant): Long {
+        connection.prepareStatement(
+            "SELECT COUNT(*) FROM ingest_feed_runs WHERE recorded_at >= ? AND status = 'FAILED'"
+        ).use { stmt ->
+            stmt.setString(1, since.toString())
+            stmt.executeQuery().use { rs ->
                 rs.next()
                 return rs.getLong(1)
             }

@@ -115,6 +115,20 @@ Replay selector rules:
 ./gradlew test --tests 'jvm.daily.PipelineServiceTest'
 ```
 
+**Quality gates report (Phase 7):**
+```bash
+# Last 24h counters (default)
+./gradlew run --args="quality-report"
+
+# Custom window and output directory
+./gradlew run --args="quality-report --since-hours 48 --output output"
+```
+Required counters include:
+- new items
+- duplicates
+- feed failures
+- summarization failures
+
 **Environment Variables:**
 
 | Variable | Default | Description |

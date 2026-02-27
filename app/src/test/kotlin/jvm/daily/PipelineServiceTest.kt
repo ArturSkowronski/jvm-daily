@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import kotlin.test.assertContains
 
 class PipelineServiceTest {
 
@@ -116,5 +117,22 @@ class PipelineServiceTest {
         val telemetry = logs.filter { it.startsWith("[pipeline][telemetry]") }
         assertEquals(4, telemetry.size)
         assertTrue(telemetry.all { it.contains("status=SUCCESS") && it.contains("duration_ms=") })
+    }
+
+    @Test
+    fun `renderQualityReport should include required counters`() {
+        val report = PipelineService.renderQualityReport(
+            PipelineService.QualityCounters(
+                newItems = 11,
+                duplicates = 5,
+                feedFailures = 2,
+                summarizationFailures = 3,
+            )
+        )
+
+        assertContains(report, "| New Items | 11 |")
+        assertContains(report, "| Duplicates | 5 |")
+        assertContains(report, "| Feed Failures | 2 |")
+        assertContains(report, "| Summarization Failures | 3 |")
     }
 }
