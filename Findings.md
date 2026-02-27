@@ -110,3 +110,15 @@
 - Added reliability-focused tests:
   - `RssSourceReliabilityTest`
   - `IngressReliabilityTest`
+
+## 2026-02-27 — Persistence and Idempotency (Phase 3)
+
+- Added shared `CanonicalArticleId` utility to centralize deterministic ID generation.
+- Migrated RSS and Markdown sources to use the same canonical ID derivation strategy.
+- Added idempotency-focused tests for:
+  - repository cardinality stability (`DuckDbArticleRepositoryIdempotencyTest`)
+  - workflow rerun behavior (`IngressWorkflowIdempotencyTest`)
+- Added `validate-raw-ids` CLI path and `ValidateRawArticleIds` tool with:
+  - default dry-run mismatch/collision reporting
+  - explicit `--apply` update mode
+  - collision-safe behavior (no overwrite on conflicting target IDs)
