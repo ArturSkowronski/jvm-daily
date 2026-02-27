@@ -27,9 +27,11 @@ class EnrichmentWorkflowTest {
 
         val llmClient = stubLLMClient(
             """
-            SUMMARY: Spring Boot 3.3 brings virtual threads and improved observability
-            ENTITIES: Spring Boot, Spring Boot 3.3, Virtual Threads
-            TOPICS: framework-releases, performance
+            {
+              "summary": "Spring Boot 3.3 brings virtual threads, improved observability, and a cleaner operational model for JVM services. The release improves startup behavior, refines metrics defaults, and strengthens integration paths for production teams that need safer upgrades across Spring components in active systems.",
+              "entities": ["Spring Boot", "Spring Boot 3.3", "Virtual Threads"],
+              "topics": ["framework-releases", "performance"]
+            }
             """.trimIndent()
         )
 
@@ -53,7 +55,9 @@ class EnrichmentWorkflowTest {
         val processedArticles = mutableListOf<ProcessedArticle>()
         val processedRepo = inMemoryProcessedRepo(processedArticles, emptyList()) // None unprocessed
 
-        val llmClient = stubLLMClient("SUMMARY: test\nENTITIES: none\nTOPICS: none")
+        val llmClient = stubLLMClient(
+            """{"summary":"This response is intentionally long enough to satisfy minimum summary length requirements while no processing should happen in this test case anyway.","entities":["none"],"topics":["language-updates"]}"""
+        )
 
         val workflow = EnrichmentWorkflow(rawRepo, processedRepo, llmClient)
         workflow.execute()
@@ -71,7 +75,9 @@ class EnrichmentWorkflowTest {
         val processedArticles = mutableListOf<ProcessedArticle>()
         val processedRepo = inMemoryProcessedRepo(processedArticles, listOf("1"))
 
-        val llmClient = stubLLMClient("SUMMARY: test\nENTITIES: Spring\nTOPICS: releases")
+        val llmClient = stubLLMClient(
+            """{"summary":"This summary contains enough words to satisfy the minimum validation requirement while still remaining simple for title normalization checks in the enrichment workflow unit test.","entities":["Spring"],"topics":["releases"]}"""
+        )
 
         val workflow = EnrichmentWorkflow(rawRepo, processedRepo, llmClient)
         workflow.execute()
