@@ -151,3 +151,15 @@
   3. replay subset
   4. verify success/failure counts post-replay.
 - Practical gotcha: replay can only process IDs that still exist in raw article storage; missing IDs are skipped and logged.
+
+## 2026-02-27 — Daily Automation and Telemetry (Phase 6)
+
+- Scheduler contract aligned across JobRunr and Airflow:
+  - both use `PIPELINE_CRON`
+  - shared default cron is `0 7 * * *` (07:00 UTC).
+- Pipeline now emits structured telemetry per stage with:
+  - `run_id`, `stage`, `status`, `started_at`, `ended_at`, `duration_ms`, optional `error`.
+- Failure visibility improved: failed stage telemetry is emitted before exception is rethrown (fail-fast behavior preserved).
+- Added smoke-check guidance for:
+  - local `pipeline` command telemetry inspection
+  - Airflow trigger + logs verification path.

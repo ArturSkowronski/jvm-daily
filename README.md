@@ -106,6 +106,15 @@ Replay selector rules:
 - Example log prefix: `[pipeline][telemetry] ...`
 - Stage status is emitted on both success and failure paths for quick diagnosis.
 
+**Scheduler + telemetry smoke check (Phase 6):**
+```bash
+# Local smoke: run full pipeline once and inspect telemetry lines
+./gradlew run --args="pipeline" | rg "\\[pipeline\\]\\[telemetry\\]"
+
+# Test smoke in CI/local tests
+./gradlew test --tests 'jvm.daily.PipelineServiceTest'
+```
+
 **Environment Variables:**
 
 | Variable | Default | Description |

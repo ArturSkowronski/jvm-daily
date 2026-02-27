@@ -7,6 +7,9 @@ Orchestrates the multi-stage processing pipeline:
 3. Clustering: Group articles into thematic clusters
 4. Outgress: Write processed articles to markdown file
 
+Phase 6 contract: app pipeline emits structured stage telemetry lines
+(`[pipeline][telemetry] ...`) for scheduler smoke checks.
+
 Inspired by Latent Space AI News architecture.
 """
 
