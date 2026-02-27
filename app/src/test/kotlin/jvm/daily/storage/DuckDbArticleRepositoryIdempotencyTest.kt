@@ -51,6 +51,18 @@ class DuckDbArticleRepositoryIdempotencyTest {
     }
 
     @Test
+    fun `equivalent canonical ids from source variants keep cardinality stable`() {
+        repository.save(article("rss:https://example.com/post-1", "First"))
+        repository.save(article("rss:https://example.com/post-1", "First - updated payload"))
+        repository.save(article("rss:https://example.com/post-2", "Second"))
+
+        assertEquals(2, repository.count())
+        val byId = repository.findAll().associateBy { it.id }
+        assertEquals("First - updated payload", byId.getValue("rss:https://example.com/post-1").title)
+        assertEquals("Second", byId.getValue("rss:https://example.com/post-2").title)
+    }
+
+    @Test
     fun `persisted row keeps source metadata and ingest timestamp`() {
         val ingestedAt = Instant.parse("2026-02-27T21:00:00Z")
         val article = Article(

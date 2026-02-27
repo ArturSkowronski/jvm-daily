@@ -40,4 +40,45 @@ class CanonicalArticleIdTest {
 
         assertEquals("md:hello-jvm-weekly", id)
     }
+
+    @Test
+    fun `url normalization removes trailing slash and query fragment noise`() {
+        val a = CanonicalArticleId.from(
+            namespace = "rss",
+            sourceId = "feed-a",
+            title = "ignored",
+            url = "https://example.com/post/1?utm_source=rss#comments",
+        )
+        val b = CanonicalArticleId.from(
+            namespace = "rss",
+            sourceId = "feed-a",
+            title = "ignored",
+            url = "https://EXAMPLE.com/post/1?utm_source=rss",
+        )
+        assertEquals(a, b)
+        assertEquals("rss:https://example.com/post/1utm_sourcerss", a)
+    }
+
+    @Test
+    fun `namespace normalization keeps dedup namespace deterministic`() {
+        val id = CanonicalArticleId.from(
+            namespace = "RSS Feed",
+            sourceId = "feed-a",
+            title = "Title",
+            sourceNativeId = "entry-1",
+        )
+        assertEquals("rss_feed:entry-1", id)
+    }
+
+    @Test
+    fun `source id fallback is used when url native id and title are blank`() {
+        val id = CanonicalArticleId.from(
+            namespace = "rss",
+            sourceId = "Feed Source Id 42",
+            title = "   ",
+            url = "",
+            sourceNativeId = " ",
+        )
+        assertEquals("rss:feed-source-id-42", id)
+    }
 }

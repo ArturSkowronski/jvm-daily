@@ -31,6 +31,7 @@ class IngressWorkflow(
                 var skippedCount = 0
 
                 for (article in outcome.articles) {
+                    // Dedup quality gate: cardinality must remain stable for repeated canonical IDs.
                     if (articleRepository.existsById(article.id)) {
                         skippedCount++
                     } else {
