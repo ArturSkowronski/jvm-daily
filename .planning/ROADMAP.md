@@ -103,9 +103,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 06-01: Align scheduler path and daily execution contract
-- [ ] 06-02: Add structured stage telemetry and duration metrics
-- [ ] 06-03: Validate scheduler behavior with integration smoke checks
+- [x] 06-01: Align scheduler path and daily execution contract
+- [x] 06-02: Add structured stage telemetry and duration metrics
+- [x] 06-03: Validate scheduler behavior with integration smoke checks
 
 ### Phase 7: Quality Gates
 **Goal**: Daily output quality is measurable and regression-resistant.
@@ -146,6 +146,6 @@ Plans:
 | 3. Persistence and Idempotency | 3/3 | Complete    | 2026-02-27 |
 | 4. Summarization Core | 3/3 | Complete    | 2026-02-27 |
 | 5. Recoverability Controls | 3/3 | Complete    | 2026-02-27 |
-| 6. Daily Automation and Telemetry | 3/3 | Complete   | 2026-02-27 |
+| 6. Daily Automation and Telemetry | 3/3 | Complete    | 2026-02-27 |
 | 7. Quality Gates | 0/3 | Not started | - |
 | 8. Connector Readiness | 0/3 | Not started | - |
