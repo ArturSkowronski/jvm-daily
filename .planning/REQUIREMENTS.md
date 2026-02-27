@@ -16,7 +16,7 @@
 
 - [x] **SUM-01**: User can process newly ingested articles into stored summaries.
 - [x] **SUM-02**: User can persist extracted entities/topics linked to each processed article.
-- [ ] **SUM-03**: User can retry or reprocess failed summarization items without rerunning the entire pipeline.
+- [x] **SUM-03**: User can retry or reprocess failed summarization items without rerunning the entire pipeline.
 
 ### Quality
 
@@ -27,7 +27,7 @@
 ### Operations
 
 - [ ] **OPS-01**: User can run the full pipeline automatically on a daily schedule.
-- [ ] **OPS-02**: User can run each pipeline stage independently for debugging and recovery.
+- [x] **OPS-02**: User can run each pipeline stage independently for debugging and recovery.
 - [ ] **OPS-03**: User can see stage-level logs including start/end status and basic duration.
 
 ### Architecture
@@ -68,12 +68,12 @@
 | ING-04 | Phase 3 | Complete |
 | SUM-01 | Phase 4 | Complete |
 | SUM-02 | Phase 4 | Complete |
-| SUM-03 | Phase 5 | Pending |
+| SUM-03 | Phase 5 | Complete |
 | QLT-01 | Phase 7 | Pending |
 | QLT-02 | Phase 7 | Pending |
 | QLT-03 | Phase 8 | Pending |
 | OPS-01 | Phase 6 | Pending |
-| OPS-02 | Phase 5 | Pending |
+| OPS-02 | Phase 5 | Complete |
 | OPS-03 | Phase 6 | Pending |
 | ARC-01 | Phase 1 | Complete |
 | ARC-02 | Phase 8 | Pending |
@@ -86,4 +86,4 @@
 
 ---
 *Requirements defined: 2026-02-27*
-*Last updated: 2026-02-27 after Phase 4 completion*
+*Last updated: 2026-02-27 after Phase 5 completion*

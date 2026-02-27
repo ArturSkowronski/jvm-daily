@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: ready_to_plan
-last_updated: "2026-02-27T21:49:00Z"
+last_updated: "2026-02-27T23:25:00Z"
 progress:
   total_phases: 8
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 24
-  completed_plans: 12
+  completed_plans: 15
 ---
 
 # Project State
@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-27)
 
 **Core value:** Every morning, have as much relevant JVM information as possible available in one deduplicated place.
-**Current focus:** Phase 5: Recoverability Controls
+**Current focus:** Phase 6: Daily Automation and Telemetry
 
 ## Current Position
 
-Phase: 5 of 8 (Recoverability Controls)
+Phase: 6 of 8 (Daily Automation and Telemetry)
 Plan: 0 of 3 in current phase
 Status: Ready to plan
-Last activity: 2026-02-27 — Completed Phase 4 summarization core execution and verification
+Last activity: 2026-02-27 — Completed Phase 5 recoverability controls execution and verification
 
-Progress: [█████░░░░░] 50%
+Progress: [██████░░░░] 62%
 
 ## Performance Metrics
 
@@ -63,6 +63,8 @@ Recent decisions affecting current work:
 - [Phase 3]: Raw ID backfill uses dry-run-first validation with collision-safe apply mode.
 - [Phase 4]: Enrichment uses strict JSON contract parsing with deterministic validation rules.
 - [Phase 4]: Failed summarization attempts are persisted with reason, attempts, timestamp, and warnings.
+- [Phase 5]: Failed enrichment items can be replayed via targeted selectors without full pipeline rerun.
+- [Phase 5]: Replay command supports dry-run preview and bounded selectors (`--since-hours`, `--limit`, `--ids`).
 
 ### Pending Todos
 
@@ -74,6 +76,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-27 22:49
-Stopped at: Phase 4 execution complete and verified
-Resume file: .planning/phases/04-summarization-core/04-VERIFICATION.md
+Last session: 2026-02-27 23:25
+Stopped at: Phase 5 execution complete and verified
+Resume file: .planning/phases/05-recoverability-controls/05-VERIFICATION.md

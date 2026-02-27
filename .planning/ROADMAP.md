@@ -88,9 +88,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 05-01: Build failed-item retry/replay path
-- [ ] 05-02: Harden standalone stage CLI/service commands
-- [ ] 05-03: Add recovery runbook and test fixtures
+- [x] 05-01: Build failed-item retry/replay path
+- [x] 05-02: Harden standalone stage CLI/service commands
+- [x] 05-03: Add recovery runbook and test fixtures
 
 ### Phase 6: Daily Automation and Telemetry
 **Goal**: Daily execution is automated with clear stage-level operational visibility.
@@ -145,7 +145,7 @@ Plans:
 | 2. RSS Ingest Reliability | 3/3 | Complete    | 2026-02-27 |
 | 3. Persistence and Idempotency | 3/3 | Complete    | 2026-02-27 |
 | 4. Summarization Core | 3/3 | Complete    | 2026-02-27 |
-| 5. Recoverability Controls | 3/3 | Complete   | 2026-02-27 |
+| 5. Recoverability Controls | 3/3 | Complete    | 2026-02-27 |
 | 6. Daily Automation and Telemetry | 0/3 | Not started | - |
 | 7. Quality Gates | 0/3 | Not started | - |
 | 8. Connector Readiness | 0/3 | Not started | - |
