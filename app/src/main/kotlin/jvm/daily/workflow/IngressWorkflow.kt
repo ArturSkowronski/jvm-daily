@@ -2,13 +2,17 @@ package jvm.daily.workflow
 
 import jvm.daily.model.FeedIngestResult
 import jvm.daily.model.FeedIngestStatus
+import jvm.daily.model.FeedRunSnapshot
 import jvm.daily.model.IngestRunStatus
 import jvm.daily.source.SourceRegistry
 import jvm.daily.storage.ArticleRepository
+import kotlinx.datetime.Clock
+import java.util.UUID
 
 class IngressWorkflow(
     private val sourceRegistry: SourceRegistry,
     private val articleRepository: ArticleRepository,
+    private val clock: Clock = Clock.System,
 ) : Workflow {
 
     override val name: String = "ingress"
@@ -16,6 +20,8 @@ class IngressWorkflow(
         private set
 
     override suspend fun execute() {
+        val runId = UUID.randomUUID().toString()
+        val recordedAt = clock.now()
         val sources = sourceRegistry.all()
         println("[ingress] Starting ingress workflow with ${sources.size} source(s)")
 
@@ -65,6 +71,20 @@ class IngressWorkflow(
         }
 
         val runStatus = classifyRunStatus(feedResults)
+        articleRepository.recordFeedRunSnapshots(
+            feedResults.map {
+                FeedRunSnapshot(
+                    runId = runId,
+                    recordedAt = recordedAt,
+                    sourceType = it.sourceType,
+                    sourceId = it.sourceId,
+                    status = it.status,
+                    fetchedCount = it.fetchedCount,
+                    newCount = it.newCount,
+                    duplicateCount = it.duplicateCount,
+                )
+            }
+        )
         lastRunStatus = runStatus
         println("[ingress] Feed summary:")
         println("[ingress] source_id | status | fetched | new | duplicate | errors")

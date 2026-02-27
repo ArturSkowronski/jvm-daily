@@ -18,6 +18,12 @@ class PipelineService(
     private val clusteringFn: (String) -> Unit = ::runClustering,
     private val outgressFn:   (String) -> Unit = ::runOutgress,
 ) {
+    data class QualityCounters(
+        val newItems: Long,
+        val duplicates: Long,
+        val feedFailures: Long,
+        val summarizationFailures: Long,
+    )
     internal data class StageTelemetry(
         val runId: String,
         val stage: String,
@@ -90,5 +96,18 @@ class PipelineService(
             log("[pipeline] ✗ $name (${durationMs}ms)")
             throw e
         }
+    }
+
+    companion object {
+        internal fun renderQualityReport(counters: QualityCounters): String = buildString {
+            appendLine("# JVM Daily Quality Report")
+            appendLine()
+            appendLine("| Counter | Value |")
+            appendLine("|---------|-------|")
+            appendLine("| New Items | ${counters.newItems} |")
+            appendLine("| Duplicates | ${counters.duplicates} |")
+            appendLine("| Feed Failures | ${counters.feedFailures} |")
+            appendLine("| Summarization Failures | ${counters.summarizationFailures} |")
+        }.trim()
     }
 }

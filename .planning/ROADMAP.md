@@ -147,5 +147,5 @@ Plans:
 | 4. Summarization Core | 3/3 | Complete    | 2026-02-27 |
 | 5. Recoverability Controls | 3/3 | Complete    | 2026-02-27 |
 | 6. Daily Automation and Telemetry | 3/3 | Complete    | 2026-02-27 |
-| 7. Quality Gates | 1/3 | In Progress|  |
+| 7. Quality Gates | 2/3 | In Progress|  |
 | 8. Connector Readiness | 0/3 | Not started | - |

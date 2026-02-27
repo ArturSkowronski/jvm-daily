@@ -15,6 +15,8 @@ import jvm.daily.workflow.IngressWorkflow
 import jvm.daily.workflow.OutgressWorkflow
 import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.Clock
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import org.h2.jdbcx.JdbcDataSource
 import org.jobrunr.configuration.JobRunr
 import org.jobrunr.jobs.context.JobContext
@@ -23,6 +25,7 @@ import org.jobrunr.server.JobActivator
 import org.jobrunr.storage.sql.h2.H2StorageProvider
 import java.nio.file.Path
 import kotlin.io.path.createDirectories
+import kotlin.io.path.writeText
 import kotlin.system.exitProcess
 import kotlin.time.Duration.Companion.hours
 
@@ -33,6 +36,7 @@ import kotlin.time.Duration.Companion.hours
  * pipeline             → run full pipeline once (useful for first run / testing)
  * ingress|enrichment|clustering|outgress → run single step (debugging)
  * enrichment-replay     → rerun failed enrichment items only (recoverability)
+ * quality-report        → generate daily quality counters artifact
  */
 fun main(args: Array<String>) {
     val dbPath = System.getenv("DUCKDB_PATH") ?: "jvm-daily.duckdb"
@@ -46,12 +50,13 @@ fun main(args: Array<String>) {
         "ingress"     -> { println("JVM Daily — ingress");     runIngress(dbPath) }
         "enrichment"  -> { println("JVM Daily — enrichment");  runEnrichment(dbPath) }
         "enrichment-replay" -> { println("JVM Daily — enrichment-replay"); runEnrichmentReplay(dbPath, args.drop(1)) }
+        "quality-report" -> { println("JVM Daily — quality-report"); runQualityReport(dbPath, args.drop(1)) }
         "clustering"  -> { println("JVM Daily — clustering");  runClustering(dbPath) }
         "outgress"    -> { println("JVM Daily — outgress");     runOutgress(dbPath) }
         "validate-raw-ids" -> { println("JVM Daily — validate-raw-ids"); runValidateRawIds(dbPath, args.drop(1)) }
         else -> {
             System.err.println("Unknown command: $cmd")
-            System.err.println("Valid: pipeline | ingress | enrichment | enrichment-replay | clustering | outgress | validate-raw-ids [--apply]")
+            System.err.println("Valid: pipeline | ingress | enrichment | enrichment-replay | quality-report | clustering | outgress | validate-raw-ids [--apply]")
             exitProcess(1)
         }
     }
@@ -144,6 +149,11 @@ internal data class ReplayOptions(
     val limit: Int = 50,
     val ids: List<String> = emptyList(),
     val dryRun: Boolean = false,
+)
+
+internal data class QualityReportOptions(
+    val sinceHours: Int = 24,
+    val outputDir: String = "output",
 )
 
 internal fun runEnrichmentReplay(dbPath: String, args: List<String>) {
@@ -240,6 +250,58 @@ internal fun parseReplayOptions(args: List<String>): ReplayOptions {
         ids = ids,
         dryRun = dryRun,
     )
+}
+
+internal fun parseQualityReportOptions(args: List<String>): QualityReportOptions {
+    var sinceHours = 24
+    var outputDir = "output"
+    var index = 0
+    while (index < args.size) {
+        when (val arg = args[index]) {
+            "--since-hours" -> {
+                sinceHours = args.getOrNull(index + 1)?.toIntOrNull()
+                    ?: error("Invalid --since-hours value. Expected non-negative integer.")
+                index++
+            }
+            "--output" -> {
+                outputDir = args.getOrNull(index + 1)
+                    ?.takeIf { it.isNotBlank() }
+                    ?: error("Invalid --output value. Expected a non-empty directory path.")
+                index++
+            }
+            else -> error("Unknown quality-report option: $arg. Valid: --since-hours <n> | --output <dir>")
+        }
+        index++
+    }
+    require(sinceHours >= 0) { "--since-hours must be >= 0" }
+    return QualityReportOptions(sinceHours = sinceHours, outputDir = outputDir)
+}
+
+internal fun runQualityReport(dbPath: String, args: List<String>) {
+    val options = parseQualityReportOptions(args)
+    val since = Clock.System.now().minus(options.sinceHours.hours)
+
+    DuckDbConnectionFactory.persistent(dbPath).use { connection ->
+        val rawRepo = DuckDbArticleRepository(connection)
+        val processedRepo = DuckDbProcessedArticleRepository(connection)
+
+        val counters = PipelineService.QualityCounters(
+            newItems = rawRepo.countSince(since),
+            duplicates = rawRepo.sumDuplicateCountSince(since),
+            feedFailures = rawRepo.countFeedFailuresSince(since),
+            summarizationFailures = processedRepo.countFailedSince(since),
+        )
+
+        val report = PipelineService.renderQualityReport(counters)
+        val reportDir = Path.of(options.outputDir)
+        reportDir.createDirectories()
+        val date = Clock.System.now().toLocalDateTime(TimeZone.UTC).date
+        val reportPath = reportDir.resolve("quality-report-$date.md")
+        reportPath.writeText(report + "\n")
+
+        println(report)
+        println("Quality report written to: $reportPath")
+    }
 }
 
 internal fun runClustering(dbPath: String) {

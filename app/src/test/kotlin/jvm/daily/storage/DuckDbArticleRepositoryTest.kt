@@ -1,7 +1,10 @@
 package jvm.daily.storage
 
 import jvm.daily.model.Article
+import jvm.daily.model.FeedIngestStatus
+import jvm.daily.model.FeedRunSnapshot
 import kotlinx.datetime.Clock
+import kotlinx.datetime.Instant
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -81,6 +84,38 @@ class DuckDbArticleRepositoryTest {
 
         assertEquals(1, repository.count())
         assertEquals("Updated", repository.findAll()[0].title)
+    }
+
+    @Test
+    fun `feed run snapshots support duplicate and failure counters`() {
+        val now = Instant.parse("2026-02-27T23:00:00Z")
+        repository.recordFeedRunSnapshots(
+            listOf(
+                FeedRunSnapshot(
+                    runId = "r1",
+                    recordedAt = now,
+                    sourceType = "rss",
+                    sourceId = "feed-1",
+                    status = FeedIngestStatus.SUCCESS,
+                    fetchedCount = 10,
+                    newCount = 8,
+                    duplicateCount = 2,
+                ),
+                FeedRunSnapshot(
+                    runId = "r1",
+                    recordedAt = now,
+                    sourceType = "rss",
+                    sourceId = "feed-2",
+                    status = FeedIngestStatus.FAILED,
+                    fetchedCount = 0,
+                    newCount = 0,
+                    duplicateCount = 0,
+                ),
+            )
+        )
+
+        assertEquals(2, repository.sumDuplicateCountSince(Instant.parse("2026-02-27T00:00:00Z")))
+        assertEquals(1, repository.countFeedFailuresSince(Instant.parse("2026-02-27T00:00:00Z")))
     }
 
     private fun createArticle(
