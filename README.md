@@ -122,12 +122,21 @@ Replay selector rules:
 
 # Custom window and output directory
 ./gradlew run --args="quality-report --since-hours 48 --output output"
+
+# Fail command when thresholds are breached
+./gradlew run --args="quality-report --max-duplicates 20 --max-feed-failures 0 --max-summarization-failures 5 --fail-on-threshold"
 ```
 Required counters include:
 - new items
 - duplicates
 - feed failures
 - summarization failures
+
+Quality gate thresholds:
+- `--max-duplicates <n>`
+- `--max-feed-failures <n>`
+- `--max-summarization-failures <n>`
+- `--fail-on-threshold` to make routine runs/CI fail fast on breaches
 
 **Environment Variables:**
 

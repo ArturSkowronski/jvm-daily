@@ -12,7 +12,7 @@ Roadmap hardens the existing JVM Daily brownfield pipeline into a reliable JVM W
 - [x] **Phase 4: Summarization Core** - Stabilize summary/entity/topic processing and persistence. (completed 2026-02-27)
 - [x] **Phase 5: Recoverability Controls** - Add replay/retry controls and independent stage operations. (completed 2026-02-27)
 - [x] **Phase 6: Daily Automation and Telemetry** - Make daily execution automatic and operationally visible. (completed 2026-02-27)
-- [ ] **Phase 7: Quality Gates** - Enforce data quality assertions and duplicate controls.
+- [x] **Phase 7: Quality Gates** - Enforce data quality assertions and duplicate controls. (completed 2026-02-27)
 - [ ] **Phase 8: Connector Readiness** - Validate onboarding framework for non-RSS connectors.
 
 ## Phase Details
@@ -147,5 +147,5 @@ Plans:
 | 4. Summarization Core | 3/3 | Complete    | 2026-02-27 |
 | 5. Recoverability Controls | 3/3 | Complete    | 2026-02-27 |
 | 6. Daily Automation and Telemetry | 3/3 | Complete    | 2026-02-27 |
-| 7. Quality Gates | 2/3 | In Progress|  |
+| 7. Quality Gates | 3/3 | Complete   | 2026-02-27 |
 | 8. Connector Readiness | 0/3 | Not started | - |

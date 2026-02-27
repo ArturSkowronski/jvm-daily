@@ -163,3 +163,15 @@
 - Added smoke-check guidance for:
   - local `pipeline` command telemetry inspection
   - Airflow trigger + logs verification path.
+
+## 2026-02-27 — Quality Gates (Phase 7)
+
+- Dedup quality gating is now anchored in canonical ID and cardinality stability tests, not manual validation.
+- `quality-report` command emits daily counters for:
+  - new items
+  - duplicates
+  - feed failures
+  - summarization failures
+- Feed failure/duplicate counters are derived from persisted `ingest_feed_runs` snapshots in DuckDB.
+- Threshold evaluation (`max-duplicates`, `max-feed-failures`, `max-summarization-failures`) can optionally fail runs via `--fail-on-threshold`.
+- Practical caveat: canonical URL normalization currently strips query punctuation characters (`?`, `=`), which is now explicitly regression-tested.

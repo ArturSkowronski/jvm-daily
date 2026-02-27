@@ -135,4 +135,26 @@ class PipelineServiceTest {
         assertContains(report, "| Feed Failures | 2 |")
         assertContains(report, "| Summarization Failures | 3 |")
     }
+
+    @Test
+    fun `evaluateQualityGate should fail when counters breach thresholds`() {
+        val result = PipelineService.evaluateQualityGate(
+            counters = PipelineService.QualityCounters(
+                newItems = 10,
+                duplicates = 4,
+                feedFailures = 2,
+                summarizationFailures = 3,
+            ),
+            thresholds = PipelineService.QualityGateThresholds(
+                maxDuplicates = 1,
+                maxFeedFailures = 0,
+                maxSummarizationFailures = 1,
+            )
+        )
+
+        assertTrue(!result.passed)
+        assertTrue(result.breaches.any { it.startsWith("duplicates") })
+        assertTrue(result.breaches.any { it.startsWith("feed_failures") })
+        assertTrue(result.breaches.any { it.startsWith("summarization_failures") })
+    }
 }

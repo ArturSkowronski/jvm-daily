@@ -154,6 +154,10 @@ internal data class ReplayOptions(
 internal data class QualityReportOptions(
     val sinceHours: Int = 24,
     val outputDir: String = "output",
+    val maxDuplicates: Long? = null,
+    val maxFeedFailures: Long? = null,
+    val maxSummarizationFailures: Long? = null,
+    val failOnThreshold: Boolean = false,
 )
 
 internal fun runEnrichmentReplay(dbPath: String, args: List<String>) {
@@ -255,6 +259,10 @@ internal fun parseReplayOptions(args: List<String>): ReplayOptions {
 internal fun parseQualityReportOptions(args: List<String>): QualityReportOptions {
     var sinceHours = 24
     var outputDir = "output"
+    var maxDuplicates: Long? = null
+    var maxFeedFailures: Long? = null
+    var maxSummarizationFailures: Long? = null
+    var failOnThreshold = false
     var index = 0
     while (index < args.size) {
         when (val arg = args[index]) {
@@ -269,12 +277,41 @@ internal fun parseQualityReportOptions(args: List<String>): QualityReportOptions
                     ?: error("Invalid --output value. Expected a non-empty directory path.")
                 index++
             }
-            else -> error("Unknown quality-report option: $arg. Valid: --since-hours <n> | --output <dir>")
+            "--max-duplicates" -> {
+                maxDuplicates = args.getOrNull(index + 1)?.toLongOrNull()
+                    ?: error("Invalid --max-duplicates value. Expected non-negative integer.")
+                index++
+            }
+            "--max-feed-failures" -> {
+                maxFeedFailures = args.getOrNull(index + 1)?.toLongOrNull()
+                    ?: error("Invalid --max-feed-failures value. Expected non-negative integer.")
+                index++
+            }
+            "--max-summarization-failures" -> {
+                maxSummarizationFailures = args.getOrNull(index + 1)?.toLongOrNull()
+                    ?: error("Invalid --max-summarization-failures value. Expected non-negative integer.")
+                index++
+            }
+            "--fail-on-threshold" -> failOnThreshold = true
+            else -> error(
+                "Unknown quality-report option: $arg. " +
+                    "Valid: --since-hours <n> | --output <dir> | --max-duplicates <n> | " +
+                    "--max-feed-failures <n> | --max-summarization-failures <n> | --fail-on-threshold"
+            )
         }
         index++
     }
     require(sinceHours >= 0) { "--since-hours must be >= 0" }
+    require(maxDuplicates == null || maxDuplicates >= 0) { "--max-duplicates must be >= 0" }
+    require(maxFeedFailures == null || maxFeedFailures >= 0) { "--max-feed-failures must be >= 0" }
+    require(maxSummarizationFailures == null || maxSummarizationFailures >= 0) { "--max-summarization-failures must be >= 0" }
     return QualityReportOptions(sinceHours = sinceHours, outputDir = outputDir)
+        .copy(
+            maxDuplicates = maxDuplicates,
+            maxFeedFailures = maxFeedFailures,
+            maxSummarizationFailures = maxSummarizationFailures,
+            failOnThreshold = failOnThreshold,
+        )
 }
 
 internal fun runQualityReport(dbPath: String, args: List<String>) {
@@ -293,14 +330,35 @@ internal fun runQualityReport(dbPath: String, args: List<String>) {
         )
 
         val report = PipelineService.renderQualityReport(counters)
+        val qualityGate = PipelineService.evaluateQualityGate(
+            counters,
+            PipelineService.QualityGateThresholds(
+                maxDuplicates = options.maxDuplicates ?: Long.MAX_VALUE,
+                maxFeedFailures = options.maxFeedFailures ?: Long.MAX_VALUE,
+                maxSummarizationFailures = options.maxSummarizationFailures ?: Long.MAX_VALUE,
+            )
+        )
+        val thresholdSection = buildString {
+            appendLine()
+            appendLine("## Quality Gate")
+            appendLine("Status: ${if (qualityGate.passed) "PASS" else "FAIL"}")
+            if (qualityGate.breaches.isNotEmpty()) {
+                appendLine("Breaches:")
+                qualityGate.breaches.forEach { appendLine("- $it") }
+            }
+        }.trimEnd()
         val reportDir = Path.of(options.outputDir)
         reportDir.createDirectories()
         val date = Clock.System.now().toLocalDateTime(TimeZone.UTC).date
         val reportPath = reportDir.resolve("quality-report-$date.md")
-        reportPath.writeText(report + "\n")
+        reportPath.writeText(report + "\n\n" + thresholdSection + "\n")
 
         println(report)
+        println(thresholdSection)
         println("Quality report written to: $reportPath")
+        if (options.failOnThreshold && !qualityGate.passed) {
+            error("Quality gate failed: ${qualityGate.breaches.joinToString("; ")}")
+        }
     }
 }
 

@@ -24,6 +24,17 @@ class PipelineService(
         val feedFailures: Long,
         val summarizationFailures: Long,
     )
+
+    data class QualityGateThresholds(
+        val maxDuplicates: Long = Long.MAX_VALUE,
+        val maxFeedFailures: Long = Long.MAX_VALUE,
+        val maxSummarizationFailures: Long = Long.MAX_VALUE,
+    )
+
+    data class QualityGateResult(
+        val passed: Boolean,
+        val breaches: List<String>,
+    )
     internal data class StageTelemetry(
         val runId: String,
         val stage: String,
@@ -109,5 +120,25 @@ class PipelineService(
             appendLine("| Feed Failures | ${counters.feedFailures} |")
             appendLine("| Summarization Failures | ${counters.summarizationFailures} |")
         }.trim()
+
+        internal fun evaluateQualityGate(
+            counters: QualityCounters,
+            thresholds: QualityGateThresholds,
+        ): QualityGateResult {
+            val breaches = mutableListOf<String>()
+            if (counters.duplicates > thresholds.maxDuplicates) {
+                breaches += "duplicates ${counters.duplicates} > ${thresholds.maxDuplicates}"
+            }
+            if (counters.feedFailures > thresholds.maxFeedFailures) {
+                breaches += "feed_failures ${counters.feedFailures} > ${thresholds.maxFeedFailures}"
+            }
+            if (counters.summarizationFailures > thresholds.maxSummarizationFailures) {
+                breaches += "summarization_failures ${counters.summarizationFailures} > ${thresholds.maxSummarizationFailures}"
+            }
+            return QualityGateResult(
+                passed = breaches.isEmpty(),
+                breaches = breaches,
+            )
+        }
     }
 }
