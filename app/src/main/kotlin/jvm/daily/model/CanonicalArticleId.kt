@@ -1,6 +1,7 @@
 package jvm.daily.model
 
 object CanonicalArticleId {
+    // Quality gate invariant: equivalent source payloads must map to the same canonical ID.
     fun from(
         namespace: String,
         sourceId: String,

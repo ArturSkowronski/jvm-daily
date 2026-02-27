@@ -36,6 +36,26 @@ class IngressWorkflowIdempotencyTest {
         assertEquals(2, saved.size)
     }
 
+    @Test
+    fun `duplicates are surfaced in run status and feed counters`() = runTest {
+        val saved = mutableListOf<Article>()
+        val repository = inMemoryRepo(saved)
+        val source = stubSource(
+            listOf(
+                article(id = "rss:https://example.com/post-1", title = "First"),
+                article(id = "rss:https://example.com/post-1", title = "First duplicate"),
+            )
+        )
+
+        val workflow = IngressWorkflow(SourceRegistry().apply { register(source) }, repository)
+        workflow.execute()
+        workflow.execute()
+
+        assertEquals(1, saved.size)
+        assertEquals("First", saved.single().title)
+        assertEquals("SUCCESS", workflow.lastRunStatus.name)
+    }
+
     private fun article(id: String, title: String) = Article(
         id = id,
         title = title,
@@ -45,10 +65,15 @@ class IngressWorkflowIdempotencyTest {
         ingestedAt = Clock.System.now(),
     )
 
-    private fun stubSource(articles: List<Article>) = object : Source {
+    private class StubSource(private val articles: List<Article>) : Source {
         override val sourceType: String = "rss"
+
         override suspend fun fetch(): List<Article> = articles
+
+        override suspend fun fetchOutcomes(): List<jvm.daily.model.SourceFetchOutcome> = super.fetchOutcomes()
     }
+
+    private fun stubSource(articles: List<Article>) = StubSource(articles)
 
     private fun inMemoryRepo(storage: MutableList<Article>) = object : ArticleRepository {
         override fun save(article: Article) { storage.add(article) }
