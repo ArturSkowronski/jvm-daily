@@ -32,6 +32,13 @@ Backfill/validation should remain lightweight: detect rows violating canonical-k
 
 **Primary recommendation:** Implement a centralized canonical dedup key utility, adopt it in ingest paths, then add repository-level idempotency tests and a validation/backfill script for existing records.
 
+## Current Codebase Observations
+
+- `DuckDbArticleRepository` persists all required raw fields (`id`, `source_type`, `source_id`, `ingested_at`) and uses `INSERT OR REPLACE`, which supports rerun-safe writes when IDs are stable.
+- `RssSource` currently derives IDs from source payload (`entry.uri ?: link`) and `MarkdownFileSource` uses `md:{filename}`. These two strategies are deterministic but not centralized.
+- `IngressWorkflow` still performs `existsById` checks before `save`, so idempotency is partially guaranteed in workflow; Phase 3 should make repository and canonical-id rules the primary guarantee.
+- Existing test coverage validates repository CRUD and ingest duplicate skipping, but there is no dedicated canonical-ID matrix or backfill/validation tool coverage yet.
+
 ## Standard Stack
 
 ### Core
@@ -86,6 +93,12 @@ Backfill/validation should remain lightweight: detect rows violating canonical-k
 - Canonical key behavior matrix for URL/title/source-id edge cases.
 - Idempotent persistence tests proving reruns preserve row cardinality.
 - Backfill script dry-run report with explicit collision counts and no mutation by default.
+
+## Planning Implications
+
+- Plan 03-01 should create a shared `CanonicalArticleId` utility and migrate both RSS and markdown adapters in one wave.
+- Plan 03-02 should add new idempotency-focused tests first, then align repository behavior only if tests reveal gaps.
+- Plan 03-03 should include CLI wiring in `App.kt` so validation/backfill tooling is operationally runnable, not just implemented as an internal class.
 
 ---
 *Phase: 03-persistence-and-idempotency*
