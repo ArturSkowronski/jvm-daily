@@ -20,8 +20,8 @@
 
 ### Quality
 
-- [ ] **QLT-01**: User can enforce canonical dedup logic (URL/title normalization or equivalent) verified by automated tests.
-- [ ] **QLT-02**: User can view daily quality counters (new items, duplicates, feed failures, summarization failures).
+- [x] **QLT-01**: User can enforce canonical dedup logic (URL/title normalization or equivalent) verified by automated tests.
+- [x] **QLT-02**: User can view daily quality counters (new items, duplicates, feed failures, summarization failures).
 - [ ] **QLT-03**: User can inspect a list of failed or low-quality processed items for manual follow-up.
 
 ### Operations
@@ -69,8 +69,8 @@
 | SUM-01 | Phase 4 | Complete |
 | SUM-02 | Phase 4 | Complete |
 | SUM-03 | Phase 5 | Complete |
-| QLT-01 | Phase 7 | Pending |
-| QLT-02 | Phase 7 | Pending |
+| QLT-01 | Phase 7 | Complete |
+| QLT-02 | Phase 7 | Complete |
 | QLT-03 | Phase 8 | Pending |
 | OPS-01 | Phase 6 | Complete |
 | OPS-02 | Phase 5 | Complete |
@@ -86,4 +86,4 @@
 
 ---
 *Requirements defined: 2026-02-27*
-*Last updated: 2026-02-27 after Phase 6 completion*
+*Last updated: 2026-02-27 after Phase 7 completion*

@@ -118,9 +118,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 07-01: Implement canonical dedup assertions across data path
-- [ ] 07-02: Generate daily quality report artifact
-- [ ] 07-03: Add regression tests for quality counters and thresholds
+- [x] 07-01: Implement canonical dedup assertions across data path
+- [x] 07-02: Generate daily quality report artifact
+- [x] 07-03: Add regression tests for quality counters and thresholds
 
 ### Phase 8: Connector Readiness
 **Goal**: Platform is demonstrably ready for future non-RSS connector rollout.
@@ -147,5 +147,5 @@ Plans:
 | 4. Summarization Core | 3/3 | Complete    | 2026-02-27 |
 | 5. Recoverability Controls | 3/3 | Complete    | 2026-02-27 |
 | 6. Daily Automation and Telemetry | 3/3 | Complete    | 2026-02-27 |
-| 7. Quality Gates | 3/3 | Complete   | 2026-02-27 |
+| 7. Quality Gates | 3/3 | Complete    | 2026-02-27 |
 | 8. Connector Readiness | 0/3 | Not started | - |
