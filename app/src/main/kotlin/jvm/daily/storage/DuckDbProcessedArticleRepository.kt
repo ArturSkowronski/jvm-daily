@@ -198,6 +198,33 @@ class DuckDbProcessedArticleRepository(private val connection: Connection) : Pro
         return ids.mapNotNull { byId[it] }
     }
 
+    override fun findInspectionCandidates(since: Instant, limit: Int, minWarnings: Int): List<ProcessedArticle> {
+        if (limit <= 0) return emptyList()
+        require(minWarnings >= 0) { "minWarnings must be >= 0" }
+
+        val results = mutableListOf<ProcessedArticle>()
+        connection.prepareStatement(
+            """
+            SELECT * FROM processed_articles
+            WHERE processed_at >= ?
+            ORDER BY processed_at DESC, id ASC
+            """.trimIndent()
+        ).use { stmt ->
+            stmt.setString(1, since.toString())
+            stmt.executeQuery().use { rs ->
+                while (rs.next() && results.size < limit) {
+                    val article = rs.toProcessedArticle()
+                    val include = article.outcomeStatus == EnrichmentOutcomeStatus.FAILED ||
+                        article.warnings.size >= minWarnings
+                    if (include) {
+                        results.add(article)
+                    }
+                }
+            }
+        }
+        return results
+    }
+
     override fun findUnprocessedRawArticles(since: Instant): List<String> {
         val results = mutableListOf<String>()
         connection.prepareStatement(

@@ -12,6 +12,7 @@ interface ProcessedArticleRepository {
     fun countFailedSince(since: Instant): Long = findFailedSince(since).size.toLong()
     fun findFailedRawArticleIds(since: Instant, limit: Int): List<String>
     fun findFailedByIds(ids: List<String>): List<ProcessedArticle>
+    fun findInspectionCandidates(since: Instant, limit: Int, minWarnings: Int = 1): List<ProcessedArticle>
     fun findUnprocessedRawArticles(since: Instant): List<String> // Returns raw article IDs
     fun existsById(id: String): Boolean
     fun count(): Long

@@ -1,10 +1,12 @@
 package jvm.daily.source
 
 import jvm.daily.model.Article
+import jvm.daily.model.FeedIngestStatus
 import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 import org.junit.jupiter.api.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class SourceContractTest {
@@ -65,5 +67,53 @@ class SourceContractTest {
         assertTrue(articles[0].url == null)
         assertTrue(articles[0].author == null)
         assertTrue(articles[0].comments == null)
+    }
+
+    @Test
+    fun `default fetchOutcomes maps successful fetch into deterministic feed result`() = runTest {
+        val source = object : Source {
+            override val sourceType: String = "connector-cert"
+
+            override suspend fun fetch(): List<Article> = listOf(
+                Article(
+                    id = "src:ok",
+                    title = "OK",
+                    content = "ok",
+                    sourceType = sourceType,
+                    sourceId = "source-1",
+                    ingestedAt = fixedInstant,
+                )
+            )
+        }
+
+        val outcomes = source.fetchOutcomes()
+
+        assertEquals(1, outcomes.size)
+        val outcome = outcomes.single()
+        assertEquals(FeedIngestStatus.SUCCESS, outcome.feed.status)
+        assertEquals(source.sourceType, outcome.feed.sourceType)
+        assertEquals(source.sourceType, outcome.feed.sourceId)
+        assertEquals(1, outcome.feed.fetchedCount)
+        assertEquals(1, outcome.articles.size)
+    }
+
+    @Test
+    fun `default fetchOutcomes maps exceptions into failed feed result`() = runTest {
+        val source = object : Source {
+            override val sourceType: String = "connector-cert-fail"
+
+            override suspend fun fetch(): List<Article> {
+                error("boom")
+            }
+        }
+
+        val outcomes = source.fetchOutcomes()
+
+        assertEquals(1, outcomes.size)
+        val outcome = outcomes.single()
+        assertEquals(FeedIngestStatus.FAILED, outcome.feed.status)
+        assertEquals(0, outcome.feed.fetchedCount)
+        assertTrue(outcome.feed.errors.single().contains("boom"))
+        assertTrue(outcome.articles.isEmpty())
     }
 }

@@ -138,6 +138,21 @@ Quality gate thresholds:
 - `--max-summarization-failures <n>`
 - `--fail-on-threshold` to make routine runs/CI fail fast on breaches
 
+**Failed/low-quality inspection report (Phase 8):**
+```bash
+# Last 24h (default) failed + low-quality candidates
+./gradlew run --args="inspect-quality"
+
+# Custom window, warning threshold, and output directory
+./gradlew run --args="inspect-quality --since-hours 72 --limit 100 --min-warnings 2 --output output"
+```
+
+Manual follow-up workflow:
+1. Review `FAILED` records first and inspect `failure_reason`.
+2. Review low-quality warning-heavy records (`warnings` count >= threshold) for connector/content issues.
+3. Fix connector/parsing inputs, then replay targeted IDs with `enrichment-replay --ids ...`.
+4. Re-run `inspect-quality` to confirm candidate counts drop.
+
 **Environment Variables:**
 
 | Variable | Default | Description |
@@ -237,6 +252,34 @@ jvm-daily/
 - Workflow layer should not import concrete source implementations or concrete DuckDB repositories.
 - Source and storage layers should stay independent from workflow package internals.
 - Guard tests in `app/src/test/kotlin/jvm/daily/architecture/` enforce these boundaries on every `./gradlew test`.
+
+### Connector Certification Checklist (Phase 8)
+
+Before enabling a new connector in routine runs:
+
+1. Contract tests pass:
+   - `./gradlew test --tests 'jvm.daily.source.SourceContractTest' --tests 'jvm.daily.source.SourceRegistryContractTest'`
+2. Adapter contract is satisfied:
+   - emits normalized required fields (`id`, `title`, `sourceType`, `sourceId`, `ingestedAt`)
+   - supports optional nullable fields (`url`, `author`, `comments`) without failing
+   - `sourceType` is stable, non-blank, trimmed, and unique in `SourceRegistry`
+3. Outcome semantics are validated:
+   - successful adapter fetch maps to deterministic `SUCCESS` feed outcome
+   - adapter failures map to deterministic `FAILED` feed outcome with error reason
+4. Operator readiness:
+   - run inspection report flow from Phase 8 to review failed/low-quality records before rollout
+
+### Connector Skeleton Dry-Run Workflow (Phase 8)
+
+Use this before implementing a full non-RSS connector:
+
+1. Add a connector skeleton fixture test (example: `ConnectorDryRunContractTest`) implementing only `Source`.
+2. Register the skeleton in `SourceRegistry` from test scope and verify uniqueness/guardrails.
+3. Run certification suite:
+   - `./gradlew test --tests 'jvm.daily.source.ConnectorDryRunContractTest' --tests 'jvm.daily.source.SourceContractTest' --tests 'jvm.daily.source.SourceRegistryContractTest'`
+4. Run inspection report to validate operational follow-up path:
+   - `./gradlew run --args="inspect-quality --since-hours 24 --limit 50 --min-warnings 1"`
+5. If failed/low-quality items appear, perform manual follow-up and replay targeted IDs before enabling the connector.
 
 ## Tech Stack
 

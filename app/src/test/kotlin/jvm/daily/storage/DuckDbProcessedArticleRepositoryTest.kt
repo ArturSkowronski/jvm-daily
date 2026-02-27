@@ -8,6 +8,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.sql.Connection
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 
 class DuckDbProcessedArticleRepositoryTest {
@@ -134,6 +135,79 @@ class DuckDbProcessedArticleRepositoryTest {
 
         val failed = repository.findFailedByIds(listOf("failed-2", "success-1", "missing", "failed-1"))
         assertEquals(listOf("failed-2", "failed-1"), failed.map { it.id })
+    }
+
+    @Test
+    fun `findInspectionCandidates returns failed and warning-heavy records in deterministic order`() {
+        repository.save(
+            processedArticle(
+                id = "warning-heavy",
+                outcomeStatus = EnrichmentOutcomeStatus.SUCCESS,
+                warnings = listOf("SUMMARY_SHORT", "TOPICS_EMPTY"),
+                processedAt = Instant.parse("2026-02-27T22:00:00Z"),
+            )
+        )
+        repository.save(
+            processedArticle(
+                id = "failed-latest",
+                outcomeStatus = EnrichmentOutcomeStatus.FAILED,
+                failureReason = "PARSE_JSON: malformed",
+                processedAt = Instant.parse("2026-02-27T23:00:00Z"),
+            )
+        )
+        repository.save(
+            processedArticle(
+                id = "healthy",
+                outcomeStatus = EnrichmentOutcomeStatus.SUCCESS,
+                warnings = emptyList(),
+                processedAt = Instant.parse("2026-02-27T23:30:00Z"),
+            )
+        )
+
+        val results = repository.findInspectionCandidates(
+            since = Instant.parse("2026-02-27T00:00:00Z"),
+            limit = 10,
+            minWarnings = 1,
+        )
+
+        assertEquals(listOf("failed-latest", "warning-heavy"), results.map { it.id })
+    }
+
+    @Test
+    fun `findInspectionCandidates enforces minWarnings threshold and limit`() {
+        repository.save(
+            processedArticle(
+                id = "warn-1",
+                warnings = listOf("SUMMARY_SHORT"),
+                processedAt = Instant.parse("2026-02-27T21:00:00Z"),
+            )
+        )
+        repository.save(
+            processedArticle(
+                id = "warn-2",
+                warnings = listOf("SUMMARY_SHORT", "ENTITIES_EMPTY"),
+                processedAt = Instant.parse("2026-02-27T22:00:00Z"),
+            )
+        )
+
+        val results = repository.findInspectionCandidates(
+            since = Instant.parse("2026-02-27T00:00:00Z"),
+            limit = 1,
+            minWarnings = 2,
+        )
+
+        assertEquals(listOf("warn-2"), results.map { it.id })
+    }
+
+    @Test
+    fun `findInspectionCandidates rejects negative minWarnings`() {
+        assertFailsWith<IllegalArgumentException> {
+            repository.findInspectionCandidates(
+                since = Instant.parse("2026-02-27T00:00:00Z"),
+                limit = 10,
+                minWarnings = -1,
+            )
+        }
     }
 
     private fun processedArticle(

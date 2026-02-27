@@ -30,6 +30,26 @@ class SourceRegistryContractTest {
     }
 
     @Test
+    fun `registry rejects duplicate source type ignoring case`() {
+        val registry = SourceRegistry()
+
+        registry.register(stubSource("rss"))
+
+        assertFailsWith<IllegalArgumentException> {
+            registry.register(stubSource("RSS"))
+        }
+    }
+
+    @Test
+    fun `registry rejects source type with leading or trailing whitespace`() {
+        val registry = SourceRegistry()
+
+        assertFailsWith<IllegalArgumentException> {
+            registry.register(stubSource(" rss "))
+        }
+    }
+
+    @Test
     fun `registry returns all registered adapters`() = runTest {
         val registry = SourceRegistry()
 
