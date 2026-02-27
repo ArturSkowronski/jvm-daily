@@ -24,7 +24,18 @@ data class ProcessedArticle(
     val entities: List<String> = emptyList(),  // NER: JDK versions, frameworks, companies, JEPs
     val topics: List<String> = emptyList(),     // Topic tags for clustering
     val engagementScore: Double = 0.0,          // For prioritization (0-100)
+    val outcomeStatus: EnrichmentOutcomeStatus = EnrichmentOutcomeStatus.SUCCESS,
+    val failureReason: String? = null,
+    val lastAttemptAt: Instant? = null,
+    val attemptCount: Int = 1,
+    val warnings: List<String> = emptyList(),
 )
+
+@Serializable
+enum class EnrichmentOutcomeStatus {
+    SUCCESS,
+    FAILED,
+}
 
 /**
  * Thematic cluster of related articles across sources.

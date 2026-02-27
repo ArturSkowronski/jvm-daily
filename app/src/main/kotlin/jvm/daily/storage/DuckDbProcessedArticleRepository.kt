@@ -1,6 +1,7 @@
 package jvm.daily.storage
 
 import jvm.daily.model.ProcessedArticle
+import jvm.daily.model.EnrichmentOutcomeStatus
 import kotlinx.datetime.Instant
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -31,7 +32,12 @@ class DuckDbProcessedArticleRepository(private val connection: Connection) : Pro
                     processed_at VARCHAR NOT NULL,
                     entities VARCHAR NOT NULL,
                     topics VARCHAR NOT NULL,
-                    engagement_score DOUBLE NOT NULL
+                    engagement_score DOUBLE NOT NULL,
+                    outcome_status VARCHAR NOT NULL DEFAULT 'SUCCESS',
+                    failure_reason VARCHAR,
+                    last_attempt_at VARCHAR,
+                    attempt_count INTEGER NOT NULL DEFAULT 1,
+                    warnings VARCHAR NOT NULL DEFAULT '[]'
                 )
                 """.trimIndent()
             )
@@ -41,6 +47,12 @@ class DuckDbProcessedArticleRepository(private val connection: Connection) : Pro
                 "CREATE INDEX IF NOT EXISTS idx_processed_at ON processed_articles(processed_at)"
             )
         }
+
+        ensureColumn("processed_articles", "outcome_status", "VARCHAR NOT NULL DEFAULT 'SUCCESS'")
+        ensureColumn("processed_articles", "failure_reason", "VARCHAR")
+        ensureColumn("processed_articles", "last_attempt_at", "VARCHAR")
+        ensureColumn("processed_articles", "attempt_count", "INTEGER NOT NULL DEFAULT 1")
+        ensureColumn("processed_articles", "warnings", "VARCHAR NOT NULL DEFAULT '[]'")
     }
 
     override fun save(article: ProcessedArticle) {
@@ -49,8 +61,9 @@ class DuckDbProcessedArticleRepository(private val connection: Connection) : Pro
             INSERT OR REPLACE INTO processed_articles
             (id, original_title, normalized_title, summary, original_content,
              source_type, source_id, url, author, published_at, ingested_at,
-             processed_at, entities, topics, engagement_score)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             processed_at, entities, topics, engagement_score, outcome_status,
+             failure_reason, last_attempt_at, attempt_count, warnings)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """.trimIndent()
         ).use { stmt ->
             stmt.setString(1, article.id)
@@ -68,6 +81,11 @@ class DuckDbProcessedArticleRepository(private val connection: Connection) : Pro
             stmt.setString(13, Json.encodeToString(article.entities))
             stmt.setString(14, Json.encodeToString(article.topics))
             stmt.setDouble(15, article.engagementScore)
+            stmt.setString(16, article.outcomeStatus.name)
+            stmt.setString(17, article.failureReason)
+            stmt.setString(18, article.lastAttemptAt?.toString())
+            stmt.setInt(19, article.attemptCount)
+            stmt.setString(20, Json.encodeToString(article.warnings))
             stmt.executeUpdate()
         }
     }
@@ -95,6 +113,25 @@ class DuckDbProcessedArticleRepository(private val connection: Connection) : Pro
         ).use { stmt ->
             stmt.setString(1, startDate.toString())
             stmt.setString(2, endDate.toString())
+            stmt.executeQuery().use { rs ->
+                while (rs.next()) {
+                    results.add(rs.toProcessedArticle())
+                }
+            }
+        }
+        return results
+    }
+
+    override fun findFailedSince(since: Instant): List<ProcessedArticle> {
+        val results = mutableListOf<ProcessedArticle>()
+        connection.prepareStatement(
+            """
+            SELECT * FROM processed_articles
+            WHERE processed_at >= ? AND outcome_status = 'FAILED'
+            ORDER BY processed_at DESC
+            """.trimIndent()
+        ).use { stmt ->
+            stmt.setString(1, since.toString())
             stmt.executeQuery().use { rs ->
                 while (rs.next()) {
                     results.add(rs.toProcessedArticle())
@@ -160,5 +197,19 @@ class DuckDbProcessedArticleRepository(private val connection: Connection) : Pro
         entities = Json.decodeFromString(getString("entities")),
         topics = Json.decodeFromString(getString("topics")),
         engagementScore = getDouble("engagement_score"),
+        outcomeStatus = runCatching { EnrichmentOutcomeStatus.valueOf(getString("outcome_status")) }
+            .getOrDefault(EnrichmentOutcomeStatus.SUCCESS),
+        failureReason = getString("failure_reason"),
+        lastAttemptAt = getString("last_attempt_at")?.takeIf { it.isNotBlank() }?.let { Instant.parse(it) },
+        attemptCount = getInt("attempt_count"),
+        warnings = runCatching { Json.decodeFromString<List<String>>(getString("warnings")) }.getOrDefault(emptyList()),
     )
+
+    private fun ensureColumn(table: String, column: String, definition: String) {
+        runCatching {
+            connection.createStatement().use { stmt ->
+                stmt.execute("ALTER TABLE $table ADD COLUMN $column $definition")
+            }
+        }
+    }
 }

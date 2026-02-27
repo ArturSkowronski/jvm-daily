@@ -2,9 +2,11 @@ package jvm.daily.workflow
 
 import jvm.daily.model.Article
 import jvm.daily.ai.LLMClient
+import jvm.daily.model.EnrichmentOutcomeStatus
 import jvm.daily.model.ProcessedArticle
 import jvm.daily.storage.ArticleRepository
 import jvm.daily.storage.ProcessedArticleRepository
+import kotlinx.coroutines.delay
 import kotlinx.datetime.Clock
 import kotlin.time.Duration.Companion.days
 
@@ -47,55 +49,97 @@ class EnrichmentWorkflow(
             .filter { it.id in unprocessedIds }
 
         var processedCount = 0
-        var errorCount = 0
+        var failedCount = 0
+        var warningCount = 0
 
         for (article in rawArticles) {
-            try {
-                val processed = enrichArticle(article)
-                processedArticleRepository.save(processed)
-                processedCount++
+            val processed = enrichArticle(article)
+            processedArticleRepository.save(processed)
 
-                if (processedCount % 10 == 0) {
-                    println("[enrichment] Processed $processedCount/${rawArticles.size}")
-                }
-            } catch (e: Exception) {
-                println("[enrichment] Failed to process ${article.id}: ${e.message}")
-                errorCount++
+            if (processed.outcomeStatus == EnrichmentOutcomeStatus.SUCCESS) {
+                processedCount++
+            } else {
+                failedCount++
+            }
+            if (processed.warnings.isNotEmpty()) {
+                warningCount++
+            }
+
+            if ((processedCount + failedCount) % 10 == 0) {
+                println("[enrichment] Processed ${processedCount + failedCount}/${rawArticles.size}")
             }
         }
 
-        println("[enrichment] Done. Processed: $processedCount, Errors: $errorCount, Total in DB: ${processedArticleRepository.count()}")
+        val stageStatus = if (failedCount > 0 || warningCount > 0) "SUCCESS_WITH_WARNINGS" else "SUCCESS"
+        println(
+            "[enrichment] Done. status=$stageStatus, Processed=$processedCount, Failed=$failedCount, " +
+                "Warnings=$warningCount, Total in DB=${processedArticleRepository.count()}"
+        )
     }
 
     private suspend fun enrichArticle(article: Article): ProcessedArticle {
         val prompt = "$ENRICHMENT_SYSTEM_PROMPT\n\n${buildEnrichmentPrompt(article)}"
-        val response = llmClient.chat(prompt)
-        val enriched = when (val result = EnrichmentContract.parse(response, article.content.isBlank())) {
-            is EnrichmentContract.ParseResult.Success -> result
-            is EnrichmentContract.ParseResult.Failure ->
-                error("${result.code}: ${result.message}")
+        val warnings = mutableListOf<String>()
+        var attempt = 0
+
+        while (attempt < MAX_ATTEMPTS) {
+            attempt++
+            val response = try {
+                llmClient.chat(prompt)
+            } catch (e: Exception) {
+                if (attempt < MAX_ATTEMPTS) {
+                    delay(RETRY_BACKOFF_MS)
+                    continue
+                }
+                return failedArticle(
+                    article = article,
+                    reason = "TRANSPORT: ${e.message ?: "LLM transport failure"}",
+                    attempt = attempt,
+                )
+            }
+
+            when (val result = EnrichmentContract.parse(response, article.content.isBlank())) {
+                is EnrichmentContract.ParseResult.Success -> {
+                    warnings += result.warnings
+                    if (warnings.isNotEmpty()) {
+                        println("[enrichment] ${article.id}: ${warnings.joinToString(" | ")}")
+                    }
+
+                    return ProcessedArticle(
+                        id = article.id,
+                        originalTitle = article.title,
+                        normalizedTitle = normalizeTitle(article.title),
+                        summary = result.summary,
+                        originalContent = article.content,
+                        sourceType = article.sourceType,
+                        sourceId = article.sourceId,
+                        url = article.url,
+                        author = article.author,
+                        publishedAt = article.ingestedAt,
+                        ingestedAt = article.ingestedAt,
+                        processedAt = clock.now(),
+                        entities = result.entities,
+                        topics = result.topics,
+                        engagementScore = calculateEngagementScore(article),
+                        outcomeStatus = EnrichmentOutcomeStatus.SUCCESS,
+                        attemptCount = attempt,
+                        warnings = warnings,
+                    )
+                }
+                is EnrichmentContract.ParseResult.Failure -> {
+                    return failedArticle(
+                        article = article,
+                        reason = "${result.code}: ${result.message}",
+                        attempt = attempt,
+                    )
+                }
+            }
         }
 
-        if (enriched.warnings.isNotEmpty()) {
-            println("[enrichment] ${article.id}: ${enriched.warnings.joinToString(" | ")}")
-        }
-
-        return ProcessedArticle(
-            id = article.id,
-            originalTitle = article.title,
-            normalizedTitle = normalizeTitle(article.title),
-            summary = enriched.summary,
-            originalContent = article.content,
-            sourceType = article.sourceType,
-            sourceId = article.sourceId,
-            url = article.url,
-            author = article.author,
-            publishedAt = article.ingestedAt, // RSS doesn't have published_at, use ingested
-            ingestedAt = article.ingestedAt,
-            processedAt = clock.now(),
-            entities = enriched.entities,
-            topics = enriched.topics,
-            engagementScore = calculateEngagementScore(article),
+        return failedArticle(
+            article = article,
+            reason = "TRANSPORT: unknown enrichment failure",
+            attempt = attempt.coerceAtLeast(1),
         )
     }
 
@@ -152,7 +196,34 @@ class EnrichmentWorkflow(
         return score.coerceIn(0.0, 100.0)
     }
 
+    private fun failedArticle(article: Article, reason: String, attempt: Int): ProcessedArticle {
+        println("[enrichment] Failed to process ${article.id}: $reason")
+        return ProcessedArticle(
+            id = article.id,
+            originalTitle = article.title,
+            normalizedTitle = normalizeTitle(article.title),
+            summary = "[FAILED]",
+            originalContent = article.content,
+            sourceType = article.sourceType,
+            sourceId = article.sourceId,
+            url = article.url,
+            author = article.author,
+            publishedAt = article.ingestedAt,
+            ingestedAt = article.ingestedAt,
+            processedAt = clock.now(),
+            entities = emptyList(),
+            topics = emptyList(),
+            engagementScore = 0.0,
+            outcomeStatus = EnrichmentOutcomeStatus.FAILED,
+            failureReason = reason,
+            lastAttemptAt = clock.now(),
+            attemptCount = attempt,
+        )
+    }
+
     companion object {
+        private const val MAX_ATTEMPTS = 3
+        private const val RETRY_BACKOFF_MS = 2_000L
         private const val ENRICHMENT_SYSTEM_PROMPT = """
 You are an expert JVM ecosystem analyst. Your job is to analyze JVM-related
 articles (Java, Kotlin, Scala, Groovy, Clojure, GraalVM, Spring, Quarkus, etc.)

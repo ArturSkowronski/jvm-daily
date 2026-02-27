@@ -2,6 +2,7 @@ package jvm.daily.workflow
 
 import jvm.daily.ai.LLMClient
 import jvm.daily.model.Article
+import jvm.daily.model.EnrichmentOutcomeStatus
 import jvm.daily.model.ProcessedArticle
 import jvm.daily.storage.ArticleRepository
 import jvm.daily.storage.ProcessedArticleRepository
@@ -116,6 +117,8 @@ class EnrichmentWorkflowTest {
         override fun findAll(): List<ProcessedArticle> = storage.toList()
         override fun findByDateRange(startDate: Instant, endDate: Instant) =
             storage.filter { it.processedAt >= startDate && it.processedAt <= endDate }
+        override fun findFailedSince(since: Instant) =
+            storage.filter { it.processedAt >= since && it.outcomeStatus == EnrichmentOutcomeStatus.FAILED }
         override fun findUnprocessedRawArticles(since: Instant) = unprocessedIds
         override fun existsById(id: String) = storage.any { it.id == id }
         override fun count(): Long = storage.size.toLong()
