@@ -211,6 +211,19 @@ docker-compose logs -f airflow-scheduler
 docker-compose logs -f airflow-webserver
 ```
 
+### Scheduler + Telemetry Smoke Check (Phase 6)
+
+```bash
+# 1) Trigger DAG manually in UI or CLI
+docker-compose exec airflow-scheduler airflow dags trigger jvm_daily_pipeline
+
+# 2) Validate stage task execution order
+docker-compose exec airflow-scheduler airflow tasks list jvm_daily_pipeline --tree
+
+# 3) Check JVM app logs for structured telemetry lines
+docker-compose logs airflow-scheduler | grep "[pipeline][telemetry]"
+```
+
 ### Task Logs
 
 In Airflow UI:

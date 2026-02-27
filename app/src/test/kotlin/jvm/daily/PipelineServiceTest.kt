@@ -97,4 +97,24 @@ class PipelineServiceTest {
         assertTrue(failedTelemetry.contains("stage=ingress"))
         assertTrue(failedTelemetry.contains("error=\"boom\""))
     }
+
+    @Test
+    fun `smoke check should emit pipeline and stage telemetry envelope`() {
+        val logs = mutableListOf<String>()
+        val service = PipelineService(
+            ingressFn = {},
+            enrichmentFn = {},
+            clusteringFn = {},
+            outgressFn = {},
+        )
+
+        service.runSteps("/dev/null", log = logs::add)
+
+        assertTrue(logs.any { it.contains("▶ pipeline") })
+        assertTrue(logs.any { it.contains("✓ pipeline") })
+
+        val telemetry = logs.filter { it.startsWith("[pipeline][telemetry]") }
+        assertEquals(4, telemetry.size)
+        assertTrue(telemetry.all { it.contains("status=SUCCESS") && it.contains("duration_ms=") })
+    }
 }
