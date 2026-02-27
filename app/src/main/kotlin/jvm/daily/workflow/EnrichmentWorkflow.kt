@@ -26,6 +26,7 @@ class EnrichmentWorkflow(
     private val rawArticleRepository: ArticleRepository,
     private val processedArticleRepository: ProcessedArticleRepository,
     private val llmClient: LLMClient,
+    private val replayRawArticleIds: Set<String>? = null,
     private val clock: Clock = Clock.System,
     private val retryBackoffMs: Long = RETRY_BACKOFF_MS,
 ) : Workflow {
@@ -35,19 +36,32 @@ class EnrichmentWorkflow(
     override suspend fun execute() {
         println("[enrichment] Starting enrichment workflow")
 
-        val unprocessedIds = processedArticleRepository.findUnprocessedRawArticles(
+        val targetIds = replayRawArticleIds?.toList() ?: processedArticleRepository.findUnprocessedRawArticles(
             since = clock.now().minus(7.days)
         )
 
-        if (unprocessedIds.isEmpty()) {
-            println("[enrichment] No new articles to process")
+        if (targetIds.isEmpty()) {
+            val message = if (replayRawArticleIds == null) {
+                "No new articles to process"
+            } else {
+                "No replay candidates to process"
+            }
+            println("[enrichment] $message")
             return
         }
 
-        println("[enrichment] Found ${unprocessedIds.size} unprocessed articles")
+        if (replayRawArticleIds == null) {
+            println("[enrichment] Found ${targetIds.size} unprocessed articles")
+        } else {
+            println("[enrichment] Replaying ${targetIds.size} targeted failed article(s)")
+        }
 
-        val rawArticles = rawArticleRepository.findAll()
-            .filter { it.id in unprocessedIds }
+        val rawArticlesById = rawArticleRepository.findAll().associateBy { it.id }
+        val rawArticles = targetIds.mapNotNull { rawArticlesById[it] }
+        val missingCount = targetIds.size - rawArticles.size
+        if (missingCount > 0) {
+            println("[enrichment] Skipping $missingCount target(s) missing in raw article storage")
+        }
 
         var processedCount = 0
         var failedCount = 0

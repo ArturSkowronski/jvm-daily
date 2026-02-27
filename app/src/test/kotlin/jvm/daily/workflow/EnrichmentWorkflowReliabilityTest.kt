@@ -125,6 +125,43 @@ class EnrichmentWorkflowReliabilityTest {
         assertTrue(saved[0].topics.all { it.length in 1..40 })
     }
 
+    @Test
+    fun `replay mode processes only targeted ids`() = runTest {
+        val raw = mutableListOf(
+            article("keep", "Keep", "Keep content"),
+            article("replay", "Replay", "Replay content"),
+        )
+        val saved = mutableListOf<ProcessedArticle>()
+
+        EnrichmentWorkflow(
+            rawArticleRepository = inMemoryRawRepo(raw),
+            processedArticleRepository = inMemoryProcessedRepo(saved, emptyList()),
+            llmClient = stubLLMClient(listOf(validJson(summary = longSummary()))),
+            replayRawArticleIds = setOf("replay"),
+            retryBackoffMs = 0,
+        ).execute()
+
+        assertEquals(1, saved.size)
+        assertEquals("replay", saved[0].id)
+    }
+
+    @Test
+    fun `replay mode skips missing raw ids deterministically`() = runTest {
+        val raw = mutableListOf(article("exists", "Exists", "Content"))
+        val saved = mutableListOf<ProcessedArticle>()
+
+        EnrichmentWorkflow(
+            rawArticleRepository = inMemoryRawRepo(raw),
+            processedArticleRepository = inMemoryProcessedRepo(saved, emptyList()),
+            llmClient = stubLLMClient(listOf(validJson(summary = longSummary()))),
+            replayRawArticleIds = linkedSetOf("missing", "exists"),
+            retryBackoffMs = 0,
+        ).execute()
+
+        assertEquals(1, saved.size)
+        assertEquals("exists", saved[0].id)
+    }
+
     private fun article(id: String, title: String, content: String) = Article(
         id = id,
         title = title,
@@ -171,6 +208,14 @@ class EnrichmentWorkflowReliabilityTest {
             storage.filter { it.processedAt >= startDate && it.processedAt <= endDate }
         override fun findFailedSince(since: Instant) =
             storage.filter { it.processedAt >= since && it.outcomeStatus == EnrichmentOutcomeStatus.FAILED }
+        override fun findFailedRawArticleIds(since: Instant, limit: Int): List<String> =
+            storage
+                .filter { it.processedAt >= since && it.outcomeStatus == EnrichmentOutcomeStatus.FAILED }
+                .sortedByDescending { it.processedAt }
+                .map { it.id }
+                .take(limit.coerceAtLeast(0))
+        override fun findFailedByIds(ids: List<String>): List<ProcessedArticle> =
+            ids.mapNotNull { id -> storage.find { it.id == id && it.outcomeStatus == EnrichmentOutcomeStatus.FAILED } }
         override fun findUnprocessedRawArticles(since: Instant) = unprocessedIds
         override fun existsById(id: String) = storage.any { it.id == id }
         override fun count(): Long = storage.size.toLong()

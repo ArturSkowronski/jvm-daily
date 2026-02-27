@@ -106,6 +106,8 @@ class OutgressWorkflowTest {
         override fun findAll(): List<ProcessedArticle> = articles
         override fun findByDateRange(startDate: Instant, endDate: Instant): List<ProcessedArticle> = articles
         override fun findFailedSince(since: Instant): List<ProcessedArticle> = emptyList()
+        override fun findFailedRawArticleIds(since: Instant, limit: Int): List<String> = emptyList()
+        override fun findFailedByIds(ids: List<String>): List<ProcessedArticle> = emptyList()
         override fun findUnprocessedRawArticles(since: Instant): List<String> = emptyList()
         override fun existsById(id: String): Boolean = false
         override fun count(): Long = articles.size.toLong()

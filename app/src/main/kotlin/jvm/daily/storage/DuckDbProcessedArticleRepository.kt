@@ -141,6 +141,51 @@ class DuckDbProcessedArticleRepository(private val connection: Connection) : Pro
         return results
     }
 
+    override fun findFailedRawArticleIds(since: Instant, limit: Int): List<String> {
+        if (limit <= 0) return emptyList()
+
+        val results = mutableListOf<String>()
+        connection.prepareStatement(
+            """
+            SELECT id FROM processed_articles
+            WHERE processed_at >= ? AND outcome_status = 'FAILED'
+            ORDER BY processed_at DESC, id ASC
+            LIMIT ?
+            """.trimIndent()
+        ).use { stmt ->
+            stmt.setString(1, since.toString())
+            stmt.setInt(2, limit)
+            stmt.executeQuery().use { rs ->
+                while (rs.next()) {
+                    results.add(rs.getString("id"))
+                }
+            }
+        }
+        return results
+    }
+
+    override fun findFailedByIds(ids: List<String>): List<ProcessedArticle> {
+        if (ids.isEmpty()) return emptyList()
+
+        val placeholders = ids.joinToString(",") { "?" }
+        val sql = """
+            SELECT * FROM processed_articles
+            WHERE outcome_status = 'FAILED' AND id IN ($placeholders)
+            """.trimIndent()
+
+        val byId = mutableMapOf<String, ProcessedArticle>()
+        connection.prepareStatement(sql).use { stmt ->
+            ids.forEachIndexed { index, id -> stmt.setString(index + 1, id) }
+            stmt.executeQuery().use { rs ->
+                while (rs.next()) {
+                    val article = rs.toProcessedArticle()
+                    byId[article.id] = article
+                }
+            }
+        }
+        return ids.mapNotNull { byId[it] }
+    }
+
     override fun findUnprocessedRawArticles(since: Instant): List<String> {
         val results = mutableListOf<String>()
         connection.prepareStatement(
