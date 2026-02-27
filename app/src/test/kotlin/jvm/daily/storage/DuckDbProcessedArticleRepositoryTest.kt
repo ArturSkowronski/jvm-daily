@@ -76,6 +76,66 @@ class DuckDbProcessedArticleRepositoryTest {
         assertEquals("failed-1", failed[0].id)
     }
 
+    @Test
+    fun `findFailedRawArticleIds returns deterministic latest-first ids with limit`() {
+        repository.save(
+            processedArticle(
+                id = "failed-newer",
+                outcomeStatus = EnrichmentOutcomeStatus.FAILED,
+                failureReason = "TRANSPORT: timeout",
+                processedAt = Instant.parse("2026-02-27T21:00:00Z"),
+            )
+        )
+        repository.save(
+            processedArticle(
+                id = "failed-older",
+                outcomeStatus = EnrichmentOutcomeStatus.FAILED,
+                failureReason = "PARSE_JSON: invalid token",
+                processedAt = Instant.parse("2026-02-27T20:00:00Z"),
+            )
+        )
+        repository.save(
+            processedArticle(
+                id = "success",
+                outcomeStatus = EnrichmentOutcomeStatus.SUCCESS,
+                processedAt = Instant.parse("2026-02-27T22:00:00Z"),
+            )
+        )
+
+        val ids = repository.findFailedRawArticleIds(
+            since = Instant.parse("2026-02-27T00:00:00Z"),
+            limit = 1,
+        )
+        assertEquals(listOf("failed-newer"), ids)
+    }
+
+    @Test
+    fun `findFailedByIds returns only failed records preserving input order`() {
+        repository.save(
+            processedArticle(
+                id = "failed-1",
+                outcomeStatus = EnrichmentOutcomeStatus.FAILED,
+                failureReason = "VALIDATION: empty summary",
+            )
+        )
+        repository.save(
+            processedArticle(
+                id = "success-1",
+                outcomeStatus = EnrichmentOutcomeStatus.SUCCESS,
+            )
+        )
+        repository.save(
+            processedArticle(
+                id = "failed-2",
+                outcomeStatus = EnrichmentOutcomeStatus.FAILED,
+                failureReason = "TRANSPORT: timeout",
+            )
+        )
+
+        val failed = repository.findFailedByIds(listOf("failed-2", "success-1", "missing", "failed-1"))
+        assertEquals(listOf("failed-2", "failed-1"), failed.map { it.id })
+    }
+
     private fun processedArticle(
         id: String,
         summary: String = "This is a long enough summary to satisfy enrichment validation and keep repository tests deterministic for processed record persistence checks in this phase.",
@@ -86,6 +146,7 @@ class DuckDbProcessedArticleRepositoryTest {
         lastAttemptAt: Instant? = null,
         attemptCount: Int = 1,
         warnings: List<String> = emptyList(),
+        processedAt: Instant = Instant.parse("2026-02-27T21:00:00Z"),
     ) = ProcessedArticle(
         id = id,
         originalTitle = "Title $id",
@@ -98,7 +159,7 @@ class DuckDbProcessedArticleRepositoryTest {
         author = "author",
         publishedAt = Instant.parse("2026-02-27T20:00:00Z"),
         ingestedAt = Instant.parse("2026-02-27T20:00:00Z"),
-        processedAt = Instant.parse("2026-02-27T21:00:00Z"),
+        processedAt = processedAt,
         entities = entities,
         topics = topics,
         engagementScore = 67.0,

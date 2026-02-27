@@ -9,6 +9,8 @@ interface ProcessedArticleRepository {
     fun findAll(): List<ProcessedArticle>
     fun findByDateRange(startDate: Instant, endDate: Instant): List<ProcessedArticle>
     fun findFailedSince(since: Instant): List<ProcessedArticle>
+    fun findFailedRawArticleIds(since: Instant, limit: Int): List<String>
+    fun findFailedByIds(ids: List<String>): List<ProcessedArticle>
     fun findUnprocessedRawArticles(since: Instant): List<String> // Returns raw article IDs
     fun existsById(id: String): Boolean
     fun count(): Long
