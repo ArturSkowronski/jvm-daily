@@ -185,8 +185,10 @@ internal fun createLLMClient(provider: String, apiKey: String?, model: String): 
 
 private class MockLLMClient : LLMClient {
     override suspend fun chat(prompt: String) = """
-        SUMMARY: Mock summary of the article content. This is a placeholder response.
-        ENTITIES: JDK 21, Spring Boot, Kotlin, Virtual Threads
-        TOPICS: framework-releases, performance
+        {
+          "summary": "Mock summary of the article content for local development and tests. This placeholder keeps enrichment contract validation stable while providing deterministic entities and topics for pipeline smoke runs in the JVM Daily project.",
+          "entities": ["JDK 21", "Spring Boot", "Kotlin", "Virtual Threads"],
+          "topics": ["framework-releases", "performance"]
+        }
     """.trimIndent()
 }

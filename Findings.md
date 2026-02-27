@@ -122,3 +122,16 @@
   - default dry-run mismatch/collision reporting
   - explicit `--apply` update mode
   - collision-safe behavior (no overwrite on conflicting target IDs)
+
+## 2026-02-27 — Summarization Core (Phase 4)
+
+- Enrichment parser migrated from tag-based text parsing to strict JSON contract validation.
+- Added explicit enrichment outcome metadata in `ProcessedArticle`:
+  - `outcomeStatus` (`SUCCESS` / `FAILED`)
+  - `failureReason`
+  - `lastAttemptAt`
+  - `attemptCount`
+  - `warnings`
+- Enrichment workflow now persists failed outcomes instead of logging-and-dropping errors.
+- Retry policy is explicit for transport/provider failures (max 3 attempts, fixed backoff).
+- Added dedicated contract, reliability, and repository round-trip tests for summarization semantics.
