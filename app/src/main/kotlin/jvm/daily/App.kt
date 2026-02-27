@@ -58,7 +58,7 @@ fun main(args: Array<String>) {
 }
 
 private fun startDaemon(dbPath: String) {
-    val cron          = System.getenv("PIPELINE_CRON")    ?: "0 7 * * *"
+    val cron          = System.getenv("PIPELINE_CRON")    ?: DEFAULT_PIPELINE_CRON
     val dashboardPort = System.getenv("DASHBOARD_PORT")?.toIntOrNull() ?: 8000
     val storePath     = System.getenv("JOBRUNR_STORE")    ?: "data/jobrunr"
 
@@ -299,3 +299,5 @@ private class MockLLMClient : LLMClient {
         }
     """.trimIndent()
 }
+
+internal const val DEFAULT_PIPELINE_CRON = "0 7 * * *"

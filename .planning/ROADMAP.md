@@ -146,6 +146,6 @@ Plans:
 | 3. Persistence and Idempotency | 3/3 | Complete    | 2026-02-27 |
 | 4. Summarization Core | 3/3 | Complete    | 2026-02-27 |
 | 5. Recoverability Controls | 3/3 | Complete    | 2026-02-27 |
-| 6. Daily Automation and Telemetry | 0/3 | Not started | - |
+| 6. Daily Automation and Telemetry | 1/3 | In Progress|  |
 | 7. Quality Gates | 0/3 | Not started | - |
 | 8. Connector Readiness | 0/3 | Not started | - |
