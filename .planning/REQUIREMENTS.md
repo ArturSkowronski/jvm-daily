@@ -9,8 +9,8 @@
 
 - [x] **ING-01**: User can run a daily RSS ingest that reads all enabled feeds from configuration.
 - [x] **ING-02**: User can continue ingest even when individual feeds fail (per-feed isolation with retry/timeout behavior).
-- [ ] **ING-03**: User can store all fetched raw articles with source metadata and ingest timestamp.
-- [ ] **ING-04**: User can rerun ingest safely without creating duplicate article records.
+- [x] **ING-03**: User can store all fetched raw articles with source metadata and ingest timestamp.
+- [x] **ING-04**: User can rerun ingest safely without creating duplicate article records.
 
 ### Summarization
 
@@ -32,9 +32,9 @@
 
 ### Architecture
 
-- [ ] **ARC-01**: User can add a new source type by implementing a source adapter contract without modifying core workflow orchestration.
+- [x] **ARC-01**: User can add a new source type by implementing a source adapter contract without modifying core workflow orchestration.
 - [ ] **ARC-02**: User can validate a new source adapter using connector contract tests/checklist before enabling it in production runs.
-- [ ] **ARC-03**: User can rely on documented boundaries between source adapters, workflows, and storage components.
+- [x] **ARC-03**: User can rely on documented boundaries between source adapters, workflows, and storage components.
 
 ## v2 Requirements
 
@@ -64,8 +64,8 @@
 |-------------|-------|--------|
 | ING-01 | Phase 2 | Complete |
 | ING-02 | Phase 2 | Complete |
-| ING-03 | Phase 3 | Pending |
-| ING-04 | Phase 3 | Pending |
+| ING-03 | Phase 3 | Complete |
+| ING-04 | Phase 3 | Complete |
 | SUM-01 | Phase 4 | Pending |
 | SUM-02 | Phase 4 | Pending |
 | SUM-03 | Phase 5 | Pending |
@@ -86,4 +86,4 @@
 
 ---
 *Requirements defined: 2026-02-27*
-*Last updated: 2026-02-27 after Phase 2 completion*
+*Last updated: 2026-02-27 after Phase 3 completion*

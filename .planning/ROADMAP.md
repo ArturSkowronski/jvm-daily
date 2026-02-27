@@ -8,7 +8,7 @@ Roadmap hardens the existing JVM Daily brownfield pipeline into a reliable JVM W
 
 - [x] **Phase 1: Architecture Guardrails** - Lock source/workflow/storage boundaries for safe evolution. (completed 2026-02-27)
 - [x] **Phase 2: RSS Ingest Reliability** - Ensure daily RSS ingest remains resilient per feed. (completed 2026-02-27)
-- [ ] **Phase 3: Persistence and Idempotency** - Guarantee rerun-safe storage and canonical dedup behavior.
+- [x] **Phase 3: Persistence and Idempotency** - Guarantee rerun-safe storage and canonical dedup behavior. (completed 2026-02-27)
 - [ ] **Phase 4: Summarization Core** - Stabilize summary/entity/topic processing and persistence.
 - [ ] **Phase 5: Recoverability Controls** - Add replay/retry controls and independent stage operations.
 - [ ] **Phase 6: Daily Automation and Telemetry** - Make daily execution automatic and operationally visible.
@@ -58,9 +58,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 03-01: Canonical dedup key strategy and migration
-- [ ] 03-02: Repository-level idempotency and edge-case tests
-- [ ] 03-03: Backfill/validation script for existing stored records
+- [x] 03-01: Canonical dedup key strategy and migration
+- [x] 03-02: Repository-level idempotency and edge-case tests
+- [x] 03-03: Backfill/validation script for existing stored records
 
 ### Phase 4: Summarization Core
 **Goal**: New raw articles are consistently transformed into reliable processed records.
@@ -143,7 +143,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 1. Architecture Guardrails | 3/3 | Complete    | 2026-02-27 |
 | 2. RSS Ingest Reliability | 3/3 | Complete    | 2026-02-27 |
-| 3. Persistence and Idempotency | 0/3 | Not started | - |
+| 3. Persistence and Idempotency | 3/3 | Complete    | 2026-02-27 |
 | 4. Summarization Core | 0/3 | Not started | - |
 | 5. Recoverability Controls | 0/3 | Not started | - |
 | 6. Daily Automation and Telemetry | 0/3 | Not started | - |
