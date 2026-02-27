@@ -69,4 +69,36 @@ class AppReplayOptionsTest {
             parseQualityReportOptions(listOf("--wat"))
         }
     }
+
+    @Test
+    fun `parseInspectQualityOptions should parse defaults`() {
+        val options = parseInspectQualityOptions(emptyList())
+        assertEquals(24, options.sinceHours)
+        assertEquals(50, options.limit)
+        assertEquals(1, options.minWarnings)
+        assertEquals("output", options.outputDir)
+    }
+
+    @Test
+    fun `parseInspectQualityOptions should parse custom values`() {
+        val options = parseInspectQualityOptions(
+            listOf(
+                "--since-hours", "72",
+                "--limit", "15",
+                "--min-warnings", "2",
+                "--output", "reports",
+            )
+        )
+        assertEquals(72, options.sinceHours)
+        assertEquals(15, options.limit)
+        assertEquals(2, options.minWarnings)
+        assertEquals("reports", options.outputDir)
+    }
+
+    @Test
+    fun `parseInspectQualityOptions should reject unknown option`() {
+        assertFailsWith<IllegalStateException> {
+            parseInspectQualityOptions(listOf("--wat"))
+        }
+    }
 }

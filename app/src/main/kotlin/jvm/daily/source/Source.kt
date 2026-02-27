@@ -15,6 +15,10 @@ import jvm.daily.model.SourceFetchOutcome
  * - `id`, `title`, `sourceType`, `sourceId`, `ingestedAt` are always populated
  * - partial records are allowed (`url`, `author`, `comments` may be null)
  * - adapter exceptions should be handled by the adapter where possible
+ *
+ * Connector certification checks rely on this contract:
+ * - `sourceType` is stable and non-blank
+ * - `fetchOutcomes()` must emit deterministic source-level status and counts
  */
 interface Source {
     val sourceType: String

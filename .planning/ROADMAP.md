@@ -13,7 +13,7 @@ Roadmap hardens the existing JVM Daily brownfield pipeline into a reliable JVM W
 - [x] **Phase 5: Recoverability Controls** - Add replay/retry controls and independent stage operations. (completed 2026-02-27)
 - [x] **Phase 6: Daily Automation and Telemetry** - Make daily execution automatic and operationally visible. (completed 2026-02-27)
 - [x] **Phase 7: Quality Gates** - Enforce data quality assertions and duplicate controls. (completed 2026-02-27)
-- [ ] **Phase 8: Connector Readiness** - Validate onboarding framework for non-RSS connectors.
+- [x] **Phase 8: Connector Readiness** - Validate onboarding framework for non-RSS connectors. (completed 2026-02-27)
 
 ## Phase Details
 
@@ -133,9 +133,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 08-01: Define connector certification checklist + contract tests
-- [ ] 08-02: Implement failed/low-quality item inspection view/report
-- [ ] 08-03: Dry-run new connector skeleton against contracts
+- [x] 08-01: Define connector certification checklist + contract tests
+- [x] 08-02: Implement failed/low-quality item inspection view/report
+- [x] 08-03: Dry-run new connector skeleton against contracts
 
 ## Progress
 
@@ -148,4 +148,4 @@ Plans:
 | 5. Recoverability Controls | 3/3 | Complete    | 2026-02-27 |
 | 6. Daily Automation and Telemetry | 3/3 | Complete    | 2026-02-27 |
 | 7. Quality Gates | 3/3 | Complete    | 2026-02-27 |
-| 8. Connector Readiness | 0/3 | Not started | - |
+| 8. Connector Readiness | 3/3 | Complete    | 2026-02-27 |

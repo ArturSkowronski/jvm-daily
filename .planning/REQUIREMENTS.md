@@ -22,7 +22,7 @@
 
 - [x] **QLT-01**: User can enforce canonical dedup logic (URL/title normalization or equivalent) verified by automated tests.
 - [x] **QLT-02**: User can view daily quality counters (new items, duplicates, feed failures, summarization failures).
-- [ ] **QLT-03**: User can inspect a list of failed or low-quality processed items for manual follow-up.
+- [x] **QLT-03**: User can inspect a list of failed or low-quality processed items for manual follow-up.
 
 ### Operations
 
@@ -33,7 +33,7 @@
 ### Architecture
 
 - [x] **ARC-01**: User can add a new source type by implementing a source adapter contract without modifying core workflow orchestration.
-- [ ] **ARC-02**: User can validate a new source adapter using connector contract tests/checklist before enabling it in production runs.
+- [x] **ARC-02**: User can validate a new source adapter using connector contract tests/checklist before enabling it in production runs.
 - [x] **ARC-03**: User can rely on documented boundaries between source adapters, workflows, and storage components.
 
 ## v2 Requirements
@@ -71,12 +71,12 @@
 | SUM-03 | Phase 5 | Complete |
 | QLT-01 | Phase 7 | Complete |
 | QLT-02 | Phase 7 | Complete |
-| QLT-03 | Phase 8 | Pending |
+| QLT-03 | Phase 8 | Complete |
 | OPS-01 | Phase 6 | Complete |
 | OPS-02 | Phase 5 | Complete |
 | OPS-03 | Phase 6 | Complete |
 | ARC-01 | Phase 1 | Complete |
-| ARC-02 | Phase 8 | Pending |
+| ARC-02 | Phase 8 | Complete |
 | ARC-03 | Phase 1 | Complete |
 
 **Coverage:**
@@ -86,4 +86,4 @@
 
 ---
 *Requirements defined: 2026-02-27*
-*Last updated: 2026-02-27 after Phase 7 completion*
+*Last updated: 2026-02-27 after Phase 8 completion*

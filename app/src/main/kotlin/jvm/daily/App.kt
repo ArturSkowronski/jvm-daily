@@ -37,6 +37,7 @@ import kotlin.time.Duration.Companion.hours
  * ingress|enrichment|clustering|outgress → run single step (debugging)
  * enrichment-replay     → rerun failed enrichment items only (recoverability)
  * quality-report        → generate daily quality counters artifact
+ * inspect-quality       → report failed/low-quality processed items for manual follow-up
  */
 fun main(args: Array<String>) {
     val dbPath = System.getenv("DUCKDB_PATH") ?: "jvm-daily.duckdb"
@@ -51,12 +52,13 @@ fun main(args: Array<String>) {
         "enrichment"  -> { println("JVM Daily — enrichment");  runEnrichment(dbPath) }
         "enrichment-replay" -> { println("JVM Daily — enrichment-replay"); runEnrichmentReplay(dbPath, args.drop(1)) }
         "quality-report" -> { println("JVM Daily — quality-report"); runQualityReport(dbPath, args.drop(1)) }
+        "inspect-quality" -> { println("JVM Daily — inspect-quality"); runInspectQuality(dbPath, args.drop(1)) }
         "clustering"  -> { println("JVM Daily — clustering");  runClustering(dbPath) }
         "outgress"    -> { println("JVM Daily — outgress");     runOutgress(dbPath) }
         "validate-raw-ids" -> { println("JVM Daily — validate-raw-ids"); runValidateRawIds(dbPath, args.drop(1)) }
         else -> {
             System.err.println("Unknown command: $cmd")
-            System.err.println("Valid: pipeline | ingress | enrichment | enrichment-replay | quality-report | clustering | outgress | validate-raw-ids [--apply]")
+            System.err.println("Valid: pipeline | ingress | enrichment | enrichment-replay | quality-report | inspect-quality | clustering | outgress | validate-raw-ids [--apply]")
             exitProcess(1)
         }
     }
@@ -158,6 +160,13 @@ internal data class QualityReportOptions(
     val maxFeedFailures: Long? = null,
     val maxSummarizationFailures: Long? = null,
     val failOnThreshold: Boolean = false,
+)
+
+internal data class InspectQualityOptions(
+    val sinceHours: Int = 24,
+    val limit: Int = 50,
+    val minWarnings: Int = 1,
+    val outputDir: String = "output",
 )
 
 internal fun runEnrichmentReplay(dbPath: String, args: List<String>) {
@@ -360,6 +369,121 @@ internal fun runQualityReport(dbPath: String, args: List<String>) {
             error("Quality gate failed: ${qualityGate.breaches.joinToString("; ")}")
         }
     }
+}
+
+internal fun parseInspectQualityOptions(args: List<String>): InspectQualityOptions {
+    var sinceHours = 24
+    var limit = 50
+    var minWarnings = 1
+    var outputDir = "output"
+    var index = 0
+    while (index < args.size) {
+        when (val arg = args[index]) {
+            "--since-hours" -> {
+                sinceHours = args.getOrNull(index + 1)?.toIntOrNull()
+                    ?: error("Invalid --since-hours value. Expected non-negative integer.")
+                index++
+            }
+            "--limit" -> {
+                limit = args.getOrNull(index + 1)?.toIntOrNull()
+                    ?: error("Invalid --limit value. Expected positive integer.")
+                index++
+            }
+            "--min-warnings" -> {
+                minWarnings = args.getOrNull(index + 1)?.toIntOrNull()
+                    ?: error("Invalid --min-warnings value. Expected non-negative integer.")
+                index++
+            }
+            "--output" -> {
+                outputDir = args.getOrNull(index + 1)
+                    ?.takeIf { it.isNotBlank() }
+                    ?: error("Invalid --output value. Expected a non-empty directory path.")
+                index++
+            }
+            else -> error(
+                "Unknown inspect-quality option: $arg. " +
+                    "Valid: --since-hours <n> | --limit <n> | --min-warnings <n> | --output <dir>"
+            )
+        }
+        index++
+    }
+
+    require(sinceHours >= 0) { "--since-hours must be >= 0" }
+    require(limit > 0) { "--limit must be > 0" }
+    require(minWarnings >= 0) { "--min-warnings must be >= 0" }
+
+    return InspectQualityOptions(
+        sinceHours = sinceHours,
+        limit = limit,
+        minWarnings = minWarnings,
+        outputDir = outputDir,
+    )
+}
+
+internal fun runInspectQuality(dbPath: String, args: List<String>) {
+    val options = parseInspectQualityOptions(args)
+    val since = Clock.System.now().minus(options.sinceHours.hours)
+
+    DuckDbConnectionFactory.persistent(dbPath).use { connection ->
+        val processedRepo = DuckDbProcessedArticleRepository(connection)
+        val candidates = processedRepo.findInspectionCandidates(
+            since = since,
+            limit = options.limit,
+            minWarnings = options.minWarnings,
+        )
+        val report = buildInspectionReport(
+            options = options,
+            since = since,
+            candidates = candidates,
+        )
+
+        val reportDir = Path.of(options.outputDir)
+        reportDir.createDirectories()
+        val date = Clock.System.now().toLocalDateTime(TimeZone.UTC).date
+        val reportPath = reportDir.resolve("inspect-quality-$date.md")
+        reportPath.writeText(report + "\n")
+
+        println(report)
+        println("Inspection report written to: $reportPath")
+    }
+}
+
+private fun buildInspectionReport(
+    options: InspectQualityOptions,
+    since: kotlinx.datetime.Instant,
+    candidates: List<jvm.daily.model.ProcessedArticle>,
+): String {
+    val failedCount = candidates.count { it.outcomeStatus.name == "FAILED" }
+    val warningCount = candidates.size - failedCount
+    return buildString {
+        appendLine("# Inspection Report")
+        appendLine()
+        appendLine("Window: last ${options.sinceHours}h (since $since)")
+        appendLine("Limit: ${options.limit}")
+        appendLine("Minimum warnings for low-quality inclusion: ${options.minWarnings}")
+        appendLine("Candidates: ${candidates.size} (failed=$failedCount, warning-heavy=$warningCount)")
+        appendLine()
+        appendLine("## Items")
+        if (candidates.isEmpty()) {
+            appendLine("- none")
+        } else {
+            candidates.forEach { item ->
+                val reason = item.failureReason ?: "-"
+                val warnings = if (item.warnings.isEmpty()) "-" else item.warnings.joinToString(" | ")
+                appendLine(
+                    "- id=${item.id} status=${item.outcomeStatus} processed_at=${item.processedAt} " +
+                        "warnings=${item.warnings.size} reason=$reason"
+                )
+                appendLine("  source=${item.sourceType}:${item.sourceId}")
+                appendLine("  warning_details=$warnings")
+            }
+        }
+        appendLine()
+        appendLine("## Manual Follow-up")
+        appendLine("1. Prioritize FAILED items and inspect failure_reason for connector or LLM parsing issues.")
+        appendLine("2. For warning-heavy items, inspect warning_details and validate source content quality.")
+        appendLine("3. Replay targeted failures with `enrichment-replay --ids ...` after remediation.")
+    }.trimEnd()
 }
 
 internal fun runClustering(dbPath: String) {
