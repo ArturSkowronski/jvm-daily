@@ -1,6 +1,7 @@
 package jvm.daily.source
 
 import jvm.daily.model.Article
+import jvm.daily.model.CanonicalArticleId
 import kotlinx.datetime.Clock
 import java.nio.file.Files
 import java.nio.file.Path
@@ -28,7 +29,12 @@ class MarkdownFileSource(
                 val content = path.readText()
                 val title = extractTitle(content, path.nameWithoutExtension)
                 Article(
-                    id = "md:${path.nameWithoutExtension}",
+                    id = CanonicalArticleId.from(
+                        namespace = "md",
+                        sourceId = path.fileName.toString(),
+                        title = title,
+                        sourceNativeId = path.nameWithoutExtension,
+                    ),
                     title = title,
                     content = content,
                     sourceType = sourceType,
