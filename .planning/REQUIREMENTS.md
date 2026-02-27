@@ -14,8 +14,8 @@
 
 ### Summarization
 
-- [ ] **SUM-01**: User can process newly ingested articles into stored summaries.
-- [ ] **SUM-02**: User can persist extracted entities/topics linked to each processed article.
+- [x] **SUM-01**: User can process newly ingested articles into stored summaries.
+- [x] **SUM-02**: User can persist extracted entities/topics linked to each processed article.
 - [ ] **SUM-03**: User can retry or reprocess failed summarization items without rerunning the entire pipeline.
 
 ### Quality
@@ -66,8 +66,8 @@
 | ING-02 | Phase 2 | Complete |
 | ING-03 | Phase 3 | Complete |
 | ING-04 | Phase 3 | Complete |
-| SUM-01 | Phase 4 | Pending |
-| SUM-02 | Phase 4 | Pending |
+| SUM-01 | Phase 4 | Complete |
+| SUM-02 | Phase 4 | Complete |
 | SUM-03 | Phase 5 | Pending |
 | QLT-01 | Phase 7 | Pending |
 | QLT-02 | Phase 7 | Pending |
@@ -86,4 +86,4 @@
 
 ---
 *Requirements defined: 2026-02-27*
-*Last updated: 2026-02-27 after Phase 3 completion*
+*Last updated: 2026-02-27 after Phase 4 completion*

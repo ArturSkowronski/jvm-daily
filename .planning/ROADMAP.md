@@ -9,7 +9,7 @@ Roadmap hardens the existing JVM Daily brownfield pipeline into a reliable JVM W
 - [x] **Phase 1: Architecture Guardrails** - Lock source/workflow/storage boundaries for safe evolution. (completed 2026-02-27)
 - [x] **Phase 2: RSS Ingest Reliability** - Ensure daily RSS ingest remains resilient per feed. (completed 2026-02-27)
 - [x] **Phase 3: Persistence and Idempotency** - Guarantee rerun-safe storage and canonical dedup behavior. (completed 2026-02-27)
-- [ ] **Phase 4: Summarization Core** - Stabilize summary/entity/topic processing and persistence.
+- [x] **Phase 4: Summarization Core** - Stabilize summary/entity/topic processing and persistence. (completed 2026-02-27)
 - [ ] **Phase 5: Recoverability Controls** - Add replay/retry controls and independent stage operations.
 - [ ] **Phase 6: Daily Automation and Telemetry** - Make daily execution automatic and operationally visible.
 - [ ] **Phase 7: Quality Gates** - Enforce data quality assertions and duplicate controls.
@@ -73,9 +73,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 04-01: Strengthen enrichment parse contract and validation
-- [ ] 04-02: Persist and verify entities/topics integrity
-- [ ] 04-03: Add summarization quality assertions in tests
+- [x] 04-01: Strengthen enrichment parse contract and validation
+- [x] 04-02: Persist and verify entities/topics integrity
+- [x] 04-03: Add summarization quality assertions in tests
 
 ### Phase 5: Recoverability Controls
 **Goal**: Operators can recover from partial processing failures quickly.
@@ -144,7 +144,7 @@ Plans:
 | 1. Architecture Guardrails | 3/3 | Complete    | 2026-02-27 |
 | 2. RSS Ingest Reliability | 3/3 | Complete    | 2026-02-27 |
 | 3. Persistence and Idempotency | 3/3 | Complete    | 2026-02-27 |
-| 4. Summarization Core | 0/3 | Not started | - |
+| 4. Summarization Core | 3/3 | Complete    | 2026-02-27 |
 | 5. Recoverability Controls | 0/3 | Not started | - |
 | 6. Daily Automation and Telemetry | 0/3 | Not started | - |
 | 7. Quality Gates | 0/3 | Not started | - |
