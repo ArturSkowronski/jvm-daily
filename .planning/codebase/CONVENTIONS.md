@@ -53,6 +53,15 @@
 - Concrete implementations follow interface contracts and are wired in composition root (`App.kt`)
 - Package structure aligns to responsibility domains (`source`, `storage`, `workflow`)
 
+## Architecture Guardrails
+
+- New source connectors belong in `source/` and implement `Source`; avoid placing source-specific logic in workflow classes.
+- Keep workflow code dependent on abstractions, not concrete source/storage implementations.
+- Any change that alters layer boundaries should update architecture tests in:
+  - `app/src/test/kotlin/jvm/daily/architecture/WorkflowBoundaryTest.kt`
+  - `app/src/test/kotlin/jvm/daily/architecture/LayerDependencyTest.kt`
+- Boundary checks must stay in the default `./gradlew test` execution path.
+
 ## Practical guidance for new changes
 
 - Keep new logic behind existing interfaces when possible
