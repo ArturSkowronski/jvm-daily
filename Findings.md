@@ -82,3 +82,13 @@
   - Timeouts: 30min enrichment, 20min clustering
   - DuckDB file-level locking requires sequential task execution
   - Consider CeleryExecutor for parallel processing
+
+## 2026-02-27 — Architecture Guardrails
+
+- Added explicit source-adapter contract documentation in `Source`.
+- Added registry guardrails: reject blank/duplicate `sourceType` at registration.
+- Added architecture dependency tests in `app/src/test/kotlin/jvm/daily/architecture/` to enforce:
+  - workflow does not import concrete source/storage implementations
+  - source does not depend on workflow
+  - storage does not depend on workflow or concrete source implementations
+- Boundary checks run as part of default `./gradlew test`.

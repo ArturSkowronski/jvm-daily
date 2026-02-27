@@ -131,6 +131,13 @@ jvm-daily/
 - **`Workflow`** — Pipeline stage interface (ingress, processing, publishing)
 - **`ArticleRepository`** — Storage abstraction (DuckDB via JDBC)
 
+### Architecture Guardrails
+
+- Source adapters must implement `Source` and return normalized `Article` records.
+- Workflow layer should not import concrete source implementations or concrete DuckDB repositories.
+- Source and storage layers should stay independent from workflow package internals.
+- Guard tests in `app/src/test/kotlin/jvm/daily/architecture/` enforce these boundaries on every `./gradlew test`.
+
 ## Tech Stack
 
 - **Language:** Kotlin 2.2

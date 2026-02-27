@@ -38,6 +38,23 @@
 - Purpose: DTOs and strongly typed config parsing
 - Contains: `model/*`, `config/SourcesConfig.kt`
 
+## Enforced Boundaries
+
+Architecture boundaries are now executable, not advisory. The following tests
+guard dependency direction and layer isolation:
+
+- `app/src/test/kotlin/jvm/daily/architecture/WorkflowBoundaryTest.kt`
+- `app/src/test/kotlin/jvm/daily/architecture/LayerDependencyTest.kt`
+
+### Boundary Rules
+
+- Workflow package must not import concrete source implementations.
+- Workflow package must not import concrete DuckDB repositories directly.
+- Source package must not depend on workflow package.
+- Storage package must not depend on workflow package or concrete source implementations.
+
+These checks run in the default `./gradlew test` path.
+
 ## Data Flow
 
 **Pipeline run (batch):**
