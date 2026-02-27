@@ -6,7 +6,7 @@ Roadmap hardens the existing JVM Daily brownfield pipeline into a reliable JVM W
 
 ## Phases
 
-- [ ] **Phase 1: Architecture Guardrails** - Lock source/workflow/storage boundaries for safe evolution.
+- [x] **Phase 1: Architecture Guardrails** - Lock source/workflow/storage boundaries for safe evolution. (completed 2026-02-27)
 - [ ] **Phase 2: RSS Ingest Reliability** - Ensure daily RSS ingest remains resilient per feed.
 - [ ] **Phase 3: Persistence and Idempotency** - Guarantee rerun-safe storage and canonical dedup behavior.
 - [ ] **Phase 4: Summarization Core** - Stabilize summary/entity/topic processing and persistence.
@@ -141,7 +141,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Architecture Guardrails | 0/3 | Not started | - |
+| 1. Architecture Guardrails | 0/3 | Complete    | 2026-02-27 |
 | 2. RSS Ingest Reliability | 0/3 | Not started | - |
 | 3. Persistence and Idempotency | 0/3 | Not started | - |
 | 4. Summarization Core | 0/3 | Not started | - |
