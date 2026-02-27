@@ -162,6 +162,24 @@ class EnrichmentWorkflowReliabilityTest {
         assertEquals("exists", saved[0].id)
     }
 
+    @Test
+    fun `replay mode can leave target in failed state`() = runTest {
+        val raw = mutableListOf(article("f1", "Replay Failure", "Replay failure content"))
+        val saved = mutableListOf<ProcessedArticle>()
+
+        EnrichmentWorkflow(
+            rawArticleRepository = inMemoryRawRepo(raw),
+            processedArticleRepository = inMemoryProcessedRepo(saved, emptyList()),
+            llmClient = stubLLMClient(listOf("invalid-json")),
+            replayRawArticleIds = setOf("f1"),
+            retryBackoffMs = 0,
+        ).execute()
+
+        assertEquals(1, saved.size)
+        assertEquals("f1", saved[0].id)
+        assertEquals(EnrichmentOutcomeStatus.FAILED, saved[0].outcomeStatus)
+    }
+
     private fun article(id: String, title: String, content: String) = Article(
         id = id,
         title = title,

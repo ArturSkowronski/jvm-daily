@@ -135,3 +135,19 @@
 - Enrichment workflow now persists failed outcomes instead of logging-and-dropping errors.
 - Retry policy is explicit for transport/provider failures (max 3 attempts, fixed backoff).
 - Added dedicated contract, reliability, and repository round-trip tests for summarization semantics.
+
+## 2026-02-27 — Recoverability Controls (Phase 5)
+
+- Added replay selectors to processed repository:
+  - `findFailedRawArticleIds(since, limit)` for deterministic candidate preview.
+  - `findFailedByIds(ids)` for targeted failed-item lookup in input order.
+- `EnrichmentWorkflow` now supports targeted replay via explicit `replayRawArticleIds`.
+- New CLI command: `enrichment-replay` with safe selector constraints:
+  - either `--ids` or `--since-hours/--limit`
+  - optional `--dry-run` preview mode before mutation.
+- Recovery verification pattern now test-backed:
+  1. create failures
+  2. preview candidates
+  3. replay subset
+  4. verify success/failure counts post-replay.
+- Practical gotcha: replay can only process IDs that still exist in raw article storage; missing IDs are skipped and logged.

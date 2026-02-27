@@ -81,6 +81,25 @@ Replay selector rules:
 2. Start with `--dry-run` before mutating runs.
 3. Replay targets failed enrichment records only; no ingest rerun is required.
 
+### Recoverability Runbook (Phase 5)
+
+1. Preview candidates:
+```bash
+./gradlew run --args="enrichment-replay --dry-run --since-hours 24 --limit 20"
+```
+2. Validate candidate IDs and failure reasons in DB explorer/logs.
+3. Execute replay:
+```bash
+./gradlew run --args="enrichment-replay --since-hours 24 --limit 20"
+```
+4. Verify outcomes:
+   - rerun dry-run and confirm failed candidate count dropped
+   - inspect `still-failed` output from replay command
+5. If failures remain, rerun with focused IDs:
+```bash
+./gradlew run --args="enrichment-replay --ids <id1,id2,...>"
+```
+
 **Environment Variables:**
 
 | Variable | Default | Description |
