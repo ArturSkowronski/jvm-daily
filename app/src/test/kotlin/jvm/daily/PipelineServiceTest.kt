@@ -58,4 +58,43 @@ class PipelineServiceTest {
         assertTrue(starts[2].contains("clustering"))
         assertTrue(starts[3].contains("outgress"))
     }
+
+    @Test
+    fun `should emit structured telemetry with duration and status for successful stages`() {
+        val logs = mutableListOf<String>()
+        val service = PipelineService(
+            ingressFn = {},
+            enrichmentFn = {},
+            clusteringFn = {},
+            outgressFn = {},
+        )
+
+        service.runSteps("/dev/null", log = logs::add)
+
+        val telemetry = logs.filter { it.startsWith("[pipeline][telemetry]") }
+        assertEquals(4, telemetry.size)
+        telemetry.forEach { line ->
+            assertTrue(line.contains("status=SUCCESS"))
+            assertTrue(line.contains("duration_ms="))
+            assertTrue(line.contains("stage="))
+            assertTrue(line.contains("run_id="))
+        }
+    }
+
+    @Test
+    fun `should emit failed telemetry when stage throws`() {
+        val logs = mutableListOf<String>()
+        val service = PipelineService(
+            ingressFn = { error("boom") },
+            enrichmentFn = {},
+            clusteringFn = {},
+            outgressFn = {},
+        )
+
+        assertThrows<IllegalStateException> { service.runSteps("/dev/null", log = logs::add) }
+        val failedTelemetry = logs.single { it.startsWith("[pipeline][telemetry]") }
+        assertTrue(failedTelemetry.contains("status=FAILED"))
+        assertTrue(failedTelemetry.contains("stage=ingress"))
+        assertTrue(failedTelemetry.contains("error=\"boom\""))
+    }
 }

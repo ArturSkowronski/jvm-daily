@@ -100,6 +100,12 @@ Replay selector rules:
 ./gradlew run --args="enrichment-replay --ids <id1,id2,...>"
 ```
 
+**Daily automation telemetry (Phase 6):**
+- `PipelineService` emits structured stage telemetry lines:
+  - `run_id`, `stage`, `status`, `started_at`, `ended_at`, `duration_ms`, optional `error`
+- Example log prefix: `[pipeline][telemetry] ...`
+- Stage status is emitted on both success and failure paths for quick diagnosis.
+
 **Environment Variables:**
 
 | Variable | Default | Description |
