@@ -27,6 +27,7 @@ class EnrichmentWorkflow(
     private val processedArticleRepository: ProcessedArticleRepository,
     private val llmClient: LLMClient,
     private val clock: Clock = Clock.System,
+    private val retryBackoffMs: Long = RETRY_BACKOFF_MS,
 ) : Workflow {
 
     override val name: String = "enrichment"
@@ -88,7 +89,7 @@ class EnrichmentWorkflow(
                 llmClient.chat(prompt)
             } catch (e: Exception) {
                 if (attempt < MAX_ATTEMPTS) {
-                    delay(RETRY_BACKOFF_MS)
+                    delay(retryBackoffMs)
                     continue
                 }
                 return failedArticle(

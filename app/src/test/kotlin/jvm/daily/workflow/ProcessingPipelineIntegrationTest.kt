@@ -8,6 +8,11 @@ import jvm.daily.storage.DuckDbConnectionFactory
 import jvm.daily.storage.DuckDbProcessedArticleRepository
 import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.Clock
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonArray
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Tag
@@ -30,6 +35,7 @@ import kotlin.test.assertTrue
  */
 @Tag("integration")
 class ProcessingPipelineIntegrationTest {
+    private val json = Json
 
     private lateinit var connection: Connection
     private lateinit var articleRepo: ArticleRepository
@@ -248,11 +254,11 @@ class ProcessingPipelineIntegrationTest {
                     "Article discusses recent developments in the JVM ecosystem with technical details and community insights."
             }
 
-            return """
-                SUMMARY: $summary
-                ENTITIES: ${entities.joinToString(", ")}
-                TOPICS: ${topics.joinToString(", ")}
-            """.trimIndent()
+            return buildJsonObject {
+                put("summary", summary)
+                put("entities", buildJsonArray { entities.forEach { add(JsonPrimitive(it)) } })
+                put("topics", buildJsonArray { topics.forEach { add(JsonPrimitive(it)) } })
+            }.toString()
         }
     }
 }

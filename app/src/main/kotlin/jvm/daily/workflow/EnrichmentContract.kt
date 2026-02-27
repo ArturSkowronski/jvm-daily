@@ -5,7 +5,7 @@ import kotlinx.serialization.json.Json
 
 object EnrichmentContract {
     private val json = Json { ignoreUnknownKeys = true }
-    private const val MIN_SUMMARY_WORDS = 20
+    private const val MIN_SUMMARY_WORDS = 10
     private const val SUMMARY_WARNING_WORDS = 220
     private const val MAX_TOPICS = 5
 

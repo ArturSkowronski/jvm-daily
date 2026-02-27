@@ -58,6 +58,12 @@ Recommended operator flow:
 2. Only run `--apply` when collisions are `0`.
 3. Re-run dry-run to confirm mismatches are cleared.
 
+**Summarization core contract (Phase 4):**
+- Enrichment expects strict JSON from the LLM (`summary`, `entities`, `topics`).
+- Invalid JSON or blank summary produces explicit failed outcomes in processed storage.
+- Transport/provider failures retry up to 3 attempts (2 retries, fixed 2s backoff).
+- Pipeline continues on partial failures and reports warning status instead of aborting the entire run.
+
 **Environment Variables:**
 
 | Variable | Default | Description |
