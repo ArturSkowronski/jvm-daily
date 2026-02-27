@@ -11,6 +11,7 @@ Inspired by Latent Space AI News architecture.
 """
 
 from datetime import datetime, timedelta
+import os
 from pathlib import Path
 
 from airflow import DAG
@@ -32,6 +33,8 @@ default_args = {
 PROJECT_ROOT = Path("/jvm-daily")
 GRADLE_WRAPPER = PROJECT_ROOT / "gradlew"
 DB_PATH = PROJECT_ROOT / "jvm-daily.duckdb"
+DEFAULT_PIPELINE_CRON = "0 7 * * *"
+PIPELINE_CRON = os.getenv("PIPELINE_CRON", DEFAULT_PIPELINE_CRON)
 
 # Java environment (required for Gradle)
 JAVA_HOME = "/opt/java"
@@ -78,7 +81,7 @@ with DAG(
     'jvm_daily_pipeline',
     default_args=default_args,
     description='JVM Daily processing pipeline - ingress, enrichment, clustering, outgress',
-    schedule='0 7 * * *',  # Daily at 7am UTC
+    schedule=PIPELINE_CRON,  # Must match app DEFAULT_PIPELINE_CRON by default
     start_date=datetime(2026, 2, 10),
     catchup=False,
     tags=['jvm-daily', 'processing', 'newsletter'],

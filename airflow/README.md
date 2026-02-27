@@ -118,12 +118,19 @@ In Airflow UI, go to **Admin → Variables** and add:
 ### Schedule
 
 ```python
-schedule='0 7 * * *'  # Daily at 7am UTC
+schedule=PIPELINE_CRON  # defaults to 0 7 * * *
 ```
 
 To change:
 - Edit `airflow/dags/jvm_daily_pipeline.py`
 - Use cron expression or timedelta
+- Or set `PIPELINE_CRON` in scheduler environment (recommended to keep parity with JobRunr daemon mode)
+
+### Scheduler Contract (Phase 6)
+
+- Canonical default cron: `0 7 * * *` (daily 07:00 UTC)
+- JobRunr daemon and Airflow DAG both use `PIPELINE_CRON` with the same default.
+- Daily contract means running the same stage sequence: `ingress -> enrichment -> clustering -> outgress`.
 
 ### Task Timeouts
 
