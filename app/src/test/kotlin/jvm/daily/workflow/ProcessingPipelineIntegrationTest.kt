@@ -19,6 +19,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import java.sql.Connection
+import kotlin.time.Duration.Companion.hours
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -231,6 +232,62 @@ class ProcessingPipelineIntegrationTest {
         assertEquals(EnrichmentOutcomeStatus.SUCCESS, recovered.outcomeStatus)
         assertTrue(recovered.summary.contains("Replay execution produced"))
         assertTrue(recovered.topics.contains("recovery"))
+    }
+
+    @Test
+    fun `recovery sequence supports preview then replay then outcome verification`() = runTest {
+        val replayId = "runbook-1"
+        val stayFailedId = "runbook-2"
+        articleRepo.saveAll(
+            listOf(
+                article(replayId, "Replay Candidate", "Replay candidate content."),
+                article(stayFailedId, "Still Failed Candidate", "Still failed candidate content."),
+            )
+        )
+
+        val failingLlm = object : LLMClient {
+            override suspend fun chat(prompt: String): String = "invalid-json"
+        }
+        EnrichmentWorkflow(articleRepo, processedRepo, failingLlm, retryBackoffMs = 0).execute()
+
+        val previewIds = processedRepo.findFailedRawArticleIds(
+            since = Clock.System.now().minus(24.hours),
+            limit = 10,
+        )
+        assertTrue(previewIds.contains(replayId))
+        assertTrue(previewIds.contains(stayFailedId))
+
+        val replayLlm = object : LLMClient {
+            override suspend fun chat(prompt: String): String {
+                return if (prompt.contains("Title: Replay Candidate")) {
+                    buildJsonObject {
+                        put(
+                            "summary",
+                            "Recovered summary now passes validation with sufficient detail to confirm replay behavior in the integration test."
+                        )
+                        put("entities", buildJsonArray { add(JsonPrimitive("Kotlin")) })
+                        put("topics", buildJsonArray { add(JsonPrimitive("recovery")) })
+                    }.toString()
+                } else {
+                    "invalid-json"
+                }
+            }
+        }
+
+        EnrichmentWorkflow(
+            rawArticleRepository = articleRepo,
+            processedArticleRepository = processedRepo,
+            llmClient = replayLlm,
+            replayRawArticleIds = setOf(replayId, stayFailedId),
+            retryBackoffMs = 0,
+        ).execute()
+
+        val replayTargets = processedRepo.findFailedByIds(listOf(replayId, stayFailedId))
+        assertEquals(listOf(stayFailedId), replayTargets.map { it.id })
+
+        val all = processedRepo.findAll().associateBy { it.id }
+        assertEquals(EnrichmentOutcomeStatus.SUCCESS, all.getValue(replayId).outcomeStatus)
+        assertEquals(EnrichmentOutcomeStatus.FAILED, all.getValue(stayFailedId).outcomeStatus)
     }
 
     private fun article(id: String, title: String, content: String) = Article(
