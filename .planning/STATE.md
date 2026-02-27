@@ -12,7 +12,7 @@ See: .planning/PROJECT.md (updated 2026-02-27)
 Phase: 1 of 8 (Architecture Guardrails)
 Plan: 1 of 3 in current phase
 Status: Ready to plan
-Last activity: 2026-02-27 — Created initial roadmap and mapped all v1 requirements
+Last activity: 2026-02-27 — Captured Phase 1 context and decisions for adapter boundary contract
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -42,7 +42,7 @@ Recent decisions affecting current work:
 
 - [Init]: Treat project as brownfield hardening, not rewrite.
 - [Init]: Keep v1 scoped to RSS + storage + summarization reliability.
-- [Init]: Defer email publishing and non-RSS connectors to later milestones.
+- [Phase 1 Context]: Adapter contract: fetch+normalize, partial-record tolerance, central fingerprint, per-adapter failure isolation.
 
 ### Pending Todos
 
@@ -54,6 +54,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-27 20:32
-Stopped at: Project initialization completed with roadmap ready for phase planning
-Resume file: None
+Last session: 2026-02-27 20:59
+Stopped at: Phase 1 context gathered
+Resume file: .planning/phases/01-architecture-guardrails/01-CONTEXT.md
