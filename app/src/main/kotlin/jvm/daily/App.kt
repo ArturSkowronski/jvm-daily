@@ -108,7 +108,9 @@ internal fun runIngress(dbPath: String) {
             register(MarkdownFileSource(Path.of(sourcesDir)))
             if (config.rss.isNotEmpty()) register(RssSource(config.rss))
         }
-        runBlocking { IngressWorkflow(sourceRegistry, repository).execute() }
+        val workflow = IngressWorkflow(sourceRegistry, repository)
+        runBlocking { workflow.execute() }
+        println("Ingest status: ${workflow.lastRunStatus}")
         println("Total articles in DB: ${repository.count()}")
     }
 }
