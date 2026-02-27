@@ -45,6 +45,19 @@
 
 Ingress output now includes a per-feed summary with status, fetched/new/duplicate counts, and error reasons.
 
+**Raw article ID validation/backfill (Phase 3):**
+```bash
+# Dry-run: report mismatches/collisions without mutating rows
+./gradlew run --args="validate-raw-ids"
+
+# Apply mode: update mismatched IDs when collision-free
+./gradlew run --args="validate-raw-ids --apply"
+```
+Recommended operator flow:
+1. Run dry-run and check mismatch/collision counters.
+2. Only run `--apply` when collisions are `0`.
+3. Re-run dry-run to confirm mismatches are cleared.
+
 **Environment Variables:**
 
 | Variable | Default | Description |

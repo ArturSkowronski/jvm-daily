@@ -8,6 +8,7 @@ import jvm.daily.source.SourceRegistry
 import jvm.daily.storage.DuckDbArticleRepository
 import jvm.daily.storage.DuckDbConnectionFactory
 import jvm.daily.storage.DuckDbProcessedArticleRepository
+import jvm.daily.tools.ValidateRawArticleIds
 import jvm.daily.workflow.ClusteringWorkflow
 import jvm.daily.workflow.EnrichmentWorkflow
 import jvm.daily.workflow.IngressWorkflow
@@ -43,9 +44,10 @@ fun main(args: Array<String>) {
         "enrichment"  -> { println("JVM Daily — enrichment");  runEnrichment(dbPath) }
         "clustering"  -> { println("JVM Daily — clustering");  runClustering(dbPath) }
         "outgress"    -> { println("JVM Daily — outgress");     runOutgress(dbPath) }
+        "validate-raw-ids" -> { println("JVM Daily — validate-raw-ids"); runValidateRawIds(dbPath, args.drop(1)) }
         else -> {
             System.err.println("Unknown command: $cmd")
-            System.err.println("Valid: pipeline | ingress | enrichment | clustering | outgress")
+            System.err.println("Valid: pipeline | ingress | enrichment | clustering | outgress | validate-raw-ids [--apply]")
             exitProcess(1)
         }
     }
@@ -159,6 +161,19 @@ internal fun runOutgress(dbPath: String) {
     DuckDbConnectionFactory.persistent(dbPath).use { connection ->
         val processedRepo = DuckDbProcessedArticleRepository(connection)
         runBlocking { OutgressWorkflow(processedRepo, outputDir, outgressDays = outgressDays).execute() }
+    }
+}
+
+internal fun runValidateRawIds(dbPath: String, args: List<String>) {
+    val applyUpdates = args.contains("--apply")
+    DuckDbConnectionFactory.persistent(dbPath).use { connection ->
+        val summary = ValidateRawArticleIds(connection).run(applyUpdates = applyUpdates)
+        val mode = if (applyUpdates) "apply" else "dry-run"
+        println("Validate raw IDs mode: $mode")
+        println(
+            "Raw ID summary: total=${summary.totalRows}, mismatches=${summary.mismatches}, " +
+                "collisions=${summary.collisions}, updated=${summary.updated}"
+        )
     }
 }
 
