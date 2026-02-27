@@ -7,8 +7,8 @@
 
 ### Ingestion
 
-- [ ] **ING-01**: User can run a daily RSS ingest that reads all enabled feeds from configuration.
-- [ ] **ING-02**: User can continue ingest even when individual feeds fail (per-feed isolation with retry/timeout behavior).
+- [x] **ING-01**: User can run a daily RSS ingest that reads all enabled feeds from configuration.
+- [x] **ING-02**: User can continue ingest even when individual feeds fail (per-feed isolation with retry/timeout behavior).
 - [ ] **ING-03**: User can store all fetched raw articles with source metadata and ingest timestamp.
 - [ ] **ING-04**: User can rerun ingest safely without creating duplicate article records.
 
@@ -62,8 +62,8 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ING-01 | Phase 2 | Pending |
-| ING-02 | Phase 2 | Pending |
+| ING-01 | Phase 2 | Complete |
+| ING-02 | Phase 2 | Complete |
 | ING-03 | Phase 3 | Pending |
 | ING-04 | Phase 3 | Pending |
 | SUM-01 | Phase 4 | Pending |
@@ -86,4 +86,4 @@
 
 ---
 *Requirements defined: 2026-02-27*
-*Last updated: 2026-02-27 after initial definition*
+*Last updated: 2026-02-27 after Phase 2 completion*
