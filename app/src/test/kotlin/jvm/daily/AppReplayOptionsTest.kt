@@ -1,0 +1,38 @@
+package jvm.daily
+
+import org.junit.jupiter.api.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
+import kotlin.test.assertFailsWith
+
+class AppReplayOptionsTest {
+
+    @Test
+    fun `parseReplayOptions should parse defaults`() {
+        val options = parseReplayOptions(emptyList())
+        assertEquals(24 * 7, options.sinceHours)
+        assertEquals(50, options.limit)
+        assertTrue(options.ids.isEmpty())
+    }
+
+    @Test
+    fun `parseReplayOptions should parse id selector and dry-run`() {
+        val options = parseReplayOptions(listOf("--ids", "a1,a2", "--dry-run"))
+        assertEquals(listOf("a1", "a2"), options.ids)
+        assertTrue(options.dryRun)
+    }
+
+    @Test
+    fun `parseReplayOptions should reject mixed ids and range selectors`() {
+        assertFailsWith<IllegalArgumentException> {
+            parseReplayOptions(listOf("--ids", "a1", "--limit", "10"))
+        }
+    }
+
+    @Test
+    fun `parseReplayOptions should reject unknown option`() {
+        assertFailsWith<IllegalStateException> {
+            parseReplayOptions(listOf("--wat"))
+        }
+    }
+}

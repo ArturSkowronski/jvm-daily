@@ -14,6 +14,7 @@ import jvm.daily.workflow.EnrichmentWorkflow
 import jvm.daily.workflow.IngressWorkflow
 import jvm.daily.workflow.OutgressWorkflow
 import kotlinx.coroutines.runBlocking
+import kotlinx.datetime.Clock
 import org.h2.jdbcx.JdbcDataSource
 import org.jobrunr.configuration.JobRunr
 import org.jobrunr.jobs.context.JobContext
@@ -23,6 +24,7 @@ import org.jobrunr.storage.sql.h2.H2StorageProvider
 import java.nio.file.Path
 import kotlin.io.path.createDirectories
 import kotlin.system.exitProcess
+import kotlin.time.Duration.Companion.hours
 
 /**
  * Main entry point for JVM Daily.
@@ -30,6 +32,7 @@ import kotlin.system.exitProcess
  * No args              → start JobRunr daemon (scheduler + dashboard)
  * pipeline             → run full pipeline once (useful for first run / testing)
  * ingress|enrichment|clustering|outgress → run single step (debugging)
+ * enrichment-replay     → rerun failed enrichment items only (recoverability)
  */
 fun main(args: Array<String>) {
     val dbPath = System.getenv("DUCKDB_PATH") ?: "jvm-daily.duckdb"
@@ -42,12 +45,13 @@ fun main(args: Array<String>) {
         }
         "ingress"     -> { println("JVM Daily — ingress");     runIngress(dbPath) }
         "enrichment"  -> { println("JVM Daily — enrichment");  runEnrichment(dbPath) }
+        "enrichment-replay" -> { println("JVM Daily — enrichment-replay"); runEnrichmentReplay(dbPath, args.drop(1)) }
         "clustering"  -> { println("JVM Daily — clustering");  runClustering(dbPath) }
         "outgress"    -> { println("JVM Daily — outgress");     runOutgress(dbPath) }
         "validate-raw-ids" -> { println("JVM Daily — validate-raw-ids"); runValidateRawIds(dbPath, args.drop(1)) }
         else -> {
             System.err.println("Unknown command: $cmd")
-            System.err.println("Valid: pipeline | ingress | enrichment | clustering | outgress | validate-raw-ids [--apply]")
+            System.err.println("Valid: pipeline | ingress | enrichment | enrichment-replay | clustering | outgress | validate-raw-ids [--apply]")
             exitProcess(1)
         }
     }
@@ -133,6 +137,109 @@ internal fun runEnrichment(dbPath: String) {
         runBlocking { EnrichmentWorkflow(rawRepo, processedRepo, createLLMClient(llmProvider, llmApiKey, llmModel)).execute() }
         println("Total processed articles: ${processedRepo.count()}")
     }
+}
+
+internal data class ReplayOptions(
+    val sinceHours: Int = 24 * 7,
+    val limit: Int = 50,
+    val ids: List<String> = emptyList(),
+    val dryRun: Boolean = false,
+)
+
+internal fun runEnrichmentReplay(dbPath: String, args: List<String>) {
+    val llmProvider = System.getenv("LLM_PROVIDER") ?: "mock"
+    val llmApiKey   = System.getenv("LLM_API_KEY")
+    val llmModel    = System.getenv("LLM_MODEL") ?: "gpt-4"
+
+    if (llmProvider != "mock" && llmApiKey == null) {
+        error("LLM_API_KEY required for provider '$llmProvider'")
+    }
+
+    val options = parseReplayOptions(args)
+
+    DuckDbConnectionFactory.persistent(dbPath).use { connection ->
+        val rawRepo = DuckDbArticleRepository(connection)
+        val processedRepo = DuckDbProcessedArticleRepository(connection)
+
+        val replayIds = if (options.ids.isNotEmpty()) {
+            processedRepo.findFailedByIds(options.ids).map { it.id }
+        } else {
+            val since = Clock.System.now().minus(options.sinceHours.hours)
+            processedRepo.findFailedRawArticleIds(since = since, limit = options.limit)
+        }
+
+        if (replayIds.isEmpty()) {
+            println("Replay candidates: 0 (no failed items matched selector)")
+            return
+        }
+
+        if (options.dryRun) {
+            println("Replay candidates (${replayIds.size}): ${replayIds.joinToString(", ")}")
+            println("Dry-run only. No enrichment replay executed.")
+            return
+        }
+
+        println("Replaying ${replayIds.size} failed item(s): ${replayIds.joinToString(", ")}")
+        runBlocking {
+            EnrichmentWorkflow(
+                rawArticleRepository = rawRepo,
+                processedArticleRepository = processedRepo,
+                llmClient = createLLMClient(llmProvider, llmApiKey, llmModel),
+                replayRawArticleIds = replayIds.toSet(),
+            ).execute()
+        }
+
+        val stillFailed = processedRepo.findFailedByIds(replayIds)
+        println("Replay finished. requested=${replayIds.size}, still-failed=${stillFailed.size}")
+    }
+}
+
+internal fun parseReplayOptions(args: List<String>): ReplayOptions {
+    var sinceHours = 24 * 7
+    var limit = 50
+    var dryRun = false
+    var ids: List<String> = emptyList()
+
+    var index = 0
+    while (index < args.size) {
+        when (val arg = args[index]) {
+            "--since-hours" -> {
+                sinceHours = args.getOrNull(index + 1)?.toIntOrNull()
+                    ?: error("Invalid --since-hours value. Expected non-negative integer.")
+                index++
+            }
+            "--limit" -> {
+                limit = args.getOrNull(index + 1)?.toIntOrNull()
+                    ?: error("Invalid --limit value. Expected positive integer.")
+                index++
+            }
+            "--ids" -> {
+                val rawIds = args.getOrNull(index + 1)
+                    ?: error("Missing --ids value. Expected comma-separated raw article IDs.")
+                ids = rawIds.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+                index++
+            }
+            "--dry-run" -> dryRun = true
+            else -> error(
+                "Unknown enrichment-replay option: $arg. " +
+                    "Valid: --since-hours <n> | --limit <n> | --ids <id1,id2> | --dry-run"
+            )
+        }
+        index++
+    }
+
+    require(sinceHours >= 0) { "--since-hours must be >= 0" }
+    require(limit > 0) { "--limit must be > 0" }
+    require(ids.isEmpty() || (sinceHours == 24 * 7 && limit == 50)) {
+        "Use either --ids OR (--since-hours/--limit) selectors, not both."
+    }
+
+    return ReplayOptions(
+        sinceHours = sinceHours,
+        limit = limit,
+        ids = ids,
+        dryRun = dryRun,
+    )
 }
 
 internal fun runClustering(dbPath: String) {

@@ -2,6 +2,7 @@ package jvm.daily.workflow
 
 import jvm.daily.ai.LLMClient
 import jvm.daily.model.Article
+import jvm.daily.model.EnrichmentOutcomeStatus
 import jvm.daily.storage.ArticleRepository
 import jvm.daily.storage.DuckDbArticleRepository
 import jvm.daily.storage.DuckDbConnectionFactory
@@ -192,6 +193,44 @@ class ProcessingPipelineIntegrationTest {
         // Second run - should skip already processed
         workflow.execute()
         assertEquals(2, processedRepo.count(), "Should still have 2, no duplicates")
+    }
+
+    @Test
+    fun `replay mode can recover previously failed enrichment item`() = runTest {
+        val failedArticleId = "replay-1"
+        articleRepo.saveAll(listOf(article(failedArticleId, "Recoverable", "Replay content with enough details.")))
+
+        val failingLlm = object : LLMClient {
+            override suspend fun chat(prompt: String): String = "invalid-json"
+        }
+        EnrichmentWorkflow(articleRepo, processedRepo, failingLlm, retryBackoffMs = 0).execute()
+
+        val failedBeforeReplay = processedRepo.findAll().single { it.id == failedArticleId }
+        assertEquals(EnrichmentOutcomeStatus.FAILED, failedBeforeReplay.outcomeStatus)
+
+        val successReplayLlm = object : LLMClient {
+            override suspend fun chat(prompt: String): String = buildJsonObject {
+                put(
+                    "summary",
+                    "Replay execution produced a valid deterministic summary with enough words to pass strict validation for recovery testing in the integration suite."
+                )
+                put("entities", buildJsonArray { add(JsonPrimitive("JDK 21")) })
+                put("topics", buildJsonArray { add(JsonPrimitive("recovery")) })
+            }.toString()
+        }
+
+        EnrichmentWorkflow(
+            rawArticleRepository = articleRepo,
+            processedArticleRepository = processedRepo,
+            llmClient = successReplayLlm,
+            replayRawArticleIds = setOf(failedArticleId),
+            retryBackoffMs = 0,
+        ).execute()
+
+        val recovered = processedRepo.findAll().single { it.id == failedArticleId }
+        assertEquals(EnrichmentOutcomeStatus.SUCCESS, recovered.outcomeStatus)
+        assertTrue(recovered.summary.contains("Replay execution produced"))
+        assertTrue(recovered.topics.contains("recovery"))
     }
 
     private fun article(id: String, title: String, content: String) = Article(
