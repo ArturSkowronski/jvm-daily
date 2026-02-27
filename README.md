@@ -64,6 +64,23 @@ Recommended operator flow:
 - Transport/provider failures retry up to 3 attempts (2 retries, fixed 2s backoff).
 - Pipeline continues on partial failures and reports warning status instead of aborting the entire run.
 
+**Recoverability controls (Phase 5):**
+```bash
+# Preview failed enrichment candidates from the last 7 days (default selector)
+./gradlew run --args="enrichment-replay --dry-run"
+
+# Replay last N failed items from a time window
+./gradlew run --args="enrichment-replay --since-hours 48 --limit 20"
+
+# Replay explicit failed IDs only
+./gradlew run --args="enrichment-replay --ids a1,a2,a3"
+```
+
+Replay selector rules:
+1. Use either `--ids` OR the range selector (`--since-hours` + `--limit`), not both.
+2. Start with `--dry-run` before mutating runs.
+3. Replay targets failed enrichment records only; no ingest rerun is required.
+
 **Environment Variables:**
 
 | Variable | Default | Description |
