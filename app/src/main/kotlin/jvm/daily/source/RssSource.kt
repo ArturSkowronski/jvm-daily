@@ -4,6 +4,7 @@ import com.rometools.rome.io.SyndFeedInput
 import com.rometools.rome.io.XmlReader
 import jvm.daily.config.RssFeedConfig
 import jvm.daily.model.Article
+import jvm.daily.model.CanonicalArticleId
 import jvm.daily.model.FeedIngestResult
 import jvm.daily.model.FeedIngestStatus
 import jvm.daily.model.SourceFetchOutcome
@@ -79,7 +80,13 @@ class RssSource(
                         ?: ""
 
                     Article(
-                        id = "rss:${entry.uri ?: link}",
+                        id = CanonicalArticleId.from(
+                            namespace = "rss",
+                            sourceId = feedConfig.url,
+                            title = title,
+                            url = link,
+                            sourceNativeId = entry.uri,
+                        ),
                         title = title,
                         content = content,
                         sourceType = sourceType,
