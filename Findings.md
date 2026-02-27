@@ -92,3 +92,21 @@
   - source does not depend on workflow
   - storage does not depend on workflow or concrete source implementations
 - Boundary checks run as part of default `./gradlew test`.
+
+## 2026-02-27 — RSS Ingest Reliability
+
+- Added explicit ingest outcome models:
+  - `IngestRunStatus`: `SUCCESS`, `SUCCESS_WITH_WARNINGS`, `FAIL`
+  - `FeedIngestResult`: per-feed status/count/error payload
+- `Source` now supports `fetchOutcomes()` for feed-level reliability reporting while preserving legacy `fetch()`.
+- `RssSource` now:
+  - retries failed feed fetch attempts (bounded)
+  - reports partial success when malformed entries are skipped
+  - isolates failures per feed instead of failing whole RSS batch
+- `IngressWorkflow` now:
+  - aggregates per-feed results
+  - classifies run status with explicit rules
+  - emits per-feed summary table in logs
+- Added reliability-focused tests:
+  - `RssSourceReliabilityTest`
+  - `IngressReliabilityTest`

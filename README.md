@@ -38,6 +38,13 @@
 ./gradlew explore
 ```
 
+**Ingress reliability semantics:**
+- `SUCCESS` — run completed and no feed-level failures blocked coverage (including valid zero-new-items days)
+- `SUCCESS_WITH_WARNINGS` — run completed with partial feed failures or malformed-entry warnings
+- `FAIL` — all feeds failed (ingest reliability failure)
+
+Ingress output now includes a per-feed summary with status, fetched/new/duplicate counts, and error reasons.
+
 **Environment Variables:**
 
 | Variable | Default | Description |
