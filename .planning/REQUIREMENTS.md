@@ -75,9 +75,9 @@
 | OPS-01 | Phase 6 | Pending |
 | OPS-02 | Phase 5 | Pending |
 | OPS-03 | Phase 6 | Pending |
-| ARC-01 | Phase 1 | Pending |
+| ARC-01 | Phase 1 | Complete |
 | ARC-02 | Phase 8 | Pending |
-| ARC-03 | Phase 1 | Pending |
+| ARC-03 | Phase 1 | Complete |
 
 **Coverage:**
 - v1 requirements: 16 total
