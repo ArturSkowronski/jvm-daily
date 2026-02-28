@@ -27,7 +27,7 @@ jobs:
   # ── Build image + deploy to Fly.io (main only, after tests pass) ────────────
   deploy:
     needs: test
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && secrets.FLY_API_TOKEN != ''
     runs-on: ubuntu-latest
     permissions:
       contents: read
