@@ -127,6 +127,11 @@ class EnrichmentWorkflowTest {
                 .take(limit.coerceAtLeast(0))
         override fun findFailedByIds(ids: List<String>): List<ProcessedArticle> =
             ids.mapNotNull { id -> storage.find { it.id == id && it.outcomeStatus == EnrichmentOutcomeStatus.FAILED } }
+        override fun findInspectionCandidates(since: Instant, limit: Int, minWarnings: Int): List<ProcessedArticle> =
+            storage
+                .filter { it.processedAt >= since && it.warnings.size >= minWarnings }
+                .sortedByDescending { it.processedAt }
+                .take(limit.coerceAtLeast(0))
         override fun findUnprocessedRawArticles(since: Instant) = unprocessedIds
         override fun existsById(id: String) = storage.any { it.id == id }
         override fun count(): Long = storage.size.toLong()
