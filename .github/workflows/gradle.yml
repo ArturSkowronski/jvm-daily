@@ -27,7 +27,7 @@ jobs:
   # ── Build image + deploy to Fly.io (main only, after tests pass) ────────────
   deploy:
     needs: test
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && secrets.FLY_API_TOKEN != ''
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -61,6 +61,7 @@ jobs:
       - uses: superfly/flyctl-actions/setup-flyctl@master
 
       - name: Deploy to Fly.io
+        if: env.FLY_API_TOKEN != ''
         run: flyctl deploy --image ${{ env.IMAGE }}:${{ github.sha }}
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
