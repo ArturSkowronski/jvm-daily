@@ -2,53 +2,49 @@
 
 ## What This Is
 
-Internal platform for building JVM Weekly from continuously ingested ecosystem sources. In v1 it focuses on daily RSS ingestion, storage, and summarization so the morning review has high signal with minimal manual effort. The architecture is intentionally built as a solid base for adding future source types (Reddit, mailing lists, Twitter/X, and others).
+Internal platform for building a high-signal JVM daily/weekly digest from ingested ecosystem sources. v1.0 delivers reliable RSS ingestion, deterministic persistence/dedup, summarization workflows, recoverability, and connector-readiness guardrails.
 
 ## Core Value
 
 Every morning, have as much relevant JVM information as possible available in one deduplicated place.
 
-## Requirements
+## Current State (Shipped v1.0)
 
-### Validated
+- Status: `v1.0` shipped on 2026-02-28
+- Scope shipped: 8 phases, 24 plans, 73 tasks
+- Git range: `feat(01-01)` -> `feat(phase-8)`
+- Code delta (milestone range): 111 files changed, 9374 insertions, 243 deletions
+- Kotlin codebase size: ~5968 LOC (`app/**/*.kt`)
 
-- ✓ Daily ingest pipeline exists for RSS and local markdown sources — existing
-- ✓ DuckDB-backed persistence for raw and processed articles exists — existing
-- ✓ Basic deduplication based on stable article IDs exists in ingest stage — existing
-- ✓ Summarization/enrichment workflow exists (currently via mock LLM provider contract) — existing
-- ✓ Scheduled orchestration path exists (Airflow DAG + optional JobRunr daemon mode) — existing
+### Shipped Capabilities
 
-### Active
+- Architecture boundary enforcement for source/workflow/storage layers.
+- Resilient RSS ingest with per-feed isolation and reliability status reporting.
+- Canonical article ID strategy and idempotent storage behavior.
+- Enrichment with strict contract parsing, failure metadata, and replay controls.
+- Daily automation telemetry and quality report thresholds.
+- Connector certification checklist/tests plus failed/low-quality inspection workflow.
 
-- [ ] Improve ingestion quality to maximize useful JVM coverage every morning
-- [ ] Ensure daily runs produce new entries without duplicates as operational baseline
-- [ ] Strengthen and maintain solid source-plugin architecture for future connectors
-- [ ] Prepare and standardize extension boundaries for Reddit, mailing lists, Twitter/X (post-v1 implementation)
+## Next Milestone Goals
 
-### Out of Scope
-
-- Email newsletter publishing in v1 — explicitly deferred to later phase
-- Twitter/X and Reddit ingestion implementation in v1 — architecture now, connectors later
-
-## Context
-
-Existing Kotlin/JVM codebase already implements a multi-stage workflow: ingress, enrichment, clustering, and outgress. Data is stored in DuckDB and orchestrated either directly from CLI/service entry points or via Airflow. Current priority is to use and harden this foundation for reliable daily operation and to keep extensibility first-class for upcoming source families.
+- Define next milestone requirements from archived v1 learnings.
+- Prioritize first post-v1 connector implementation (e.g., Reddit or mailing lists) without breaking source boundary contracts.
+- Expand operational quality gates toward connector-specific reliability/quality SLAs.
 
 ## Constraints
 
-- **Audience**: Single-user internal workflow (for now) — Scope is optimized for speed and quality of personal morning digest
-- **Quality Baseline**: Daily new entries with no duplicates — This is the minimum success criterion declared by user
-- **Architecture**: Must remain solid and extensible — Future non-RSS sources are planned and should not require major rewrites
-- **Scope Boundary**: No email publication and no Twitter/Reddit connectors in v1 — Keep current milestone focused
+- Keep architecture extensible; new connectors must not require workflow orchestration rewrites.
+- Preserve daily-run reliability and dedup quality baseline as non-negotiable.
+- Maintain fast manual triage path for failed/low-quality records.
 
 ## Key Decisions
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Treat current project as brownfield foundation | Existing pipeline, storage, and orchestration already deliver meaningful capabilities | — Pending |
-| Keep v1 focused on RSS + storage + summarization quality | Fastest path to reliable daily value for one user | — Pending |
-| Prioritize extensible source boundaries before adding new connectors | Reddit/mailing/Twitter are planned and architecture must absorb them safely | — Pending |
-| Defer email publishing to future milestone | Not required for immediate morning information objective | — Pending |
+| Enforce boundary contracts with executable tests | Brownfield safety and predictable extension behavior | ✓ Good |
+| Treat reliability and quality counters as first-class runtime outputs | Operators need quick diagnosis without deep log digging | ✓ Good |
+| Gate connector onboarding with checklist + contract tests + dry-run | Reduces rollout risk for post-v1 source expansion | ✓ Good |
+| Keep v1 focused on core pipeline quality, defer connector implementations | Preserves delivery focus and minimizes scope risk | ✓ Good |
 
 ---
-*Last updated: 2026-02-27 after initialization*
+*Last updated: 2026-02-28 after v1.0 milestone completion*
