@@ -8,6 +8,7 @@ import kotlin.io.path.readText
 @Serializable
 data class SourcesConfig(
     val rss: List<RssFeedConfig> = emptyList(),
+    val reddit: List<RedditSourceConfig> = emptyList(),
 ) {
     companion object {
         fun load(path: Path): SourcesConfig {
@@ -20,4 +21,10 @@ data class SourcesConfig(
 @Serializable
 data class RssFeedConfig(
     val url: String,
+)
+
+@Serializable
+data class RedditSourceConfig(
+    val subreddit: String,
+    val limit: Int = 25,
 )

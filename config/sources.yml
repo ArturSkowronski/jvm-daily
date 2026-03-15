@@ -16,6 +16,8 @@ rss:
   - url: "https://feeds.dzone.com/java"
   - url: "https://hnrss.org/newest?q=java+OR+kotlin+OR+jvm+OR+spring+OR+graalvm"
   - url: "https://medium.com/feed/graalvm"
-  - url: "https://www.reddit.com/r/java/new.rss"
-  - url: "https://www.reddit.com/r/Kotlin/new.rss"
-  - url: "https://www.reddit.com/r/scala/new.rss"
+
+reddit:
+  - subreddit: "java"
+  - subreddit: "Kotlin"
+  - subreddit: "scala"
