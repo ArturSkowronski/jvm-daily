@@ -46,6 +46,9 @@ class DuckDbProcessedArticleRepository(private val connection: Connection) : Pro
             stmt.execute(
                 "CREATE INDEX IF NOT EXISTS idx_processed_at ON processed_articles(processed_at)"
             )
+            stmt.execute(
+                "CREATE INDEX IF NOT EXISTS idx_ingested_at ON processed_articles(ingested_at)"
+            )
         }
 
         ensureColumn("processed_articles", "outcome_status", "VARCHAR NOT NULL DEFAULT 'SUCCESS'")
@@ -241,6 +244,44 @@ class DuckDbProcessedArticleRepository(private val connection: Connection) : Pro
             stmt.executeQuery().use { rs ->
                 while (rs.next()) {
                     results.add(rs.getString(1))
+                }
+            }
+        }
+        return results
+    }
+
+    override fun findByIds(ids: List<String>): List<ProcessedArticle> {
+        if (ids.isEmpty()) return emptyList()
+
+        val placeholders = ids.joinToString(",") { "?" }
+        val sql = """
+            SELECT * FROM processed_articles
+            WHERE id IN ($placeholders) AND outcome_status = 'SUCCESS'
+            """.trimIndent()
+
+        val byId = mutableMapOf<String, ProcessedArticle>()
+        connection.prepareStatement(sql).use { stmt ->
+            ids.forEachIndexed { index, id -> stmt.setString(index + 1, id) }
+            stmt.executeQuery().use { rs ->
+                while (rs.next()) {
+                    val article = rs.toProcessedArticle()
+                    byId[article.id] = article
+                }
+            }
+        }
+        return ids.mapNotNull { byId[it] }
+    }
+
+    override fun findByIngestedAtRange(start: Instant, end: Instant): List<ProcessedArticle> {
+        val results = mutableListOf<ProcessedArticle>()
+        connection.prepareStatement(
+            "SELECT * FROM processed_articles WHERE ingested_at >= ? AND ingested_at <= ? ORDER BY ingested_at DESC"
+        ).use { stmt ->
+            stmt.setString(1, start.toString())
+            stmt.setString(2, end.toString())
+            stmt.executeQuery().use { rs ->
+                while (rs.next()) {
+                    results.add(rs.toProcessedArticle())
                 }
             }
         }

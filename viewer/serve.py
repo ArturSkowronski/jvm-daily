@@ -10,6 +10,7 @@ Env vars:
 
 import json
 import os
+import re
 import sys
 import urllib.request
 import urllib.error
@@ -20,6 +21,7 @@ PROJECT_ROOT = Path(__file__).parent.parent
 OUTPUT_DIR   = PROJECT_ROOT / "output"
 PORT         = int(sys.argv[1]) if len(sys.argv) > 1 else 8888
 JOBRUNR_URL  = os.environ.get("JOBRUNR_URL", "http://localhost:8000")
+DATE_PATTERN = re.compile(r'^\d{4}-\d{2}-\d{2}$')
 
 # ──────────────────────────────────────────────────────────────────────────────
 
@@ -114,6 +116,26 @@ HTML = r"""<!DOCTYPE html>
     .refresh-btn { background: #21262d; border: 1px solid #30363d; border-radius: 6px;
                    color: #8b949e; font-size: 0.78rem; padding: 3px 10px;
                    cursor: pointer; margin-left: 8px; }
+
+    /* ── Cluster digest view ── */
+    .cluster { margin-bottom: 36px; }
+    .cluster-title { color: #e6edf3; font-size: 1.1rem; margin-bottom: 8px;
+                     display: flex; align-items: center; gap: 8px;
+                     border-bottom: 1px solid #21262d; padding-bottom: 6px; }
+    .cluster-count { font-size: 0.72rem; background: #21262d; color: #8b949e;
+                     padding: 2px 7px; border-radius: 10px; font-weight: normal; }
+    .cluster-synthesis { color: #8b949e; line-height: 1.7; margin-bottom: 14px; font-size: 0.9rem; }
+    .article-list { display: flex; flex-direction: column; gap: 10px; }
+    .article-row { background: #161b22; border: 1px solid #30363d; border-radius: 8px;
+                   padding: 12px 16px; }
+    .article-title { color: #58a6ff; font-size: 0.95rem; text-decoration: none; font-weight: 600; display: block; margin-bottom: 4px; }
+    .article-title:hover { text-decoration: underline; }
+    .chips { display: flex; gap: 6px; flex-wrap: wrap; margin: 4px 0 6px; }
+    .chip { background: #1f3a5f; color: #58a6ff; font-size: 0.7rem;
+            padding: 2px 8px; border-radius: 10px; }
+    .article-summary { color: #8b949e; font-size: 0.85rem; line-height: 1.5; margin: 0;
+                       overflow: hidden; display: -webkit-box;
+                       -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
   </style>
 </head>
 <body>
@@ -154,13 +176,63 @@ HTML = r"""<!DOCTYPE html>
   }
 
   // ── Articles ──────────────────────────────────────────────────────────────
-  async function loadArticle(filename, btn) {
+  function esc(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  async function loadDate(date, btn) {
     document.querySelectorAll('.date-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
-    const md = await fetch('/output/' + filename).then(r => r.text());
-    document.getElementById('md').innerHTML = marked.parse(md);
-    const m = md.match(/Articles: (\d+)/);
-    document.getElementById('meta').textContent = m ? m[1] + ' articles' : '';
+    document.getElementById('no-files').classList.add('hidden');
+
+    const jsonRes = await fetch('/api/daily/' + date);
+    if (jsonRes.ok) {
+      const data = await jsonRes.json();
+      renderClusters(data);
+      document.getElementById('meta').textContent = data.totalArticles + ' articles';
+    } else {
+      const mdRes = await fetch('/output/jvm-daily-' + date + '.md');
+      if (!mdRes.ok) { document.getElementById('md').innerHTML = ''; return; }
+      const md = await mdRes.text();
+      document.getElementById('md').innerHTML = marked.parse(md);
+      const m = md.match(/Articles: (\d+)/);
+      document.getElementById('meta').textContent = m ? m[1] + ' articles' : '';
+    }
+  }
+
+  function renderClusters(data) {
+    const clusters = [...data.clusters].sort((a, b) => b.engagementScore - a.engagementScore);
+    let html = '';
+
+    function articleHtml(a) {
+      const chips = (a.topics || []).map(t => `<span class="chip">${esc(t)}</span>`).join('');
+      return `<div class="article-row">
+        <a class="article-title" href="${esc(a.url || '#')}" target="_blank" rel="noopener">${esc(a.title)} ↗</a>
+        <div class="chips">${chips}</div>
+        <p class="article-summary">${esc(a.summary)}</p>
+      </div>`;
+    }
+
+    for (const cluster of clusters) {
+      const arts = [...cluster.articles].sort((a, b) => b.engagementScore - a.engagementScore);
+      html += `<div class="cluster">
+        <h2 class="cluster-title">${esc(cluster.title)}
+          <span class="cluster-count">${arts.length}</span></h2>
+        <p class="cluster-synthesis">${esc(cluster.summary)}</p>
+        <div class="article-list">${arts.map(articleHtml).join('')}</div>
+      </div>`;
+    }
+
+    if (data.unclustered && data.unclustered.length > 0) {
+      const arts = [...data.unclustered].sort((a, b) => b.engagementScore - a.engagementScore);
+      html += `<div class="cluster">
+        <h2 class="cluster-title">Other <span class="cluster-count">${arts.length}</span></h2>
+        <div class="article-list">${arts.map(articleHtml).join('')}</div>
+      </div>`;
+    }
+
+    document.getElementById('md').innerHTML = html;
   }
 
   async function initArticles() {
@@ -172,9 +244,9 @@ HTML = r"""<!DOCTYPE html>
       const btn  = document.createElement('button');
       btn.className = 'date-btn';
       btn.textContent = date;
-      btn.onclick = () => loadArticle(f, btn);
+      btn.onclick = () => loadDate(date, btn);
       sidebar.appendChild(btn);
-      if (i === 0) loadArticle(f, btn);
+      if (i === 0) loadDate(date, btn);
     });
   }
 
@@ -299,6 +371,17 @@ class Handler(BaseHTTPRequestHandler):
         elif p == "/api/files":
             files = sorted([f.name for f in OUTPUT_DIR.glob("jvm-daily-*.md")], reverse=True)
             self.send_bytes(200, "application/json", json.dumps(files))
+
+        elif p.startswith("/api/daily/"):
+            date_seg = p[len("/api/daily/"):]
+            if not DATE_PATTERN.match(date_seg):
+                self.send_bytes(400, "application/json", json.dumps({"error": "invalid date"}))
+                return
+            path = OUTPUT_DIR / f"daily-{date_seg}.json"
+            if not path.exists() or not str(path.resolve()).startswith(str(OUTPUT_DIR.resolve())):
+                self.send_bytes(404, "application/json", json.dumps({"error": "not found"}))
+                return
+            self.send_bytes(200, "application/json", path.read_bytes())
 
         elif p.startswith("/output/"):
             name = Path(p[len("/output/"):]).name

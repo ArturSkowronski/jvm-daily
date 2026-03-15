@@ -3,6 +3,7 @@ package jvm.daily.workflow
 import jvm.daily.ai.LLMClient
 import jvm.daily.model.ArticleCluster
 import jvm.daily.model.ProcessedArticle
+import jvm.daily.storage.ClusterRepository
 import jvm.daily.storage.ProcessedArticleRepository
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
@@ -23,6 +24,7 @@ import kotlin.time.Duration.Companion.days
  */
 class ClusteringWorkflow(
     private val processedArticleRepository: ProcessedArticleRepository,
+    private val clusterRepository: ClusterRepository,
     private val llmClient: LLMClient,
     private val clock: Clock = Clock.System,
 ) : Workflow {
@@ -35,7 +37,7 @@ class ClusteringWorkflow(
         // Get articles from last 24 hours
         val now = clock.now()
         val yesterday = now.minus(1.days)
-        val articles = processedArticleRepository.findByDateRange(yesterday, now)
+        val articles = processedArticleRepository.findByIngestedAtRange(yesterday, now)
 
         if (articles.isEmpty()) {
             println("[clustering] No processed articles found in last 24h")
@@ -51,8 +53,8 @@ class ClusteringWorkflow(
             println("  ${i + 1}. ${cluster.title} (${cluster.articles.size} articles, ${cluster.sources.size} sources)")
         }
 
-        // TODO: Save clusters to database (future PR)
-        println("[clustering] Done. Clusters ready for compilation.")
+        clusterRepository.saveAll(clusters)
+        println("[clustering] Done. Saved ${clusters.size} clusters.")
     }
 
     private suspend fun clusterArticles(articles: List<ProcessedArticle>): List<ArticleCluster> {
