@@ -514,7 +514,14 @@ internal fun runOutgress(dbPath: String) {
 
     DuckDbConnectionFactory.persistent(dbPath).use { connection ->
         val processedRepo = DuckDbProcessedArticleRepository(connection)
-        runBlocking { OutgressWorkflow(processedRepo, outputDir, outgressDays = outgressDays).execute() }
+        val clusterRepo = DuckDbClusterRepository(connection)
+        runBlocking {
+            OutgressWorkflow(
+                processedRepo, outputDir,
+                outgressDays = outgressDays,
+                clusterRepository = clusterRepo,
+            ).execute()
+        }
     }
 }
 
