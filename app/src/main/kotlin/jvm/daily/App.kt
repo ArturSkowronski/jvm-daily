@@ -137,7 +137,7 @@ internal fun runEnrichment(dbPath: String) {
     val llmModel    = System.getenv("LLM_MODEL") ?: "gpt-4"
 
     println("LLM Provider: $llmProvider / Model: $llmModel")
-    if (llmProvider != "mock" && llmApiKey == null) {
+    if (llmProvider != "mock" && llmProvider != "groq" && llmApiKey == null) {
         error("LLM_API_KEY required for provider '$llmProvider'")
     }
 
@@ -177,7 +177,7 @@ internal fun runEnrichmentReplay(dbPath: String, args: List<String>) {
     val llmApiKey   = System.getenv("LLM_API_KEY")
     val llmModel    = System.getenv("LLM_MODEL") ?: "gpt-4"
 
-    if (llmProvider != "mock" && llmApiKey == null) {
+    if (llmProvider != "mock" && llmProvider != "groq" && llmApiKey == null) {
         error("LLM_API_KEY required for provider '$llmProvider'")
     }
 
@@ -494,7 +494,7 @@ internal fun runClustering(dbPath: String) {
     val llmApiKey   = System.getenv("LLM_API_KEY")
     val llmModel    = System.getenv("LLM_MODEL") ?: "gpt-4"
 
-    if (llmProvider != "mock" && llmApiKey == null) {
+    if (llmProvider != "mock" && llmProvider != "groq" && llmApiKey == null) {
         error("LLM_API_KEY required for provider '$llmProvider'")
     }
 
@@ -544,7 +544,7 @@ internal fun createLLMClient(provider: String, apiKey: String?, model: String): 
         "mock" -> MockLLMClient()
         "openai" -> OpenAiCompatibleLLMClient(apiKey, model)
         "groq" -> OpenAiCompatibleLLMClient(
-            apiKey = apiKey,
+            apiKey = System.getenv("GROQ_API_TOKEN") ?: apiKey,
             model = model.ifEmpty { "llama-3.3-70b-versatile" },
             baseUrl = "https://api.groq.com/openai/v1",
         )
