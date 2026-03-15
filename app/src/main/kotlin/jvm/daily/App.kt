@@ -6,6 +6,7 @@ import jvm.daily.source.MarkdownFileSource
 import jvm.daily.source.RssSource
 import jvm.daily.source.SourceRegistry
 import jvm.daily.storage.DuckDbArticleRepository
+import jvm.daily.storage.DuckDbClusterRepository
 import jvm.daily.storage.DuckDbConnectionFactory
 import jvm.daily.storage.DuckDbProcessedArticleRepository
 import jvm.daily.tools.ValidateRawArticleIds
@@ -72,7 +73,8 @@ private fun startDaemon(dbPath: String) {
     Path.of(storePath).parent?.createDirectories()
 
     val ds = JdbcDataSource().apply {
-        setURL("jdbc:h2:file:./$storePath;DB_CLOSE_ON_EXIT=FALSE;AUTO_SERVER=TRUE")
+        // AUTO_SERVER is not supported in this runtime mode on Fly machines.
+        setURL("jdbc:h2:file:./$storePath;DB_CLOSE_ON_EXIT=FALSE")
         user     = "sa"
         password = ""
     }
@@ -497,7 +499,8 @@ internal fun runClustering(dbPath: String) {
 
     DuckDbConnectionFactory.persistent(dbPath).use { connection ->
         val processedRepo = DuckDbProcessedArticleRepository(connection)
-        runBlocking { ClusteringWorkflow(processedRepo, createLLMClient(llmProvider, llmApiKey, llmModel)).execute() }
+        val clusterRepo = DuckDbClusterRepository(connection)
+        runBlocking { ClusteringWorkflow(processedRepo, clusterRepo, createLLMClient(llmProvider, llmApiKey, llmModel)).execute() }
     }
 }
 
