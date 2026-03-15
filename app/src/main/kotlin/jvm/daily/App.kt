@@ -543,12 +543,17 @@ internal fun createLLMClient(provider: String, apiKey: String?, model: String): 
     when (provider) {
         "mock" -> MockLLMClient()
         "openai" -> OpenAiCompatibleLLMClient(apiKey, model)
+        "groq" -> OpenAiCompatibleLLMClient(
+            apiKey = apiKey,
+            model = model.ifEmpty { "llama-3.3-70b-versatile" },
+            baseUrl = "https://api.groq.com/openai/v1",
+        )
         "openai-compatible" -> OpenAiCompatibleLLMClient(
             apiKey = apiKey,
             model = model,
             baseUrl = System.getenv("LLM_BASE_URL") ?: "https://api.openai.com/v1",
         )
-        else -> error("LLM provider '$provider' not yet implemented. Supported: mock, openai, openai-compatible")
+        else -> error("LLM provider '$provider' not yet implemented. Supported: mock, openai, groq, openai-compatible")
     }
 
 private class MockLLMClient : LLMClient {
