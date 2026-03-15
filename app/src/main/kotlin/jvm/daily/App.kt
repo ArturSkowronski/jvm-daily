@@ -545,7 +545,7 @@ internal fun createLLMClient(provider: String, apiKey: String?, model: String): 
         "openai" -> OpenAiCompatibleLLMClient(apiKey, model)
         "groq" -> OpenAiCompatibleLLMClient(
             apiKey = System.getenv("GROQ_API_TOKEN") ?: apiKey,
-            model = model.ifEmpty { "llama-3.3-70b-versatile" },
+            model = System.getenv("LLM_MODEL") ?: "llama-3.3-70b-versatile",
             baseUrl = "https://api.groq.com/openai/v1",
         )
         "openai-compatible" -> OpenAiCompatibleLLMClient(
