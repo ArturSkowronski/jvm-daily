@@ -1,6 +1,7 @@
 package jvm.daily
 
 import jvm.daily.ai.LLMClient
+import jvm.daily.ai.OpenAiCompatibleLLMClient
 import jvm.daily.config.SourcesConfig
 import jvm.daily.source.MarkdownFileSource
 import jvm.daily.source.RssSource
@@ -541,7 +542,13 @@ internal fun runValidateRawIds(dbPath: String, args: List<String>) {
 internal fun createLLMClient(provider: String, apiKey: String?, model: String): LLMClient =
     when (provider) {
         "mock" -> MockLLMClient()
-        else   -> error("LLM provider '$provider' not yet implemented. Supported: mock")
+        "openai" -> OpenAiCompatibleLLMClient(apiKey, model)
+        "openai-compatible" -> OpenAiCompatibleLLMClient(
+            apiKey = apiKey,
+            model = model,
+            baseUrl = System.getenv("LLM_BASE_URL") ?: "https://api.openai.com/v1",
+        )
+        else -> error("LLM provider '$provider' not yet implemented. Supported: mock, openai, openai-compatible")
     }
 
 private class MockLLMClient : LLMClient {
