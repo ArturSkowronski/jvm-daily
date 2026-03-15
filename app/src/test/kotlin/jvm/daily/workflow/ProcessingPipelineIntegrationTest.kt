@@ -5,6 +5,7 @@ import jvm.daily.model.Article
 import jvm.daily.model.EnrichmentOutcomeStatus
 import jvm.daily.storage.ArticleRepository
 import jvm.daily.storage.DuckDbArticleRepository
+import jvm.daily.storage.DuckDbClusterRepository
 import jvm.daily.storage.DuckDbConnectionFactory
 import jvm.daily.storage.DuckDbProcessedArticleRepository
 import kotlinx.coroutines.test.runTest
@@ -143,14 +144,9 @@ class ProcessingPipelineIntegrationTest {
         assertTrue(frameworkReleases.isNotEmpty(), "Should have framework-releases topic")
 
         // Step 2: Clustering
-        val clusteringWorkflow = ClusteringWorkflow(processedRepo, mockLLM)
+        val clusterRepo = DuckDbClusterRepository(connection)
+        val clusteringWorkflow = ClusteringWorkflow(processedRepo, clusterRepo, mockLLM)
         clusteringWorkflow.execute()
-
-        // Note: ClusteringWorkflow currently only logs, doesn't persist clusters
-        // Once cluster persistence is added, we would verify:
-        // - Clusters were created
-        // - Cross-source grouping worked
-        // - Synthesis summaries were generated
     }
 
     @Test

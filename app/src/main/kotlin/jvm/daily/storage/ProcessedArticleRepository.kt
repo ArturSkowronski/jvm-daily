@@ -14,6 +14,8 @@ interface ProcessedArticleRepository {
     fun findFailedByIds(ids: List<String>): List<ProcessedArticle>
     fun findInspectionCandidates(since: Instant, limit: Int, minWarnings: Int = 1): List<ProcessedArticle>
     fun findUnprocessedRawArticles(since: Instant): List<String> // Returns raw article IDs
+    fun findByIds(ids: List<String>): List<ProcessedArticle>
+    fun findByIngestedAtRange(start: Instant, end: Instant): List<ProcessedArticle>
     fun existsById(id: String): Boolean
     fun count(): Long
 }

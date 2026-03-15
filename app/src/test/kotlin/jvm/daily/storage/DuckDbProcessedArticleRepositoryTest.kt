@@ -10,6 +10,7 @@ import java.sql.Connection
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 class DuckDbProcessedArticleRepositoryTest {
 
@@ -210,6 +211,47 @@ class DuckDbProcessedArticleRepositoryTest {
         }
     }
 
+    @Test
+    fun `findByIds returns SUCCESS articles only, FAILED excluded`() {
+        repository.save(processedArticle(id = "success-1", outcomeStatus = EnrichmentOutcomeStatus.SUCCESS))
+        repository.save(
+            processedArticle(
+                id = "failed-1",
+                outcomeStatus = EnrichmentOutcomeStatus.FAILED,
+                failureReason = "PARSE_JSON: invalid token",
+            )
+        )
+        repository.save(processedArticle(id = "success-2", outcomeStatus = EnrichmentOutcomeStatus.SUCCESS))
+
+        val results = repository.findByIds(listOf("success-1", "failed-1", "success-2"))
+        assertEquals(listOf("success-1", "success-2"), results.map { it.id })
+    }
+
+    @Test
+    fun `findByIds with empty list returns empty without error`() {
+        val results = repository.findByIds(emptyList())
+        assertTrue(results.isEmpty())
+    }
+
+    @Test
+    fun `findByIngestedAtRange boundary - article at now-25h excluded, now-23h included`() {
+        val now = Instant.parse("2026-03-15T12:00:00Z")
+        val tooOld = processedArticle(
+            id = "old",
+            ingestedAt = Instant.parse("2026-03-14T11:00:00Z"), // now - 25h
+        )
+        val inRange = processedArticle(
+            id = "recent",
+            ingestedAt = Instant.parse("2026-03-14T13:00:00Z"), // now - 23h
+        )
+        repository.save(tooOld)
+        repository.save(inRange)
+
+        val start = Instant.parse("2026-03-14T12:00:00Z") // now - 24h
+        val results = repository.findByIngestedAtRange(start = start, end = now)
+        assertEquals(listOf("recent"), results.map { it.id })
+    }
+
     private fun processedArticle(
         id: String,
         summary: String = "This is a long enough summary to satisfy enrichment validation and keep repository tests deterministic for processed record persistence checks in this phase.",
@@ -221,6 +263,7 @@ class DuckDbProcessedArticleRepositoryTest {
         attemptCount: Int = 1,
         warnings: List<String> = emptyList(),
         processedAt: Instant = Instant.parse("2026-02-27T21:00:00Z"),
+        ingestedAt: Instant = Instant.parse("2026-02-27T20:00:00Z"),
     ) = ProcessedArticle(
         id = id,
         originalTitle = "Title $id",
@@ -232,7 +275,7 @@ class DuckDbProcessedArticleRepositoryTest {
         url = "https://example.com/$id",
         author = "author",
         publishedAt = Instant.parse("2026-02-27T20:00:00Z"),
-        ingestedAt = Instant.parse("2026-02-27T20:00:00Z"),
+        ingestedAt = ingestedAt,
         processedAt = processedAt,
         entities = entities,
         topics = topics,

@@ -1,11 +1,13 @@
 package jvm.daily
 
 import jvm.daily.ai.LLMClient
+import jvm.daily.ai.OpenAiCompatibleLLMClient
 import jvm.daily.config.SourcesConfig
 import jvm.daily.source.MarkdownFileSource
 import jvm.daily.source.RssSource
 import jvm.daily.source.SourceRegistry
 import jvm.daily.storage.DuckDbArticleRepository
+import jvm.daily.storage.DuckDbClusterRepository
 import jvm.daily.storage.DuckDbConnectionFactory
 import jvm.daily.storage.DuckDbProcessedArticleRepository
 import jvm.daily.tools.ValidateRawArticleIds
@@ -72,7 +74,8 @@ private fun startDaemon(dbPath: String) {
     Path.of(storePath).parent?.createDirectories()
 
     val ds = JdbcDataSource().apply {
-        setURL("jdbc:h2:file:./$storePath;DB_CLOSE_ON_EXIT=FALSE;AUTO_SERVER=TRUE")
+        // AUTO_SERVER is not supported in this runtime mode on Fly machines.
+        setURL("jdbc:h2:file:./$storePath;DB_CLOSE_ON_EXIT=FALSE")
         user     = "sa"
         password = ""
     }
@@ -134,7 +137,7 @@ internal fun runEnrichment(dbPath: String) {
     val llmModel    = System.getenv("LLM_MODEL") ?: "gpt-4"
 
     println("LLM Provider: $llmProvider / Model: $llmModel")
-    if (llmProvider != "mock" && llmApiKey == null) {
+    if (llmProvider != "mock" && llmProvider != "groq" && llmApiKey == null) {
         error("LLM_API_KEY required for provider '$llmProvider'")
     }
 
@@ -174,7 +177,7 @@ internal fun runEnrichmentReplay(dbPath: String, args: List<String>) {
     val llmApiKey   = System.getenv("LLM_API_KEY")
     val llmModel    = System.getenv("LLM_MODEL") ?: "gpt-4"
 
-    if (llmProvider != "mock" && llmApiKey == null) {
+    if (llmProvider != "mock" && llmProvider != "groq" && llmApiKey == null) {
         error("LLM_API_KEY required for provider '$llmProvider'")
     }
 
@@ -491,13 +494,14 @@ internal fun runClustering(dbPath: String) {
     val llmApiKey   = System.getenv("LLM_API_KEY")
     val llmModel    = System.getenv("LLM_MODEL") ?: "gpt-4"
 
-    if (llmProvider != "mock" && llmApiKey == null) {
+    if (llmProvider != "mock" && llmProvider != "groq" && llmApiKey == null) {
         error("LLM_API_KEY required for provider '$llmProvider'")
     }
 
     DuckDbConnectionFactory.persistent(dbPath).use { connection ->
         val processedRepo = DuckDbProcessedArticleRepository(connection)
-        runBlocking { ClusteringWorkflow(processedRepo, createLLMClient(llmProvider, llmApiKey, llmModel)).execute() }
+        val clusterRepo = DuckDbClusterRepository(connection)
+        runBlocking { ClusteringWorkflow(processedRepo, clusterRepo, createLLMClient(llmProvider, llmApiKey, llmModel)).execute() }
     }
 }
 
@@ -511,7 +515,14 @@ internal fun runOutgress(dbPath: String) {
 
     DuckDbConnectionFactory.persistent(dbPath).use { connection ->
         val processedRepo = DuckDbProcessedArticleRepository(connection)
-        runBlocking { OutgressWorkflow(processedRepo, outputDir, outgressDays = outgressDays).execute() }
+        val clusterRepo = DuckDbClusterRepository(connection)
+        runBlocking {
+            OutgressWorkflow(
+                processedRepo, outputDir,
+                outgressDays = outgressDays,
+                clusterRepository = clusterRepo,
+            ).execute()
+        }
     }
 }
 
@@ -531,7 +542,18 @@ internal fun runValidateRawIds(dbPath: String, args: List<String>) {
 internal fun createLLMClient(provider: String, apiKey: String?, model: String): LLMClient =
     when (provider) {
         "mock" -> MockLLMClient()
-        else   -> error("LLM provider '$provider' not yet implemented. Supported: mock")
+        "openai" -> OpenAiCompatibleLLMClient(apiKey, model)
+        "groq" -> OpenAiCompatibleLLMClient(
+            apiKey = System.getenv("GROQ_API_TOKEN") ?: apiKey,
+            model = System.getenv("LLM_MODEL") ?: "llama-3.3-70b-versatile",
+            baseUrl = "https://api.groq.com/openai/v1",
+        )
+        "openai-compatible" -> OpenAiCompatibleLLMClient(
+            apiKey = apiKey,
+            model = model,
+            baseUrl = System.getenv("LLM_BASE_URL") ?: "https://api.openai.com/v1",
+        )
+        else -> error("LLM provider '$provider' not yet implemented. Supported: mock, openai, groq, openai-compatible")
     }
 
 private class MockLLMClient : LLMClient {
