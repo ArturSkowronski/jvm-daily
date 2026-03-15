@@ -113,6 +113,8 @@ class OutgressWorkflowTest {
                 .filter { it.processedAt >= since && it.warnings.size >= minWarnings }
                 .sortedByDescending { it.processedAt }
                 .take(limit.coerceAtLeast(0))
+        override fun findByIds(ids: List<String>): List<ProcessedArticle> = emptyList()
+        override fun findByIngestedAtRange(start: Instant, end: Instant): List<ProcessedArticle> = emptyList()
         override fun findUnprocessedRawArticles(since: Instant): List<String> = emptyList()
         override fun existsById(id: String): Boolean = false
         override fun count(): Long = articles.size.toLong()

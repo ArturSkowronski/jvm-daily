@@ -259,6 +259,10 @@ class EnrichmentWorkflowReliabilityTest {
                 .filter { it.processedAt >= since && it.warnings.size >= minWarnings }
                 .sortedByDescending { it.processedAt }
                 .take(limit.coerceAtLeast(0))
+        override fun findByIds(ids: List<String>): List<ProcessedArticle> =
+            ids.mapNotNull { id -> storage.find { it.id == id && it.outcomeStatus == EnrichmentOutcomeStatus.SUCCESS } }
+        override fun findByIngestedAtRange(start: Instant, end: Instant): List<ProcessedArticle> =
+            storage.filter { it.ingestedAt >= start && it.ingestedAt <= end }.sortedByDescending { it.ingestedAt }
         override fun findUnprocessedRawArticles(since: Instant) = unprocessedIds
         override fun existsById(id: String) = storage.any { it.id == id }
         override fun count(): Long = storage.size.toLong()
