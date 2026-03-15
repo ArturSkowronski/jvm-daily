@@ -4,6 +4,7 @@ import jvm.daily.ai.LLMClient
 import jvm.daily.ai.OpenAiCompatibleLLMClient
 import jvm.daily.config.SourcesConfig
 import jvm.daily.source.MarkdownFileSource
+import jvm.daily.source.RedditSource
 import jvm.daily.source.RssSource
 import jvm.daily.source.SourceRegistry
 import jvm.daily.storage.DuckDbArticleRepository
@@ -123,6 +124,7 @@ internal fun runIngress(dbPath: String) {
         val sourceRegistry = SourceRegistry().apply {
             register(MarkdownFileSource(Path.of(sourcesDir)))
             if (config.rss.isNotEmpty()) register(RssSource(config.rss))
+            if (config.reddit.isNotEmpty()) register(RedditSource(config.reddit))
         }
         val workflow = IngressWorkflow(sourceRegistry, repository)
         runBlocking { workflow.execute() }
