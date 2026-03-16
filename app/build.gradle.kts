@@ -19,6 +19,7 @@ dependencies {
     implementation(libs.guava)
     implementation(libs.jobrunr)
     implementation(libs.h2)
+    implementation("com.fasterxml.jackson.core:jackson-databind:2.18.2")
 
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
     testImplementation(libs.junit.jupiter.engine)
@@ -60,5 +61,15 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach 
 }
 
 tasks.named<Test>("test") {
-    useJUnitPlatform()
+    useJUnitPlatform {
+        excludeTags("integration")
+    }
+}
+
+tasks.register<Test>("integrationTest") {
+    description = "Run integration tests (require network)"
+    group = "verification"
+    useJUnitPlatform {
+        includeTags("integration")
+    }
 }
