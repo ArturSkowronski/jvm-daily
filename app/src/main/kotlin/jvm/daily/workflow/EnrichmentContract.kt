@@ -24,7 +24,8 @@ object EnrichmentContract {
     }
 
     fun parse(response: String, isContentEmpty: Boolean): ParseResult {
-        val raw = runCatching { json.decodeFromString<EnrichmentJsonResponse>(response) }
+        val cleaned = stripMarkdownFences(response)
+        val raw = runCatching { json.decodeFromString<EnrichmentJsonResponse>(cleaned) }
             .getOrElse {
                 return ParseResult.Failure("PARSE_JSON", it.message ?: "Invalid JSON response")
             }
@@ -90,6 +91,15 @@ object EnrichmentContract {
             topics = topics,
             warnings = warnings,
         )
+    }
+
+    private fun stripMarkdownFences(text: String): String {
+        val trimmed = text.trim()
+        if (!trimmed.startsWith("```")) return trimmed
+        return trimmed
+            .removePrefix("```json").removePrefix("```")
+            .removeSuffix("```")
+            .trim()
     }
 
     @Serializable
