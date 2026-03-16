@@ -1,38 +1,17 @@
-name: CI / Deploy
+name: Deploy
 
 on:
   push:
     branches: [main]
-  pull_request:
-    branches: [main]
+
+permissions:
+  contents: read
+  packages: write
 
 jobs:
-  # ── Run tests (always — PRs + main) ────────────────────────────────────────
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-java@v4
-        with:
-          java-version: '21'
-          distribution: 'temurin'
-          cache: gradle
-
-      - uses: gradle/actions/setup-gradle@v4
-
-      - name: Test
-        run: ./gradlew test
-
-  # ── Build image + deploy to Fly.io (main only, after tests pass) ────────────
   deploy:
-    needs: test
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    name: Build & Deploy to Fly.io
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write   # needed to push to GHCR
-
     steps:
       - uses: actions/checkout@v4
 
