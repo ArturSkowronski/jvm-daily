@@ -51,11 +51,11 @@ class DuckDbProcessedArticleRepository(private val connection: Connection) : Pro
             )
         }
 
-        ensureColumn("processed_articles", "outcome_status", "VARCHAR NOT NULL DEFAULT 'SUCCESS'")
+        ensureColumn("processed_articles", "outcome_status", "VARCHAR DEFAULT 'SUCCESS'")
         ensureColumn("processed_articles", "failure_reason", "VARCHAR")
         ensureColumn("processed_articles", "last_attempt_at", "VARCHAR")
-        ensureColumn("processed_articles", "attempt_count", "INTEGER NOT NULL DEFAULT 1")
-        ensureColumn("processed_articles", "warnings", "VARCHAR NOT NULL DEFAULT '[]'")
+        ensureColumn("processed_articles", "attempt_count", "INTEGER DEFAULT 1")
+        ensureColumn("processed_articles", "warnings", "VARCHAR DEFAULT '[]'")
     }
 
     override fun save(article: ProcessedArticle) {
@@ -333,7 +333,7 @@ class DuckDbProcessedArticleRepository(private val connection: Connection) : Pro
     private fun ensureColumn(table: String, column: String, definition: String) {
         runCatching {
             connection.createStatement().use { stmt ->
-                stmt.execute("ALTER TABLE $table ADD COLUMN $column $definition")
+                stmt.execute("ALTER TABLE $table ADD COLUMN IF NOT EXISTS $column $definition")
             }
         }
     }
