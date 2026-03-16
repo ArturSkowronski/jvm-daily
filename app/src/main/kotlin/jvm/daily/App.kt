@@ -123,11 +123,22 @@ internal fun runIngress(dbPath: String) {
 
     DuckDbConnectionFactory.persistent(dbPath).use { connection ->
         val repository = DuckDbArticleRepository(connection)
+
+        // Trending dedup: repos already seen in previous runs won't appear again
+        val seenTrendingRepos = repository.findBySourceType("github_trending")
+            .mapNotNull { article ->
+                // sourceId is "trending/{lang}/{owner/name}", extract the repo name
+                article.sourceId.substringAfter("/").substringAfter("/").takeIf { it.contains("/") }
+            }.toSet()
+        if (seenTrendingRepos.isNotEmpty()) {
+            println("Excluding ${seenTrendingRepos.size} already-seen trending repos")
+        }
+
         val sourceRegistry = SourceRegistry().apply {
             register(MarkdownFileSource(Path.of(sourcesDir)))
             if (config.rss.isNotEmpty()) register(RssSource(config.rss))
             if (config.reddit.isNotEmpty()) register(RedditSource(config.reddit))
-            config.githubTrending?.let { register(GitHubTrendingSource(it)) }
+            config.githubTrending?.let { register(GitHubTrendingSource(it, excludeRepos = seenTrendingRepos)) }
             config.githubReleases?.let { register(GitHubReleasesSource(it)) }
         }
         val workflow = IngressWorkflow(sourceRegistry, repository)

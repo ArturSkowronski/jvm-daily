@@ -25,6 +25,7 @@ import java.net.URI
  */
 class GitHubTrendingSource(
     private val config: GitHubTrendingConfig,
+    private val excludeRepos: Set<String> = emptySet(),
     private val clock: Clock = Clock.System,
 ) : Source {
 
@@ -48,9 +49,19 @@ class GitHubTrendingSource(
             val result = Json.parseToJsonElement(json).jsonObject
             val items = result["items"]?.jsonArray ?: emptyList()
 
+            var skippedSeen = 0
             val articles = items.mapNotNull { item ->
-                try { parseRepo(item.jsonObject, language) } catch (_: Exception) { null }
+                try {
+                    val fullName = item.jsonObject["full_name"]!!.jsonPrimitive.content
+                    if (fullName in excludeRepos) {
+                        skippedSeen++
+                        return@mapNotNull null
+                    }
+                    parseRepo(item.jsonObject, language)
+                } catch (_: Exception) { null }
             }
+
+            val errors = if (skippedSeen > 0) listOf("Skipped $skippedSeen already-seen repos") else emptyList()
 
             SourceFetchOutcome(
                 feed = FeedIngestResult(
@@ -58,6 +69,7 @@ class GitHubTrendingSource(
                     sourceId = "trending/$language",
                     status = FeedIngestStatus.SUCCESS,
                     fetchedCount = articles.size,
+                    errors = errors,
                 ),
                 articles = articles,
             )

@@ -47,15 +47,29 @@ class GitHubReleasesSource(
             val json = httpGet(url)
             val releases = Json.parseToJsonElement(json).jsonArray
 
+            var skippedPatch = 0
             val articles = releases.mapNotNull { release ->
                 try {
                     val rel = release.jsonObject
                     val publishedAt = rel["published_at"]?.jsonPrimitive?.contentOrNull ?: return@mapNotNull null
                     val publishedInstant = Instant.parse(publishedAt)
                     if (publishedInstant < cutoff) return@mapNotNull null
+
+                    val tag = rel["tag_name"]!!.jsonPrimitive.content
+                    val body = rel["body"]?.jsonPrimitive?.contentOrNull ?: ""
+                    val prerelease = rel["prerelease"]?.jsonPrimitive?.booleanOrNull ?: false
+
+                    // Skip insignificant releases: patch versions with tiny changelogs
+                    if (isPatchRelease(tag) && body.length < 300 && !prerelease) {
+                        skippedPatch++
+                        return@mapNotNull null
+                    }
+
                     parseRelease(rel, repo)
                 } catch (_: Exception) { null }
             }
+
+            val errors = if (skippedPatch > 0) listOf("Skipped $skippedPatch patch releases") else emptyList()
 
             SourceFetchOutcome(
                 feed = FeedIngestResult(
@@ -63,6 +77,7 @@ class GitHubReleasesSource(
                     sourceId = repo,
                     status = FeedIngestStatus.SUCCESS,
                     fetchedCount = articles.size,
+                    errors = errors,
                 ),
                 articles = articles,
             )
@@ -114,6 +129,19 @@ class GitHubReleasesSource(
             author = author,
             ingestedAt = clock.now(),
         )
+    }
+
+    /**
+     * A release is a "patch" if its version ends with .N where N > 0,
+     * e.g. "v3.30.7", "5.6.1.Final". Major/minor like "v3.31.0" or "v4.0.0" pass through.
+     */
+    private fun isPatchRelease(tag: String): Boolean {
+        // Extract version numbers: strip leading v, trailing qualifiers
+        val versionPart = tag.removePrefix("v").split("-", "+", ".Final", ".RELEASE").first()
+        val parts = versionPart.split(".")
+        if (parts.size < 3) return false
+        val patch = parts.last().toIntOrNull() ?: return false
+        return patch > 0
     }
 
     private fun httpGet(url: String): String {
