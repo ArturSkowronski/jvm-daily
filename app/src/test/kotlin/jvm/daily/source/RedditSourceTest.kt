@@ -3,6 +3,7 @@ package jvm.daily.source
 import jvm.daily.config.RedditSourceConfig
 import jvm.daily.model.FeedIngestStatus
 import kotlinx.coroutines.test.runTest
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -15,7 +16,7 @@ class RedditSourceTest {
         assertEquals("reddit", source.sourceType)
     }
 
-    @Test
+    @Test @Tag("integration")
     fun `fetch from r-java returns articles with comments`() = runTest {
         val source = RedditSource(listOf(RedditSourceConfig("java", limit = 3)))
         val outcomes = source.fetchOutcomes()
@@ -33,7 +34,7 @@ class RedditSourceTest {
         assertTrue(article.content.contains("Score:"), "Content should include score")
     }
 
-    @Test
+    @Test @Tag("integration")
     fun `articles have canonical IDs`() = runTest {
         val source = RedditSource(listOf(RedditSourceConfig("java", limit = 2)))
         val articles = source.fetch()
@@ -42,7 +43,7 @@ class RedditSourceTest {
         assertTrue(articles.all { it.id.startsWith("reddit:") }, "IDs should be prefixed with reddit:")
     }
 
-    @Test
+    @Test @Tag("integration")
     fun `invalid subreddit returns failed outcome`() = runTest {
         val source = RedditSource(listOf(RedditSourceConfig("this_subreddit_definitely_does_not_exist_xyz123")))
         val outcomes = source.fetchOutcomes()
