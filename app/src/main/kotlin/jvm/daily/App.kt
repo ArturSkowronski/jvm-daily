@@ -6,6 +6,7 @@ import jvm.daily.config.SourcesConfig
 import jvm.daily.source.GitHubReleasesSource
 import jvm.daily.source.GitHubTrendingSource
 import jvm.daily.source.MarkdownFileSource
+import jvm.daily.source.OpenJdkMailSource
 import jvm.daily.source.RedditSource
 import jvm.daily.source.RssSource
 import jvm.daily.source.SourceRegistry
@@ -140,6 +141,7 @@ internal fun runIngress(dbPath: String) {
             if (config.reddit.isNotEmpty()) register(RedditSource(config.reddit))
             config.githubTrending?.let { register(GitHubTrendingSource(it, excludeRepos = seenTrendingRepos)) }
             config.githubReleases?.let { register(GitHubReleasesSource(it)) }
+            if (config.openjdkMail.isNotEmpty()) register(OpenJdkMailSource(config.openjdkMail))
         }
         val workflow = IngressWorkflow(sourceRegistry, repository)
         runBlocking { workflow.execute() }
