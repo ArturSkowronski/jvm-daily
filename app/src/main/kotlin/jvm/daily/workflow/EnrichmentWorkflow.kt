@@ -160,21 +160,27 @@ class EnrichmentWorkflow(
     }
 
     private fun buildEnrichmentPrompt(article: Article): String {
+        val commentsSection = if (!article.comments.isNullOrBlank()) {
+            "\nDiscussion:\n${article.comments!!.take(3000)}"
+        } else ""
+
         return """
-        Analyze this JVM ecosystem article and return STRICT JSON only.
+        Analyze this article. Return STRICT JSON only — no markdown fences, no explanation.
 
         Title: ${article.title}
         Author: ${article.author ?: "Unknown"}
-        Source Type: ${article.sourceType}
-        Source ID: ${article.sourceId}
+        Source: ${article.sourceType} / ${article.sourceId}
         URL: ${article.url ?: "N/A"}
-        Content: ${article.content}
 
-        Return JSON with this exact shape:
+        Content:
+        ${article.content.take(4000)}
+        $commentsSection
+
+        Return JSON:
         {
-          "summary": "minimum 40 words",
-          "entities": ["entity1", "entity2"],
-          "topics": ["topic1", "topic2"]
+          "summary": "Dense, fact-packed summary (50-120 words). Include specific versions, APIs, numbers. If this is a discussion thread, summarize the key arguments and consensus. Never restate the title. Never use filler phrases.",
+          "entities": ["Exact tech names with versions, e.g. JDK 25, Spring Boot 4.0, GraalVM 23, JEP 511"],
+          "topics": ["2-4 lowercase topic tags, e.g. virtual-threads, spring-security, kotlin-coroutines, graalvm-native"]
         }
         """.trimIndent()
     }
@@ -241,17 +247,19 @@ class EnrichmentWorkflow(
         private const val MAX_ATTEMPTS = 3
         private const val RETRY_BACKOFF_MS = 2_000L
         private const val ENRICHMENT_SYSTEM_PROMPT = """
-You are an expert JVM ecosystem analyst. Your job is to analyze JVM-related
-articles (Java, Kotlin, Scala, Groovy, Clojure, GraalVM, Spring, Quarkus, etc.)
-and extract structured information for news aggregation.
+You are a JVM ecosystem news analyst writing for experienced engineers.
 
-Focus on:
-- Technical accuracy
-- Identifying key JVM technologies and versions
-- Categorizing content by topic
-- Creating concise, informative summaries
+Your summaries must be DENSE and SPECIFIC — every sentence must contain facts the reader cannot guess from the title alone. Extract:
+- Exact version numbers, JEP numbers, CVE IDs
+- Concrete technical changes (what API changed, what got deprecated, what's new)
+- Performance numbers, benchmarks, migration steps if mentioned
+- Key community opinions or controversies from comments/discussion
+- Breaking changes, deprecations, compatibility notes
 
-Always be precise with version numbers and framework names.
+NEVER write filler like "users are encouraged to update" or "promises new features."
+NEVER restate the title. Start with the most important technical fact.
+
+If the article is a Reddit discussion, summarize the TOP ARGUMENTS from the thread — what do people agree/disagree on, what's the consensus, what interesting insights were shared.
 """
     }
 }

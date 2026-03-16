@@ -21,3 +21,33 @@ reddit:
   - subreddit: "java"
   - subreddit: "Kotlin"
   - subreddit: "scala"
+
+githubTrending:
+  languages: ["java", "kotlin", "scala"]
+  minStars: 10
+  sinceDays: 7
+  limit: 20
+
+githubReleases:
+  sinceDays: 7
+  repos:
+    - "spring-projects/spring-boot"
+    - "spring-projects/spring-framework"
+    - "spring-projects/spring-security"
+    - "quarkusio/quarkus"
+    - "micronaut-projects/micronaut-core"
+    - "JetBrains/kotlin"
+    - "oracle/graal"
+    - "apache/kafka"
+    - "hibernate/hibernate-orm"
+    - "ktorio/ktor"
+    - "google/guava"
+    - "apache/maven"
+    - "gradle/gradle"
+    - "mockito/mockito"
+    - "junit-team/junit5"
+    - "testcontainers/testcontainers-java"
+    - "reactor/reactor-core"
+    - "netty/netty"
+    - "grpc/grpc-java"
+    - "flyway/flyway"
