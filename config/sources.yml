@@ -51,3 +51,61 @@ githubReleases:
     - "netty/netty"
     - "grpc/grpc-java"
     - "flyway/flyway"
+
+openjdkMail:
+  # Core JDK development
+  - list: "jdk-dev"
+    minReplies: 3
+  - list: "core-libs-dev"
+    minReplies: 3
+  - list: "compiler-dev"
+    minReplies: 3
+  - list: "security-dev"
+    minReplies: 2
+  # Runtime & GC
+  - list: "hotspot-dev"
+    minReplies: 3
+  - list: "hotspot-gc-dev"
+    minReplies: 2
+  - list: "hotspot-runtime-dev"
+    minReplies: 2
+  - list: "hotspot-compiler-dev"
+    minReplies: 2
+  # Language projects
+  - list: "amber-dev"
+    minReplies: 2
+  - list: "loom-dev"
+    minReplies: 2
+  - list: "valhalla-dev"
+    minReplies: 2
+  - list: "panama-dev"
+    minReplies: 2
+  - list: "leyden-dev"
+    minReplies: 2
+  - list: "babylon-dev"
+    minReplies: 2
+  # Runtime features
+  - list: "lilliput-dev"
+    minReplies: 2
+  - list: "zgc-dev"
+    minReplies: 2
+  - list: "shenandoah-dev"
+    minReplies: 2
+  - list: "crac-dev"
+    minReplies: 2
+  - list: "graal-dev"
+    minReplies: 2
+  # Tooling & ecosystem
+  - list: "serviceability-dev"
+    minReplies: 2
+  - list: "jdk-updates-dev"
+    minReplies: 3
+  - list: "net-dev"
+    minReplies: 2
+  - list: "classfile-api-dev"
+    minReplies: 2
+  # Announcements (always include)
+  - list: "announce"
+    minReplies: 0
+  - list: "vuln-announce"
+    minReplies: 0

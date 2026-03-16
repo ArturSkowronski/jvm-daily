@@ -11,6 +11,7 @@ data class SourcesConfig(
     val reddit: List<RedditSourceConfig> = emptyList(),
     val githubTrending: GitHubTrendingConfig? = null,
     val githubReleases: GitHubReleasesConfig? = null,
+    val openjdkMail: List<OpenJdkMailConfig> = emptyList(),
 ) {
     companion object {
         fun load(path: Path): SourcesConfig {
@@ -37,6 +38,12 @@ data class GitHubTrendingConfig(
 data class GitHubReleasesConfig(
     val repos: List<String> = emptyList(),
     val sinceDays: Int = 7,
+)
+
+@Serializable
+data class OpenJdkMailConfig(
+    val list: String,          // e.g. "jdk-dev", "amber-dev"
+    val minReplies: Int = 2,   // skip threads with fewer replies (noise filter)
 )
 
 @Serializable
