@@ -139,7 +139,7 @@ internal fun runEnrichment(dbPath: String) {
     val llmModel    = System.getenv("LLM_MODEL") ?: "gpt-4"
 
     println("LLM Provider: $llmProvider / Model: $llmModel")
-    if (llmProvider != "mock" && llmProvider != "groq" && llmApiKey == null) {
+    if (llmProvider != "mock" && llmProvider != "groq" && llmProvider != "gemini" && llmApiKey == null) {
         error("LLM_API_KEY required for provider '$llmProvider'")
     }
 
@@ -186,7 +186,7 @@ internal fun runEnrichmentReplay(dbPath: String, args: List<String>) {
     val llmApiKey   = System.getenv("LLM_API_KEY")
     val llmModel    = System.getenv("LLM_MODEL") ?: "gpt-4"
 
-    if (llmProvider != "mock" && llmProvider != "groq" && llmApiKey == null) {
+    if (llmProvider != "mock" && llmProvider != "groq" && llmProvider != "gemini" && llmApiKey == null) {
         error("LLM_API_KEY required for provider '$llmProvider'")
     }
 
@@ -503,7 +503,7 @@ internal fun runClustering(dbPath: String) {
     val llmApiKey   = System.getenv("LLM_API_KEY")
     val llmModel    = System.getenv("LLM_MODEL") ?: "gpt-4"
 
-    if (llmProvider != "mock" && llmProvider != "groq" && llmApiKey == null) {
+    if (llmProvider != "mock" && llmProvider != "groq" && llmProvider != "gemini" && llmApiKey == null) {
         error("LLM_API_KEY required for provider '$llmProvider'")
     }
 
@@ -557,12 +557,17 @@ internal fun createLLMClient(provider: String, apiKey: String?, model: String): 
             model = System.getenv("LLM_MODEL") ?: "llama-3.3-70b-versatile",
             baseUrl = "https://api.groq.com/openai/v1",
         )
+        "gemini" -> OpenAiCompatibleLLMClient(
+            apiKey = System.getenv("GEMINI_API_KEY") ?: apiKey,
+            model = System.getenv("LLM_MODEL") ?: "gemini-2.0-flash",
+            baseUrl = "https://generativelanguage.googleapis.com/v1beta/openai",
+        )
         "openai-compatible" -> OpenAiCompatibleLLMClient(
             apiKey = apiKey,
             model = model,
             baseUrl = System.getenv("LLM_BASE_URL") ?: "https://api.openai.com/v1",
         )
-        else -> error("LLM provider '$provider' not yet implemented. Supported: mock, openai, groq, openai-compatible")
+        else -> error("LLM provider '$provider' not yet implemented. Supported: mock, openai, groq, gemini, openai-compatible")
     }
 
 private class MockLLMClient : LLMClient {
