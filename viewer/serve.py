@@ -31,142 +31,161 @@ HTML = r"""<!DOCTYPE html>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>JVM Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Newsreader:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-           background: #0d1117; color: #e6edf3;
+    body { font-family: 'Inter', -apple-system, sans-serif;
+           background: #fafafa; color: #1a1a1a;
            display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
 
     /* ── Header ── */
-    header { background: #161b22; border-bottom: 1px solid #30363d;
-             padding: 0 20px; display: flex; align-items: center; height: 48px; flex-shrink: 0; }
-    header h1 { font-size: 1.05rem; color: #58a6ff; margin-right: 24px; }
-    .tab       { background: transparent; border: none; border-bottom: 2px solid transparent;
-                 color: #8b949e; font-size: 0.9rem; padding: 0 4px; height: 48px;
-                 margin-right: 20px; cursor: pointer; }
-    .tab.active { color: #e6edf3; border-bottom-color: #58a6ff; }
-    #meta { margin-left: auto; font-size: 0.8rem; color: #8b949e; }
+    header { background: #fff; border-bottom: 1px solid #e5e5e5;
+             padding: 0 24px; display: flex; align-items: center; height: 56px; flex-shrink: 0; }
+    header h1 { font-family: 'Newsreader', Georgia, serif; font-size: 1.25rem;
+                font-weight: 600; color: #1a1a1a; margin-right: 32px; letter-spacing: -0.01em; }
+    .tab { background: transparent; border: none; border-bottom: 2px solid transparent;
+           color: #888; font-size: 0.85rem; font-weight: 500; padding: 0 2px; height: 56px;
+           margin-right: 24px; cursor: pointer; transition: color 0.15s; }
+    .tab:hover { color: #555; }
+    .tab.active { color: #1a1a1a; border-bottom-color: #1a1a1a; }
+    #meta { margin-left: auto; font-size: 0.78rem; color: #999; font-weight: 400; }
 
     /* ── Layout ── */
-    .view   { display: flex; flex: 1; overflow: hidden; }
+    .view { display: flex; flex: 1; overflow: hidden; }
     .hidden { display: none !important; }
 
     /* ── Date sidebar ── */
-    aside { width: 160px; flex-shrink: 0; background: #161b22;
-            border-right: 1px solid #30363d; overflow-y: auto;
-            padding: 10px 8px; display: flex; flex-direction: column; gap: 5px; }
-    aside h2 { font-size: 0.65rem; text-transform: uppercase; letter-spacing: .08em;
-               color: #8b949e; padding: 2px 8px 8px; }
-    .date-btn { background: transparent; border: 1px solid #30363d; border-radius: 6px;
-                color: #b1bac4; font-size: 0.82rem; padding: 7px 10px; cursor: pointer;
-                text-align: left; }
-    .date-btn:hover  { background: #21262d; color: #e6edf3; }
-    .date-btn.active { background: #1f3a5f; color: #58a6ff;
-                       border-color: #58a6ff; font-weight: 600; }
+    aside { width: 140px; flex-shrink: 0; background: #fff;
+            border-right: 1px solid #e5e5e5; overflow-y: auto;
+            padding: 16px 10px; display: flex; flex-direction: column; gap: 3px; }
+    aside h2 { font-size: 0.6rem; text-transform: uppercase; letter-spacing: .1em;
+               color: #aaa; padding: 0 8px 10px; font-weight: 600; }
+    .date-btn { background: transparent; border: none; border-radius: 6px;
+                color: #666; font-size: 0.8rem; padding: 8px 10px; cursor: pointer;
+                text-align: left; font-weight: 400; transition: all 0.12s; }
+    .date-btn:hover { background: #f0f0f0; color: #1a1a1a; }
+    .date-btn.active { background: #1a1a1a; color: #fff; font-weight: 500; }
 
-    /* ── Article content ── */
-    #article-view main { flex: 1; overflow-y: auto; padding: 28px 40px 64px; }
-    #md h1 { color: #58a6ff; font-size: 1.6rem; margin-bottom: 8px; }
-    #md h2 { color: #e6edf3; font-size: 1rem; margin: 22px 0 8px;
-             padding-bottom: 5px; border-bottom: 1px solid #21262d; }
-    #md p  { line-height: 1.7; color: #b1bac4; margin-bottom: 6px; }
-    #md strong { color: #e6edf3; }
-    #md a  { color: #58a6ff; text-decoration: none; }
+    /* ── Main content ── */
+    #article-view main { flex: 1; overflow-y: auto; padding: 0; }
+    .content-scroll { max-width: 860px; margin: 0 auto; padding: 40px 24px 80px; }
+
+    /* ── Markdown fallback ── */
+    #md h1 { font-family: 'Newsreader', serif; font-size: 1.5rem; margin-bottom: 8px; color: #1a1a1a; }
+    #md h2 { font-size: 0.95rem; margin: 20px 0 8px; padding-bottom: 5px; border-bottom: 1px solid #eee; }
+    #md p { line-height: 1.7; color: #555; margin-bottom: 6px; font-size: 0.9rem; }
+    #md a { color: #2563eb; text-decoration: none; }
     #md a:hover { text-decoration: underline; }
-    #md hr { border: none; border-top: 1px solid #21262d; margin: 4px 0 18px; }
-    #no-files { color: #8b949e; padding: 60px 40px; line-height: 2; }
-    #no-files code { background: #21262d; padding: 2px 6px; border-radius: 4px; }
+    #md hr { border: none; border-top: 1px solid #eee; margin: 4px 0 18px; }
+    #no-files { color: #999; padding: 60px 24px; line-height: 2; font-size: 0.9rem; }
+    #no-files code { background: #f0f0f0; padding: 2px 6px; border-radius: 4px; font-size: 0.85rem; }
 
-    /* ── Pipeline view ── */
-    #pipeline-view { flex: 1; overflow-y: auto; padding: 24px 32px 64px; }
-    .stats-row { display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; }
-    .stat-card { background: #161b22; border: 1px solid #30363d; border-radius: 8px;
-                 padding: 14px 20px; min-width: 110px; }
-    .stat-card .num   { font-size: 1.8rem; font-weight: 700; }
-    .stat-card .label { font-size: 0.72rem; color: #8b949e; text-transform: uppercase;
-                        letter-spacing: .07em; margin-top: 2px; }
-    .stat-success { border-color: #2ea04322; }
-    .stat-success .num { color: #3fb950; }
-    .stat-failed  { border-color: #f8514922; }
-    .stat-failed  .num { color: #f85149; }
-    .stat-scheduled .num { color: #58a6ff; }
+    /* ── Digest header ── */
+    .digest-header { margin-bottom: 40px; }
+    .digest-date { font-family: 'Newsreader', serif; font-size: 1.8rem; font-weight: 600;
+                   color: #1a1a1a; letter-spacing: -0.02em; margin-bottom: 6px; }
+    .digest-stats { font-size: 0.8rem; color: #999; }
+    .digest-stats span { margin-right: 16px; }
 
-    .section-title { font-size: 0.7rem; text-transform: uppercase; letter-spacing: .08em;
-                     color: #8b949e; margin-bottom: 10px; }
-    .job-row { display: flex; align-items: center; gap: 12px; padding: 11px 16px;
-               background: #161b22; border: 1px solid #30363d; border-radius: 8px;
-               margin-bottom: 7px; }
-    .job-date { font-size: 0.82rem; color: #8b949e; font-family: monospace; min-width: 160px; }
-    .job-dur  { font-size: 0.75rem; color: #8b949e; margin-left: auto; }
-    .job-link { font-size: 0.75rem; color: #58a6ff; text-decoration: none;
-                padding: 3px 10px; border: 1px solid #58a6ff44; border-radius: 4px; }
-    .job-link:hover { background: #58a6ff11; }
+    /* ── Cluster ── */
+    .cluster { margin-bottom: 48px; }
+    .cluster-head { margin-bottom: 16px; }
+    .cluster-title { font-family: 'Newsreader', serif; font-size: 1.2rem; font-weight: 600;
+                     color: #1a1a1a; letter-spacing: -0.01em; line-height: 1.3; }
+    .cluster-count { font-size: 0.7rem; color: #999; font-weight: 400; margin-left: 8px; }
+    .cluster-synthesis { font-size: 0.88rem; color: #555; line-height: 1.7; margin-top: 8px; }
 
-    .chip { font-size: 0.7rem; font-weight: 600; padding: 2px 9px;
-            border-radius: 10px; white-space: nowrap; }
-    .state-SUCCEEDED  { background: #1a3a1a; color: #3fb950; }
-    .state-FAILED     { background: #3a1a1a; color: #f85149; }
-    .state-PROCESSING { background: #3a3a1a; color: #d29922; }
-    .state-ENQUEUED   { background: #1a2a3a; color: #58a6ff; }
-    .state-SCHEDULED  { background: #21262d; color: #8b949e; }
-
-    .offline-msg { color: #8b949e; padding: 32px 0; font-size: 0.9rem; }
-    .offline-msg a { color: #58a6ff; }
-    .refresh-btn { background: #21262d; border: 1px solid #30363d; border-radius: 6px;
-                   color: #8b949e; font-size: 0.78rem; padding: 3px 10px;
-                   cursor: pointer; margin-left: 8px; }
-
-    /* ── Cluster digest view ── */
-    .cluster { margin-bottom: 36px; }
-    .cluster-title { color: #e6edf3; font-size: 1.1rem; margin-bottom: 8px;
-                     display: flex; align-items: center; gap: 8px;
-                     border-bottom: 1px solid #21262d; padding-bottom: 6px; }
-    .cluster-count { font-size: 0.72rem; background: #21262d; color: #8b949e;
-                     padding: 2px 7px; border-radius: 10px; font-weight: normal; }
-    .cluster-synthesis { color: #8b949e; line-height: 1.7; margin-bottom: 14px; font-size: 0.9rem; }
-    .article-list { display: flex; flex-direction: column; gap: 10px; }
-    .article-row { background: #161b22; border: 1px solid #30363d; border-radius: 8px;
-                   padding: 12px 16px; }
-    .article-title { color: #58a6ff; font-size: 0.95rem; text-decoration: none; font-weight: 600; display: block; margin-bottom: 4px; }
-    .article-title:hover { text-decoration: underline; }
-    .chips { display: flex; gap: 6px; flex-wrap: wrap; margin: 4px 0 6px; }
-    .chip { background: #1f3a5f; color: #58a6ff; font-size: 0.7rem;
-            padding: 2px 8px; border-radius: 10px; }
-    .article-summary { color: #8b949e; font-size: 0.85rem; line-height: 1.5; margin: 0;
+    /* ── Article row ── */
+    .article-list { display: flex; flex-direction: column; gap: 0; }
+    .article-row { padding: 14px 0; border-bottom: 1px solid #f0f0f0;
+                   display: flex; align-items: flex-start; gap: 12px; }
+    .article-row:last-child { border-bottom: none; }
+    .article-favicon { width: 16px; height: 16px; margin-top: 3px; flex-shrink: 0;
+                       border-radius: 2px; }
+    .article-body { flex: 1; min-width: 0; }
+    .article-title-row { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+    .article-title { color: #1a1a1a; font-size: 0.9rem; font-weight: 500;
+                     text-decoration: none; line-height: 1.4; }
+    .article-title:hover { color: #2563eb; }
+    .article-source { font-size: 0.72rem; color: #bbb; white-space: nowrap; flex-shrink: 0; }
+    .article-summary { color: #777; font-size: 0.82rem; line-height: 1.55; margin-top: 4px;
                        overflow: hidden; display: -webkit-box;
                        -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+    .article-meta { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; align-items: center; }
+    .topic-tag { font-size: 0.65rem; color: #999; background: #f5f5f5; padding: 2px 8px;
+                 border-radius: 3px; font-weight: 500; letter-spacing: 0.02em; }
+    .source-badge { font-size: 0.62rem; font-weight: 600; padding: 2px 7px;
+                    border-radius: 3px; letter-spacing: 0.03em; text-transform: uppercase; }
+    .source-reddit { background: #fff1f0; color: #e25822; }
+    .source-rss { background: #f0f4ff; color: #2563eb; }
+
+    /* ── Pipeline view ── */
+    #pipeline-view { flex: 1; overflow-y: auto; padding: 32px; }
+    #pipeline-view .content-scroll { max-width: 720px; margin: 0 auto; }
+    .stats-row { display: flex; gap: 12px; margin-bottom: 28px; flex-wrap: wrap; }
+    .stat-card { background: #fff; border: 1px solid #e5e5e5; border-radius: 8px;
+                 padding: 16px 20px; min-width: 110px; }
+    .stat-card .num { font-size: 1.8rem; font-weight: 700; color: #1a1a1a; }
+    .stat-card .label { font-size: 0.68rem; color: #999; text-transform: uppercase;
+                        letter-spacing: .07em; margin-top: 2px; }
+    .stat-success .num { color: #16a34a; }
+    .stat-failed .num { color: #dc2626; }
+    .stat-scheduled .num { color: #2563eb; }
+    .section-title { font-size: 0.68rem; text-transform: uppercase; letter-spacing: .1em;
+                     color: #aaa; margin-bottom: 12px; font-weight: 600; }
+    .job-row { display: flex; align-items: center; gap: 12px; padding: 12px 16px;
+               background: #fff; border: 1px solid #e5e5e5; border-radius: 8px;
+               margin-bottom: 6px; }
+    .job-date { font-size: 0.8rem; color: #888; font-family: 'SF Mono', monospace; min-width: 150px; }
+    .job-dur { font-size: 0.75rem; color: #aaa; margin-left: auto; }
+    .job-link { font-size: 0.72rem; color: #2563eb; text-decoration: none;
+                padding: 3px 10px; border: 1px solid #dbeafe; border-radius: 4px; }
+    .job-link:hover { background: #eff6ff; }
+    .chip { font-size: 0.68rem; font-weight: 600; padding: 3px 9px;
+            border-radius: 4px; white-space: nowrap; }
+    .state-SUCCEEDED { background: #dcfce7; color: #16a34a; }
+    .state-FAILED { background: #fee2e2; color: #dc2626; }
+    .state-PROCESSING { background: #fef9c3; color: #ca8a04; }
+    .state-ENQUEUED { background: #dbeafe; color: #2563eb; }
+    .state-SCHEDULED { background: #f5f5f5; color: #888; }
+    .offline-msg { color: #999; padding: 32px 0; font-size: 0.9rem; }
+    .offline-msg a { color: #2563eb; }
+    .refresh-btn { background: #f5f5f5; border: 1px solid #e5e5e5; border-radius: 6px;
+                   color: #888; font-size: 0.75rem; padding: 3px 10px;
+                   cursor: pointer; margin-left: 8px; }
+    .refresh-btn:hover { background: #eee; }
   </style>
 </head>
 <body>
   <header>
-    <h1>☕ JVM Daily</h1>
-    <button class="tab active" onclick="showTab('articles', this)">Articles</button>
+    <h1>JVM Daily</h1>
+    <button class="tab active" onclick="showTab('articles', this)">Digest</button>
     <button class="tab"        onclick="showTab('pipeline', this)">Pipeline</button>
     <span id="meta"></span>
   </header>
 
-  <!-- Articles -->
   <div id="article-view" class="view">
-    <aside id="date-sidebar"><h2>Dates</h2></aside>
+    <aside id="date-sidebar"><h2>Archive</h2></aside>
     <main>
-      <div id="md"></div>
-      <div id="no-files" class="hidden">
-        No output files found.<br>
-        Run: <code>./gradlew run --args="pipeline"</code>
+      <div class="content-scroll">
+        <div id="md"></div>
+        <div id="no-files" class="hidden">
+          No output files found.<br>
+          Run: <code>./gradlew run --args="pipeline"</code>
+        </div>
       </div>
     </main>
   </div>
 
-  <!-- Pipeline -->
   <div id="pipeline-view" class="view hidden">
-    <div id="pipeline-content"><span style="color:#8b949e">Loading…</span></div>
+    <div class="content-scroll" id="pipeline-content"><span style="color:#999">Loading...</span></div>
   </div>
 
   <script>
   const JOBRUNR_DASHBOARD = location.hostname + ':8000';
 
-  // ── Tabs ──────────────────────────────────────────────────────────────────
   function showTab(name, btn) {
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     btn.classList.add('active');
@@ -175,10 +194,29 @@ HTML = r"""<!DOCTYPE html>
     if (name === 'pipeline') loadPipeline();
   }
 
-  // ── Articles ──────────────────────────────────────────────────────────────
   function esc(s) {
     return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;')
       .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function getDomain(url) {
+    try { return new URL(url).hostname.replace('www.', ''); } catch { return ''; }
+  }
+
+  function faviconUrl(url) {
+    const d = getDomain(url);
+    if (!d) return '';
+    return 'https://www.google.com/s2/favicons?domain=' + d + '&sz=32';
+  }
+
+  function sourceBadge(a) {
+    if (a.sourceType === 'reddit') return '<span class="source-badge source-reddit">Reddit</span>';
+    return '<span class="source-badge source-rss">RSS</span>';
+  }
+
+  function fmtDigestDate(dateStr) {
+    const d = new Date(dateStr + 'T00:00:00');
+    return d.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   }
 
   async function loadDate(date, btn) {
@@ -203,23 +241,45 @@ HTML = r"""<!DOCTYPE html>
 
   function renderClusters(data) {
     const clusters = [...data.clusters].sort((a, b) => b.engagementScore - a.engagementScore);
-    let html = '';
+    const clusterCount = clusters.reduce((s, c) => s + c.articles.length, 0);
+    const unclusteredCount = (data.unclustered || []).length;
+
+    let html = `<div class="digest-header">
+      <div class="digest-date">${fmtDigestDate(data.date)}</div>
+      <div class="digest-stats">
+        <span>${data.totalArticles} articles</span>
+        <span>${clusters.length} topics</span>
+        <span>${clusterCount} clustered</span>
+      </div>
+    </div>`;
 
     function articleHtml(a) {
-      const chips = (a.topics || []).map(t => `<span class="chip">${esc(t)}</span>`).join('');
+      const domain = getDomain(a.url || '');
+      const favicon = faviconUrl(a.url || '');
+      const topics = (a.topics || []).map(t => `<span class="topic-tag">${esc(t)}</span>`).join('');
+      const faviconImg = favicon
+        ? `<img class="article-favicon" src="${favicon}" alt="" loading="lazy" onerror="this.style.display='none'">`
+        : '';
       return `<div class="article-row">
-        <a class="article-title" href="${esc(a.url || '#')}" target="_blank" rel="noopener">${esc(a.title)} ↗</a>
-        <div class="chips">${chips}</div>
-        <p class="article-summary">${esc(a.summary)}</p>
+        ${faviconImg}
+        <div class="article-body">
+          <div class="article-title-row">
+            <a class="article-title" href="${esc(a.url || '#')}" target="_blank" rel="noopener">${esc(a.title)}</a>
+            <span class="article-source">${esc(domain)}</span>
+          </div>
+          <p class="article-summary">${esc(a.summary)}</p>
+          <div class="article-meta">${sourceBadge(a)}${topics}</div>
+        </div>
       </div>`;
     }
 
     for (const cluster of clusters) {
       const arts = [...cluster.articles].sort((a, b) => b.engagementScore - a.engagementScore);
       html += `<div class="cluster">
-        <h2 class="cluster-title">${esc(cluster.title)}
-          <span class="cluster-count">${arts.length}</span></h2>
-        <p class="cluster-synthesis">${esc(cluster.summary)}</p>
+        <div class="cluster-head">
+          <div class="cluster-title">${esc(cluster.title)}<span class="cluster-count">${arts.length} articles</span></div>
+          <p class="cluster-synthesis">${esc(cluster.summary)}</p>
+        </div>
         <div class="article-list">${arts.map(articleHtml).join('')}</div>
       </div>`;
     }
@@ -227,7 +287,9 @@ HTML = r"""<!DOCTYPE html>
     if (data.unclustered && data.unclustered.length > 0) {
       const arts = [...data.unclustered].sort((a, b) => b.engagementScore - a.engagementScore);
       html += `<div class="cluster">
-        <h2 class="cluster-title">Other <span class="cluster-count">${arts.length}</span></h2>
+        <div class="cluster-head">
+          <div class="cluster-title">Other<span class="cluster-count">${arts.length} articles</span></div>
+        </div>
         <div class="article-list">${arts.map(articleHtml).join('')}</div>
       </div>`;
     }
@@ -241,24 +303,24 @@ HTML = r"""<!DOCTYPE html>
     if (!files.length) { document.getElementById('no-files').classList.remove('hidden'); return; }
     files.forEach((f, i) => {
       const date = f.replace('jvm-daily-', '').replace('.md', '');
-      const btn  = document.createElement('button');
+      const btn = document.createElement('button');
       btn.className = 'date-btn';
-      btn.textContent = date;
+      const d = new Date(date + 'T00:00:00');
+      btn.textContent = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
       btn.onclick = () => loadDate(date, btn);
       sidebar.appendChild(btn);
       if (i === 0) loadDate(date, btn);
     });
   }
 
-  // ── Pipeline ──────────────────────────────────────────────────────────────
   function stateChip(state) {
-    const labels = { SUCCEEDED:'✓ success', FAILED:'✗ failed',
-                     PROCESSING:'⟳ running', ENQUEUED:'· queued', SCHEDULED:'◷ scheduled' };
+    const labels = { SUCCEEDED:'Passed', FAILED:'Failed',
+                     PROCESSING:'Running', ENQUEUED:'Queued', SCHEDULED:'Scheduled' };
     return `<span class="chip state-${state}">${labels[state] || state}</span>`;
   }
 
   function fmtDate(iso) {
-    if (!iso) return '—';
+    if (!iso) return '\u2014';
     return new Date(iso).toISOString().replace('T', ' ').slice(0, 16) + ' UTC';
   }
 
@@ -271,65 +333,41 @@ HTML = r"""<!DOCTYPE html>
 
   async function loadPipeline() {
     const el = document.getElementById('pipeline-content');
-
     const [statsRes, succRes, failRes] = await Promise.all([
       fetch('/api/jobrunr/stats'),
       fetch('/api/jobrunr/jobs?state=SUCCEEDED&pageSize=15'),
       fetch('/api/jobrunr/jobs?state=FAILED&pageSize=5'),
     ]);
-
     if (!statsRes.ok) {
       el.innerHTML = `<div class="offline-msg">
-        JobRunr dashboard is offline or not running.<br>
+        Pipeline scheduler is offline.<br>
         Start the app with no arguments to enable the scheduler.<br><br>
-        <a href="http://${JOBRUNR_DASHBOARD}/dashboard" target="_blank">
-          Open JobRunr dashboard ↗
-        </a>
+        <a href="http://${JOBRUNR_DASHBOARD}/dashboard" target="_blank">Open dashboard</a>
       </div>`;
       return;
     }
-
     const stats = await statsRes.json();
-    const succ  = (await succRes.json()).items || [];
-    const fail  = (await failRes.json()).items || [];
-    const jobs  = [...fail, ...succ].sort((a, b) =>
+    const succ = (await succRes.json()).items || [];
+    const fail = (await failRes.json()).items || [];
+    const jobs = [...fail, ...succ].sort((a, b) =>
       new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 20);
-
     el.innerHTML = `
       <div class="stats-row">
-        <div class="stat-card stat-success">
-          <div class="num">${stats.allTimeSucceeded ?? stats.succeeded ?? '—'}</div>
-          <div class="label">All-time runs</div>
-        </div>
-        <div class="stat-card stat-failed">
-          <div class="num">${stats.failed ?? 0}</div>
-          <div class="label">Failed</div>
-        </div>
-        <div class="stat-card stat-scheduled">
-          <div class="num">${stats.scheduled ?? 0}</div>
-          <div class="label">Scheduled</div>
-        </div>
+        <div class="stat-card stat-success"><div class="num">${stats.allTimeSucceeded ?? stats.succeeded ?? '\u2014'}</div><div class="label">Total runs</div></div>
+        <div class="stat-card stat-failed"><div class="num">${stats.failed ?? 0}</div><div class="label">Failed</div></div>
+        <div class="stat-card stat-scheduled"><div class="num">${stats.scheduled ?? 0}</div><div class="label">Scheduled</div></div>
       </div>
-
-      <div class="section-title">
-        Recent runs
-        <button class="refresh-btn" onclick="loadPipeline()">↺ refresh</button>
-      </div>
+      <div class="section-title">Recent runs <button class="refresh-btn" onclick="loadPipeline()">Refresh</button></div>
       ${jobs.length === 0
-        ? '<div style="color:#8b949e;padding:20px 0">No jobs yet — pipeline hasn\'t run.</div>'
-        : jobs.map(j => `
-          <div class="job-row">
+        ? '<div style="color:#999;padding:20px 0">No runs yet.</div>'
+        : jobs.map(j => `<div class="job-row">
             <span class="job-date">${fmtDate(j.createdAt)}</span>
             ${stateChip(j.state)}
             <span class="job-dur">${fmtDur(j.createdAt, j.updatedAt)}</span>
-            <a class="job-link"
-               href="http://${JOBRUNR_DASHBOARD}/dashboard#/jobs/${j.id}"
-               target="_blank">logs ↗</a>
-          </div>`).join('')}
-    `;
+            <a class="job-link" href="http://${JOBRUNR_DASHBOARD}/dashboard#/jobs/${j.id}" target="_blank">Logs</a>
+          </div>`).join('')}`;
   }
 
-  // ── Init ──────────────────────────────────────────────────────────────────
   initArticles();
   </script>
 </body>
