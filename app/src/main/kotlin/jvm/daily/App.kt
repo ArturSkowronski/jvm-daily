@@ -3,6 +3,8 @@ package jvm.daily
 import jvm.daily.ai.LLMClient
 import jvm.daily.ai.OpenAiCompatibleLLMClient
 import jvm.daily.config.SourcesConfig
+import jvm.daily.source.GitHubReleasesSource
+import jvm.daily.source.GitHubTrendingSource
 import jvm.daily.source.MarkdownFileSource
 import jvm.daily.source.RedditSource
 import jvm.daily.source.RssSource
@@ -125,6 +127,8 @@ internal fun runIngress(dbPath: String) {
             register(MarkdownFileSource(Path.of(sourcesDir)))
             if (config.rss.isNotEmpty()) register(RssSource(config.rss))
             if (config.reddit.isNotEmpty()) register(RedditSource(config.reddit))
+            config.githubTrending?.let { register(GitHubTrendingSource(it)) }
+            config.githubReleases?.let { register(GitHubReleasesSource(it)) }
         }
         val workflow = IngressWorkflow(sourceRegistry, repository)
         runBlocking { workflow.execute() }
