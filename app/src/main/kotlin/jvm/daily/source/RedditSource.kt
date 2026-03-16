@@ -7,22 +7,25 @@ import jvm.daily.model.FeedIngestResult
 import jvm.daily.model.FeedIngestStatus
 import jvm.daily.model.SourceFetchOutcome
 import kotlinx.datetime.Clock
-import kotlinx.datetime.Instant
 import kotlinx.serialization.json.*
 import java.net.HttpURLConnection
 import java.net.URI
 
 /**
- * Reddit source — fetches posts + full comment threads from subreddits.
+ * Reddit source — fetches top posts from the past week with active discussions.
  *
  * Uses Reddit's public JSON API (no auth required):
- *   GET https://www.reddit.com/r/{subreddit}/new.json?limit=25
+ *   GET https://www.reddit.com/r/{subreddit}/top.json?t=week&limit=50
  *   GET https://www.reddit.com/r/{subreddit}/comments/{id}.json
+ *
+ * Filters:
+ *   - Only threads with >= minComments (default 5) are kept
+ *   - Uses /top?t=week to find threads that gained traction over 7 days
+ *   - Threads are treated as "fresh" — an active discussion is newsworthy
  *
  * Each post becomes an Article with:
  *   - content: post selftext + formatted comment thread
  *   - comments: structured discussion with authors and scores
- *   - author: post author
  */
 class RedditSource(
     private val configs: List<RedditSourceConfig>,
@@ -42,24 +45,35 @@ class RedditSource(
     private fun fetchSubreddit(config: RedditSourceConfig): SourceFetchOutcome {
         val subreddit = config.subreddit
         return try {
-            val listingJson = httpGet("https://www.reddit.com/r/$subreddit/new.json?limit=${config.limit}")
+            val url = "https://www.reddit.com/r/$subreddit/top.json?t=${config.timeWindow}&limit=${config.limit}"
+            val listingJson = httpGet(url)
             val listing = Json.parseToJsonElement(listingJson)
             val posts = listing.jsonObject["data"]?.jsonObject?.get("children")?.jsonArray ?: emptyList()
 
+            var skipped = 0
             val articles = posts.mapNotNull { child ->
                 try {
-                    parsePost(child.jsonObject["data"]!!.jsonObject, subreddit)
-                } catch (e: Exception) {
-                    null // skip malformed posts
+                    val postData = child.jsonObject["data"]!!.jsonObject
+                    val numComments = postData["num_comments"]?.jsonPrimitive?.intOrNull ?: 0
+                    if (numComments < config.minComments) {
+                        skipped++
+                        return@mapNotNull null
+                    }
+                    parsePost(postData, subreddit)
+                } catch (_: Exception) {
+                    null
                 }
             }
+
+            val errors = if (skipped > 0) listOf("Skipped $skipped threads with < ${config.minComments} comments") else emptyList()
 
             SourceFetchOutcome(
                 feed = FeedIngestResult(
                     sourceType = sourceType,
                     sourceId = "r/$subreddit",
-                    status = FeedIngestStatus.SUCCESS,
+                    status = if (articles.isEmpty() && posts.isNotEmpty()) FeedIngestStatus.PARTIAL_SUCCESS else FeedIngestStatus.SUCCESS,
                     fetchedCount = articles.size,
+                    errors = errors,
                 ),
                 articles = articles,
             )
@@ -86,9 +100,8 @@ class RedditSource(
         val url = "https://www.reddit.com$permalink"
         val score = post["score"]?.jsonPrimitive?.intOrNull ?: 0
         val numComments = post["num_comments"]?.jsonPrimitive?.intOrNull ?: 0
-        val createdUtc = post["created_utc"]?.jsonPrimitive?.doubleOrNull
 
-        // Fetch comments for this post
+        // Fetch full comment thread
         val comments = fetchComments(subreddit, postId)
 
         val content = buildString {
@@ -96,7 +109,7 @@ class RedditSource(
                 appendLine(selftext)
                 appendLine()
             }
-            appendLine("Score: $score | Comments: $numComments")
+            appendLine("Score: $score | Comments: $numComments | Subreddit: r/$subreddit")
             appendLine()
             if (comments.isNotEmpty()) {
                 appendLine("--- Discussion ---")
@@ -106,17 +119,13 @@ class RedditSource(
             }
         }
 
-        val commentsFormatted = buildString {
-            for (comment in comments) {
-                appendLine(comment)
-            }
-        }.trimEnd()
+        val commentsFormatted = comments.joinToString("\n").trimEnd()
 
         val canonicalId = CanonicalArticleId.from(sourceType, "r/$subreddit/$postId", title, url)
 
         return Article(
             id = canonicalId,
-            title = title,
+            title = "[$subreddit] $title",
             content = content,
             sourceType = sourceType,
             sourceId = "r/$subreddit/$postId",
@@ -129,7 +138,7 @@ class RedditSource(
 
     private fun fetchComments(subreddit: String, postId: String): List<String> {
         return try {
-            val json = httpGet("https://www.reddit.com/r/$subreddit/comments/$postId.json?limit=50&depth=3")
+            val json = httpGet("https://www.reddit.com/r/$subreddit/comments/$postId.json?limit=50&depth=3&sort=top")
             val elements = Json.parseToJsonElement(json).jsonArray
             if (elements.size < 2) return emptyList()
 

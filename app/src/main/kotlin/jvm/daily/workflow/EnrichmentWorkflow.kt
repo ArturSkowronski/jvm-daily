@@ -29,6 +29,7 @@ class EnrichmentWorkflow(
     private val replayRawArticleIds: Set<String>? = null,
     private val clock: Clock = Clock.System,
     private val retryBackoffMs: Long = RETRY_BACKOFF_MS,
+    private val sinceDays: Int = 1,
 ) : Workflow {
 
     override val name: String = "enrichment"
@@ -37,7 +38,7 @@ class EnrichmentWorkflow(
         println("[enrichment] Starting enrichment workflow")
 
         val targetIds = replayRawArticleIds?.toList() ?: processedArticleRepository.findUnprocessedRawArticles(
-            since = clock.now().minus(7.days)
+            since = clock.now().minus(sinceDays.days)
         )
 
         if (targetIds.isEmpty()) {

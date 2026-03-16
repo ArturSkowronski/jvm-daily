@@ -26,5 +26,7 @@ data class RssFeedConfig(
 @Serializable
 data class RedditSourceConfig(
     val subreddit: String,
-    val limit: Int = 25,
+    val limit: Int = 50,
+    val minComments: Int = 5,
+    val timeWindow: String = "week",  // hour, day, week, month, year, all
 )
