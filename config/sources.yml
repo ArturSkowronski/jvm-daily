@@ -57,15 +57,55 @@ bluesky:
   limit: 20
   accounts:
     # JDK / OpenJDK team
-    - "nipafx.dev"            # Nicolai Parlog — Java Developer Advocate (Oracle)
+    - "nipafx.dev"              # Nicolai Parlog — Java Developer Advocate (Oracle)
     - "briangoetz.bsky.social"  # Brian Goetz — Java Language Architect
-    - "smarks.bsky.social"    # Stuart Marks — JDK developer (Oracle)
-    - "cl4es.bsky.social"     # Claes Redestad — JDK performance (Oracle)
+    - "smarks.bsky.social"      # Stuart Marks — JDK developer (Oracle)
+    - "cl4es.bsky.social"       # Claes Redestad — JDK performance (Oracle)
     - "gavinbierman.bsky.social" # Gavin Bierman — Java Language spec
-    - "joshbloch.bsky.social" # Joshua Bloch — Effective Java author
+    - "joshbloch.bsky.social"   # Joshua Bloch — Effective Java author
+    - "mreinhold.org"           # Mark Reinhold — Chief Architect Java
+    - "gsaab.bsky.social"       # Georges Saab — SVP Java Platform Group
+    - "shipilev.bsky.social"    # Aleksey Shipilëv — JVM performance, OpenJDK
+    - "eosterlund.bsky.social"  # Erik Österlund — HotSpot developer
     # Framework / ecosystem leaders
-    - "gunnarmorling.dev"     # Gunnar Morling — Debezium, Java Champion
-    - "headius.bsky.social"   # Charles Oliver Nutter — JRuby, JVM internals
+    - "gunnarmorling.dev"       # Gunnar Morling — Debezium, Java Champion
+    - "headius.bsky.social"     # Charles Oliver Nutter — JRuby, JVM internals
+    - "starbuxman.joshlong.com" # Josh Long — Spring Advocate
+    - "hollycummins.com"        # Holly Cummins — Quarkus, IBM
+    - "trishagee.bsky.social"   # Trisha Gee — Developer Productivity
+    - "rotnroll666.bsky.social" # Michael Simons — Neo4j, Java Champion
+    - "emmanuelbernard.com"     # Emmanuel Bernard — Hibernate, Quarkus
+    - "vladmihalcea.bsky.social" # Vlad Mihalcea — High-Performance JPA
+    - "speakjava.bsky.social"   # Simon Ritter — Azul, Java Champion
+    - "myfear.com"              # Markus Eisele — IBM, O'Reilly author
+    - "mraible.bsky.social"     # Matt Raible — Spring/Okta
+    - "maritvandijk.bsky.social" # Marit van Dijk — JetBrains Java DevRel
+    - "ogkittylyst.bsky.social" # Ben Evans — JVM performance
+    - "danielbryantuk.com"      # Daniel Bryant — Platform engineering
+    - "kousenit.com"            # Ken Kousen — Kotlin/Groovy trainer
+    - "sheratchander.bsky.social" # Sharat Chander — Oracle Java DevRel
+    # Organizations
+    - "kotlinlang.org"          # Kotlin by JetBrains
+    - "openjdk.org"             # OpenJDK official
+    - "foojay.io"               # Friends of OpenJDK
+    - "graalvm.org"             # GraalVM official
+    - "quarkus.io"              # Quarkus framework
+    - "intellijidea.com"        # IntelliJ IDEA
+    # GraalVM
+    - "thomaswue.dev"           # Thomas Wuerthinger — GraalVM founder
+    - "alina-yurenko.bsky.social" # Alina Yurenko — GraalVM DevRel
+    # Quarkus
+    - "maxandersen.xam.dk"      # Max Rydahl Andersen — Quarkus co-lead
+    - "cescoffier.bsky.social"  # Clement Escoffier — Quarkus co-lead
+    - "sannegrinovero.bsky.social" # Sanne Grinovero — Quarkus/Hibernate
+    # Kotlin
+    - "antonarhipov.bsky.social" # Anton Arhipov — JetBrains DevRel
+    - "sebi.io"                 # Sebastian Aigner — Kotlin DevRel
+    - "zsmb.co"                 # Márton Braun — Kotlin tooling
+    # Groovy
+    - "glaforge.dev"            # Guillaume Laforge — Groovy co-founder
+    # JavaFX
+    - "johanvos.bsky.social"    # Johan Vos — OpenJFX co-lead
 
 openjdkMail:
   # Core JDK development
