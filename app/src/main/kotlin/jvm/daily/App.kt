@@ -143,10 +143,17 @@ internal fun runEnrichment(dbPath: String) {
         error("LLM_API_KEY required for provider '$llmProvider'")
     }
 
+    val sinceDays = System.getenv("ENRICHMENT_SINCE_DAYS")?.toIntOrNull() ?: 1
+
     DuckDbConnectionFactory.persistent(dbPath).use { connection ->
         val rawRepo       = DuckDbArticleRepository(connection)
         val processedRepo = DuckDbProcessedArticleRepository(connection)
-        runBlocking { EnrichmentWorkflow(rawRepo, processedRepo, createLLMClient(llmProvider, llmApiKey, llmModel)).execute() }
+        runBlocking {
+            EnrichmentWorkflow(
+                rawRepo, processedRepo, createLLMClient(llmProvider, llmApiKey, llmModel),
+                sinceDays = sinceDays,
+            ).execute()
+        }
         println("Total processed articles: ${processedRepo.count()}")
     }
 }
