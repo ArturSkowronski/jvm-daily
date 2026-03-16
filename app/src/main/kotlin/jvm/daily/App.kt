@@ -3,6 +3,7 @@ package jvm.daily
 import jvm.daily.ai.LLMClient
 import jvm.daily.ai.OpenAiCompatibleLLMClient
 import jvm.daily.config.SourcesConfig
+import jvm.daily.source.BlueskySource
 import jvm.daily.source.GitHubReleasesSource
 import jvm.daily.source.GitHubTrendingSource
 import jvm.daily.source.MarkdownFileSource
@@ -142,6 +143,7 @@ internal fun runIngress(dbPath: String) {
             config.githubTrending?.let { register(GitHubTrendingSource(it, excludeRepos = seenTrendingRepos)) }
             config.githubReleases?.let { register(GitHubReleasesSource(it)) }
             if (config.openjdkMail.isNotEmpty()) register(OpenJdkMailSource(config.openjdkMail))
+            config.bluesky?.let { register(BlueskySource(it)) }
         }
         val workflow = IngressWorkflow(sourceRegistry, repository)
         runBlocking { workflow.execute() }

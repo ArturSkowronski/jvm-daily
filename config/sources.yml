@@ -52,6 +52,21 @@ githubReleases:
     - "grpc/grpc-java"
     - "flyway/flyway"
 
+bluesky:
+  sinceDays: 7
+  limit: 20
+  accounts:
+    # JDK / OpenJDK team
+    - "nipafx.dev"            # Nicolai Parlog — Java Developer Advocate (Oracle)
+    - "briangoetz.bsky.social"  # Brian Goetz — Java Language Architect
+    - "smarks.bsky.social"    # Stuart Marks — JDK developer (Oracle)
+    - "cl4es.bsky.social"     # Claes Redestad — JDK performance (Oracle)
+    - "gavinbierman.bsky.social" # Gavin Bierman — Java Language spec
+    - "joshbloch.bsky.social" # Joshua Bloch — Effective Java author
+    # Framework / ecosystem leaders
+    - "gunnarmorling.dev"     # Gunnar Morling — Debezium, Java Champion
+    - "headius.bsky.social"   # Charles Oliver Nutter — JRuby, JVM internals
+
 openjdkMail:
   # Core JDK development
   - list: "jdk-dev"

@@ -12,6 +12,7 @@ data class SourcesConfig(
     val githubTrending: GitHubTrendingConfig? = null,
     val githubReleases: GitHubReleasesConfig? = null,
     val openjdkMail: List<OpenJdkMailConfig> = emptyList(),
+    val bluesky: BlueskyConfig? = null,
 ) {
     companion object {
         fun load(path: Path): SourcesConfig {
@@ -44,6 +45,13 @@ data class GitHubReleasesConfig(
 data class OpenJdkMailConfig(
     val list: String,          // e.g. "jdk-dev", "amber-dev"
     val minReplies: Int = 2,   // skip threads with fewer replies (noise filter)
+)
+
+@Serializable
+data class BlueskyConfig(
+    val accounts: List<String>,
+    val limit: Int = 20,
+    val sinceDays: Int = 7,
 )
 
 @Serializable
