@@ -1,5 +1,6 @@
 package jvm.daily.workflow
 
+import jvm.daily.model.EnrichmentOutcomeStatus
 import jvm.daily.model.ProcessedArticle
 import jvm.daily.storage.ClusterRepository
 import jvm.daily.storage.ProcessedArticleRepository
@@ -35,6 +36,7 @@ class OutgressWorkflow(
         val since = now.minus(outgressDays.days)
 
         val byDate = processedArticleRepository.findByDateRange(since, now)
+            .filter { it.outcomeStatus == EnrichmentOutcomeStatus.SUCCESS }
             .groupBy { it.processedAt.toLocalDateTime(TimeZone.UTC).date }
 
         if (byDate.isEmpty()) {
@@ -80,6 +82,7 @@ class OutgressWorkflow(
             .findByIds(allClusterArticleIds.toList())
             .associateBy { it.id }
         val allIngested = processedArticleRepository.findByIngestedAtRange(windowStart, now)
+            .filter { it.outcomeStatus == EnrichmentOutcomeStatus.SUCCESS }
         val unclusteredArticles = allIngested.filter { it.id !in allClusterArticleIds }
         val totalArticles = allClusterArticleIds.size + unclusteredArticles.size
 

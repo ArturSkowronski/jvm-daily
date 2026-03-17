@@ -139,5 +139,6 @@ class EnrichmentWorkflowTest {
         override fun findUnprocessedRawArticles(since: Instant) = unprocessedIds
         override fun existsById(id: String) = storage.any { it.id == id }
         override fun count(): Long = storage.size.toLong()
+        override fun deleteByProcessedAtSince(since: Instant): Int = 0
     }
 }

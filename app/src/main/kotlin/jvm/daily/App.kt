@@ -28,10 +28,12 @@ import org.h2.jdbcx.JdbcDataSource
 import org.jobrunr.configuration.JobRunr
 import org.jobrunr.jobs.context.JobContext
 import org.jobrunr.jobs.lambdas.IocJobLambda
+import org.jobrunr.scheduling.JobScheduler
 import org.jobrunr.server.JobActivator
 import org.jobrunr.storage.sql.h2.H2StorageProvider
 import java.nio.file.Path
 import kotlin.io.path.createDirectories
+import kotlin.io.path.exists
 import kotlin.io.path.writeText
 import kotlin.system.exitProcess
 import kotlin.time.Duration.Companion.hours
@@ -104,6 +106,8 @@ private fun startDaemon(dbPath: String) {
         cron,
         IocJobLambda<PipelineService> { it.run(JobContext.Null) },
     )
+
+    catchUpIfMissed(jobRunr.jobScheduler, cron)
 
     println("════════════════════════════════════════")
     println(" JVM Daily daemon started")
@@ -607,6 +611,25 @@ internal fun runValidateRawIds(dbPath: String, args: List<String>) {
     }
 }
 
+/**
+ * Enqueues the pipeline immediately if today's digest is missing and the scheduled hour has passed.
+ * Handles the case where the computer was off when the cron fired.
+ */
+private fun catchUpIfMissed(scheduler: JobScheduler, cron: String) {
+    val outputDir = Path.of(System.getenv("OUTPUT_DIR") ?: "output")
+    val now       = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
+    val todayFile = outputDir.resolve("daily-${now.date}.json")
+
+    if (todayFile.exists()) return  // already ran today
+
+    // Parse scheduled hour from cron (standard format: MIN HOUR ...)
+    val scheduledHour = cron.trim().split(Regex("\\s+")).getOrNull(1)?.toIntOrNull()
+    if (scheduledHour != null && now.hour < scheduledHour) return  // too early, wait for cron
+
+    println("Catch-up: today's pipeline hasn't run yet — enqueueing now")
+    scheduler.enqueue(IocJobLambda<PipelineService> { it.run(JobContext.Null) })
+}
+
 internal fun createLLMClient(provider: String, apiKey: String?, model: String): LLMClient =
     when (provider) {
         "mock" -> MockLLMClient()
@@ -618,7 +641,7 @@ internal fun createLLMClient(provider: String, apiKey: String?, model: String): 
         )
         "gemini" -> OpenAiCompatibleLLMClient(
             apiKey = System.getenv("GEMINI_API_KEY") ?: apiKey,
-            model = System.getenv("LLM_MODEL") ?: "gemini-2.0-flash",
+            model = System.getenv("LLM_MODEL") ?: "gemini-3-flash-preview",
             baseUrl = "https://generativelanguage.googleapis.com/v1beta/openai",
         )
         "openai-compatible" -> OpenAiCompatibleLLMClient(
