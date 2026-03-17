@@ -62,10 +62,11 @@ fun main(args: Array<String>) {
         "inspect-quality" -> { println("JVM Daily — inspect-quality"); runInspectQuality(dbPath, args.drop(1)) }
         "clustering"  -> { println("JVM Daily — clustering");  runClustering(dbPath) }
         "outgress"    -> { println("JVM Daily — outgress");     runOutgress(dbPath) }
+        "reprocess"   -> { println("JVM Daily — reprocess");    runReprocess(dbPath, args.drop(1)) }
         "validate-raw-ids" -> { println("JVM Daily — validate-raw-ids"); runValidateRawIds(dbPath, args.drop(1)) }
         else -> {
             System.err.println("Unknown command: $cmd")
-            System.err.println("Valid: pipeline | ingress | enrichment | enrichment-replay | quality-report | inspect-quality | clustering | outgress | validate-raw-ids [--apply]")
+            System.err.println("Valid: pipeline | ingress | enrichment | enrichment-replay | reprocess | quality-report | inspect-quality | clustering | outgress | validate-raw-ids [--apply]")
             exitProcess(1)
         }
     }
@@ -245,6 +246,45 @@ internal fun runEnrichmentReplay(dbPath: String, args: List<String>) {
 
         val stillFailed = processedRepo.findFailedByIds(replayIds)
         println("Replay finished. requested=${replayIds.size}, still-failed=${stillFailed.size}")
+    }
+}
+
+internal fun runReprocess(dbPath: String, args: List<String>) {
+    val llmProvider = System.getenv("LLM_PROVIDER") ?: "mock"
+    val llmApiKey   = System.getenv("LLM_API_KEY")
+    val llmModel    = System.getenv("LLM_MODEL") ?: "gpt-4"
+
+    var sinceHours = 2
+    var index = 0
+    while (index < args.size) {
+        if (args[index] == "--since-hours" && index + 1 < args.size) {
+            sinceHours = args[index + 1].toInt(); index += 2
+        } else index++
+    }
+
+    val since = Clock.System.now().minus(sinceHours.hours)
+    println("Reprocessing articles enriched since $since (last ${sinceHours}h)")
+
+    DuckDbConnectionFactory.persistent(dbPath).use { connection ->
+        val rawRepo       = DuckDbArticleRepository(connection)
+        val processedRepo = DuckDbProcessedArticleRepository(connection)
+        val clusterRepo   = DuckDbClusterRepository(connection)
+
+        val deleted = processedRepo.deleteByProcessedAtSince(since)
+        println("Cleared $deleted processed article(s) — re-enriching...")
+
+        runBlocking {
+            EnrichmentWorkflow(
+                rawRepo, processedRepo, createLLMClient(llmProvider, llmApiKey, llmModel),
+                sinceDays = 1,
+            ).execute()
+        }
+        println("Re-enrichment done. Running clustering...")
+
+        runBlocking {
+            ClusteringWorkflow(processedRepo, clusterRepo, createLLMClient(llmProvider, llmApiKey, llmModel)).execute()
+        }
+        println("Reprocess complete.")
     }
 }
 

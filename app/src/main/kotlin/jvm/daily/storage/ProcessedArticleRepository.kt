@@ -18,4 +18,5 @@ interface ProcessedArticleRepository {
     fun findByIngestedAtRange(start: Instant, end: Instant): List<ProcessedArticle>
     fun existsById(id: String): Boolean
     fun count(): Long
+    fun deleteByProcessedAtSince(since: Instant): Int
 }
