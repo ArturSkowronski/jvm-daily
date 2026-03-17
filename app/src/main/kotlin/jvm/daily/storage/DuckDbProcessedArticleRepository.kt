@@ -330,6 +330,12 @@ class DuckDbProcessedArticleRepository(private val connection: Connection) : Pro
         warnings = runCatching { Json.decodeFromString<List<String>>(getString("warnings")) }.getOrDefault(emptyList()),
     )
 
+    override fun deleteByProcessedAtSince(since: Instant): Int =
+        connection.prepareStatement("DELETE FROM processed_articles WHERE processed_at >= ?").use { stmt ->
+            stmt.setString(1, since.toString())
+            stmt.executeUpdate()
+        }
+
     private fun ensureColumn(table: String, column: String, definition: String) {
         runCatching {
             connection.createStatement().use { stmt ->
