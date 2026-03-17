@@ -35,6 +35,7 @@ data class ProcessedArticle(
 enum class EnrichmentOutcomeStatus {
     SUCCESS,
     FAILED,
+    SKIPPED,  // Filtered out by relevance gate before enrichment
 }
 
 /**
