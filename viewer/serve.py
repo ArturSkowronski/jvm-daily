@@ -165,6 +165,16 @@ HTML = r"""<!DOCTYPE html>
                    color: #888; font-size: 0.75rem; padding: 3px 10px;
                    cursor: pointer; margin-left: 8px; }
     .refresh-btn:hover { background: #eee; }
+
+    .debug-panel { margin-top: 60px; border-top: 1px solid #e5e5e5; padding-top: 20px; }
+    .debug-toggle { background: none; border: none; cursor: pointer; font-size: 0.75rem; color: #bbb; padding: 0; }
+    .debug-toggle:hover { color: #888; }
+    .debug-list { margin-top: 12px; display: none; }
+    .debug-list.open { display: block; }
+    .debug-item { padding: 6px 0; border-bottom: 1px solid #f5f5f5; font-size: 0.78rem; color: #aaa; display: flex; gap: 8px; align-items: baseline; }
+    .debug-reason { font-size: 0.65rem; background: #f5f5f5; color: #999; padding: 1px 6px; border-radius: 3px; white-space: nowrap; }
+    .debug-title { color: #bbb; }
+    .debug-url { color: #c5d5f5; font-size: 0.7rem; }
   </style>
 </head>
 <body>
@@ -317,6 +327,20 @@ HTML = r"""<!DOCTYPE html>
       );
     }
 
+    if (data.debug && data.debug.length > 0) {
+      const items = data.debug.map(d =>
+        `<div class="debug-item">
+          <span class="debug-reason">${esc(d.reason)}</span>
+          <span class="debug-title">${esc(d.title)}</span>
+          ${d.url ? `<a class="debug-url" href="${esc(d.url)}" target="_blank">${esc(getDomain(d.url))}</a>` : ''}
+        </div>`
+      ).join('');
+      html += `<div class="debug-panel">
+        <button class="debug-toggle" data-count="${data.debug.length}" onclick="toggleDebug(this)">▼ Debug (${data.debug.length} rejected)</button>
+        <div class="debug-list">${items}</div>
+      </div>`;
+    }
+
     document.getElementById('md').innerHTML = html;
     applyDismissed(data.date);
   }
@@ -343,6 +367,12 @@ HTML = r"""<!DOCTYPE html>
         btn && btn.classList.add('ticked');
       }
     });
+  }
+
+  function toggleDebug(btn) {
+    const list = btn.nextElementSibling;
+    list.classList.toggle('open');
+    btn.textContent = list.classList.contains('open') ? '▲ Debug' : '▼ Debug (' + btn.dataset.count + ' rejected)';
   }
 
   function toggleDismiss(btn) {

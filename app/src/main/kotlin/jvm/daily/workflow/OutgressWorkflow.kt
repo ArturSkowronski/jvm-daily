@@ -82,8 +82,8 @@ class OutgressWorkflow(
             .findByIds(allClusterArticleIds.toList())
             .associateBy { it.id }
         val allIngested = processedArticleRepository.findByIngestedAtRange(windowStart, now)
-            .filter { it.outcomeStatus == EnrichmentOutcomeStatus.SUCCESS }
-        val unclusteredArticles = allIngested.filter { it.id !in allClusterArticleIds }
+        val successIngested = allIngested.filter { it.outcomeStatus == EnrichmentOutcomeStatus.SUCCESS }
+        val unclusteredArticles = successIngested.filter { it.id !in allClusterArticleIds }
         val totalArticles = allClusterArticleIds.size + unclusteredArticles.size
 
         val digestClusters = clusters.map { cluster ->
@@ -97,12 +97,22 @@ class OutgressWorkflow(
             )
         }.sortedByDescending { it.engagementScore }
 
+        val rejected = allIngested
+            .filter { it.outcomeStatus == EnrichmentOutcomeStatus.SKIPPED || it.outcomeStatus == EnrichmentOutcomeStatus.FAILED }
+            .map { DebugRejected(
+                title = it.originalTitle,
+                url = it.url,
+                sourceType = it.sourceType,
+                reason = it.failureReason ?: it.outcomeStatus.name.lowercase(),
+            ) }
+
         val digest = DigestJson(
             date = now.toLocalDateTime(TimeZone.UTC).date.toString(),
             generatedAt = now.toString(),
             totalArticles = totalArticles,
             clusters = digestClusters,
             unclustered = unclusteredArticles.sortedByDescending { it.engagementScore }.map { it.toDigestArticle() },
+            debug = rejected,
         )
 
         outputDir.createDirectories()
