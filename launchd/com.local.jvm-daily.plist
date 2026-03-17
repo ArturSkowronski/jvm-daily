@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+    "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.local.jvm-daily</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>__REPO__/scripts/local-daemon.sh</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>__REPO__</string>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <true/>
+
+    <key>StandardOutPath</key>
+    <string>__HOME__/.jvm-daily/logs/stdout.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>__HOME__/.jvm-daily/logs/stderr.log</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>DUCKDB_PATH</key>      <string>__HOME__/.jvm-daily/jvm-daily.duckdb</string>
+        <key>OUTPUT_DIR</key>       <string>__HOME__/.jvm-daily/output</string>
+        <key>JOBRUNR_STORE</key>    <string>__HOME__/.jvm-daily/jobrunr</string>
+        <key>CONFIG_PATH</key>      <string>__REPO__/config/sources.yml</string>
+        <key>PIPELINE_CRON</key>    <string>0 6 * * *</string>
+        <key>OUTGRESS_DAYS</key>    <string>30</string>
+        <key>DASHBOARD_PORT</key>   <string>8000</string>
+        <key>VIEWER_PORT</key>      <string>8888</string>
+        <key>LLM_PROVIDER</key>     <string>gemini</string>
+        <key>GEMINI_API_KEY</key>   <string>__GEMINI_API_KEY__</string>
+        <key>GITHUB_TOKEN</key>     <string>__GITHUB_TOKEN__</string>
+    </dict>
+</dict>
+</plist>

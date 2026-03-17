@@ -18,7 +18,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).parent.parent
-OUTPUT_DIR   = PROJECT_ROOT / "output"
+OUTPUT_DIR   = Path(os.environ.get("OUTPUT_DIR", str(PROJECT_ROOT / "output")))
 PORT         = int(sys.argv[1]) if len(sys.argv) > 1 else 8888
 JOBRUNR_URL  = os.environ.get("JOBRUNR_URL", "http://localhost:8000")
 DATE_PATTERN = re.compile(r'^\d{4}-\d{2}-\d{2}$')
@@ -90,12 +90,23 @@ HTML = r"""<!DOCTYPE html>
     .digest-stats span { margin-right: 16px; }
 
     /* ── Cluster ── */
-    .cluster { margin-bottom: 48px; }
-    .cluster-head { margin-bottom: 16px; }
+    #md { display: flex; flex-direction: column; }
+    .cluster { margin-bottom: 48px; order: 0; transition: opacity 0.2s; }
+    .cluster.dismissed { order: 1; opacity: 0.35; }
+    .cluster-head { margin-bottom: 16px; display: flex; align-items: flex-start; gap: 10px; }
+    .cluster-head-text { flex: 1; min-width: 0; }
     .cluster-title { font-family: 'Newsreader', serif; font-size: 1.2rem; font-weight: 600;
                      color: #1a1a1a; letter-spacing: -0.01em; line-height: 1.3; }
     .cluster-count { font-size: 0.7rem; color: #999; font-weight: 400; margin-left: 8px; }
     .cluster-synthesis { font-size: 0.88rem; color: #555; line-height: 1.7; margin-top: 8px; }
+    .tick-btn { flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%;
+                border: 1.5px solid #ddd; background: transparent; cursor: pointer;
+                display: flex; align-items: center; justify-content: center;
+                font-size: 0.7rem; color: transparent; margin-top: 3px;
+                transition: all 0.15s; }
+    .tick-btn:hover { border-color: #16a34a; color: #16a34a; }
+    .tick-btn.ticked { background: #16a34a; border-color: #16a34a; color: #fff; }
+    .digest-header { order: -1; }
 
     /* ── Article row ── */
     .article-list { display: flex; flex-direction: column; gap: 0; }
@@ -110,9 +121,7 @@ HTML = r"""<!DOCTYPE html>
                      text-decoration: none; line-height: 1.4; }
     .article-title:hover { color: #2563eb; }
     .article-source { font-size: 0.72rem; color: #bbb; white-space: nowrap; flex-shrink: 0; }
-    .article-summary { color: #777; font-size: 0.82rem; line-height: 1.55; margin-top: 4px;
-                       overflow: hidden; display: -webkit-box;
-                       -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+    .article-summary { color: #777; font-size: 0.82rem; line-height: 1.55; margin-top: 4px; }
     .article-meta { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; align-items: center; }
     .topic-tag { font-size: 0.65rem; color: #999; background: #f5f5f5; padding: 2px 8px;
                  border-radius: 3px; font-weight: 500; letter-spacing: 0.02em; }
@@ -273,28 +282,83 @@ HTML = r"""<!DOCTYPE html>
       </div>`;
     }
 
+    function clusterHtml(key, titleHtml, synthesisHtml, artsHtml, extraClass) {
+      return `<div class="cluster${extraClass ? ' ' + extraClass : ''}" data-key="${esc(key)}">
+        <div class="cluster-head">
+          <div class="cluster-head-text">
+            ${titleHtml}
+            ${synthesisHtml}
+          </div>
+          <button class="tick-btn" title="Dismiss" onclick="toggleDismiss(this)">✓</button>
+        </div>
+        <div class="article-list">${artsHtml}</div>
+      </div>`;
+    }
+
     for (const cluster of clusters) {
       const arts = [...cluster.articles].sort((a, b) => b.engagementScore - a.engagementScore);
-      html += `<div class="cluster">
-        <div class="cluster-head">
-          <div class="cluster-title">${esc(cluster.title)}<span class="cluster-count">${arts.length} articles</span></div>
-          <p class="cluster-synthesis">${esc(cluster.summary)}</p>
-        </div>
-        <div class="article-list">${arts.map(articleHtml).join('')}</div>
-      </div>`;
+      html += clusterHtml(
+        cluster.title,
+        `<div class="cluster-title">${esc(cluster.title)}<span class="cluster-count">${arts.length} articles</span></div>`,
+        `<div class="cluster-synthesis">${marked.parse(cluster.summary)}</div>`,
+        arts.map(articleHtml).join(''),
+        ''
+      );
     }
 
     if (data.unclustered && data.unclustered.length > 0) {
       const arts = [...data.unclustered].sort((a, b) => b.engagementScore - a.engagementScore);
-      html += `<div class="cluster">
-        <div class="cluster-head">
-          <div class="cluster-title">Other<span class="cluster-count">${arts.length} articles</span></div>
-        </div>
-        <div class="article-list">${arts.map(articleHtml).join('')}</div>
-      </div>`;
+      html += clusterHtml(
+        '__unclustered__',
+        `<div class="cluster-title">Other<span class="cluster-count">${arts.length} articles</span></div>`,
+        '',
+        arts.map(articleHtml).join(''),
+        'unclustered'
+      );
     }
 
     document.getElementById('md').innerHTML = html;
+    applyDismissed(data.date);
+  }
+
+  function dismissedKey(date) { return 'jvm-daily-dismissed-' + date; }
+  function getDismissed(date) {
+    try { return new Set(JSON.parse(localStorage.getItem(dismissedKey(date)) || '[]')); }
+    catch { return new Set(); }
+  }
+  function saveDismissed(date, set) {
+    localStorage.setItem(dismissedKey(date), JSON.stringify([...set]));
+  }
+
+  let _currentDate = '';
+
+  function applyDismissed(date) {
+    _currentDate = date;
+    const dismissed = getDismissed(date);
+    document.querySelectorAll('.cluster[data-key]').forEach(el => {
+      const key = el.dataset.key;
+      const btn = el.querySelector('.tick-btn');
+      if (dismissed.has(key)) {
+        el.classList.add('dismissed');
+        btn && btn.classList.add('ticked');
+      }
+    });
+  }
+
+  function toggleDismiss(btn) {
+    const cluster = btn.closest('.cluster');
+    const key = cluster.dataset.key;
+    const dismissed = getDismissed(_currentDate);
+    if (dismissed.has(key)) {
+      dismissed.delete(key);
+      cluster.classList.remove('dismissed');
+      btn.classList.remove('ticked');
+    } else {
+      dismissed.add(key);
+      cluster.classList.add('dismissed');
+      btn.classList.add('ticked');
+    }
+    saveDismissed(_currentDate, dismissed);
   }
 
   async function initArticles() {
