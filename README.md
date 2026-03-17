@@ -1,356 +1,234 @@
 # JVM Daily
 
 [![Build](https://github.com/ArturSkowronski/jvm-daily/actions/workflows/gradle.yml/badge.svg)](https://github.com/ArturSkowronski/jvm-daily/actions/workflows/gradle.yml)
-[![RSS Feed Check](https://github.com/ArturSkowronski/jvm-daily/actions/workflows/rss-feed-check.yml/badge.svg)](https://github.com/ArturSkowronski/jvm-daily/actions/workflows/rss-feed-check.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 > Automated daily news aggregator for the JVM ecosystem — inspired by [Latent Space AI News](https://news.smol.ai)
 
-**JVM Daily** aggregates news, blog posts, and articles from 17+ RSS feeds covering Java, Kotlin, Spring, Quarkus, GraalVM, and the broader JVM ecosystem. Built with a plugin-based architecture supporting multi-stage AI workflows powered by Koog Agents.
+**JVM Daily** collects articles from RSS feeds, Reddit, GitHub, Bluesky, and OpenJDK mailing lists; enriches them with an LLM; clusters them into themes; and publishes a daily markdown digest.
 
-## Features
+Live: **https://jvm-daily.fly.dev**
 
-- **Plugin-based source engine** — easily add new data sources (RSS, Twitter, Reddit, etc.)
-- **Deduplication** — skip already-ingested articles automatically
-- **Cron-ready** — designed for scheduled execution with timestamped logging
-- **DuckDB storage** — lightweight, embedded analytics database
-- **Multi-stage workflows** — ingress → processing → publishing pipeline (ingress implemented)
+## How It Works
+
+```
+Sources → Ingress → Enrichment → Clustering → Outgress
+```
+
+| Stage | What happens |
+|---|---|
+| **Ingress** | Fetch articles from all configured sources, deduplicate, store in DuckDB |
+| **Enrichment** | LLM generates a summary, extracts entities (frameworks, versions) and topics |
+| **Clustering** | Group articles into thematic clusters by shared topics |
+| **Outgress** | Write daily markdown digest + JSON to `output/` |
+
+### Sources
+
+| Source | What's collected |
+|---|---|
+| RSS (17 feeds) | inside.java, Spring, Kotlin blog, Baeldung, InfoQ, Quarkus, Foojay, DZone, HN, GraalVM, … |
+| Reddit | r/java, r/Kotlin, r/scala |
+| GitHub Trending | Top Java/Kotlin/Scala repos by stars |
+| GitHub Releases | New releases from 20 core JVM projects (Spring Boot, Kotlin, Quarkus, …) |
+| Bluesky | Posts from 42 JVM community members (OpenJDK team, framework leads, orgs) |
+| OpenJDK Mail | 23 mailing lists (jdk-dev, amber-dev, loom-dev, hotspot-dev, …) |
 
 ## Quick Start
 
-> 📖 **Detailed guides:** [`QUICKSTART.md`](QUICKSTART.md) | [`airflow/README.md`](airflow/README.md)
-
-### Option 1: Run Workflows Locally (No Airflow)
-
-**Prerequisites:** JDK 21+, Gradle 8.x (wrapper included)
+**Prerequisites:** JDK 21+, an LLM API key (Gemini, OpenAI, or Groq)
 
 ```bash
-# Step 1: Collect articles from RSS feeds
-./gradlew run --args="ingress"
+# Run the full pipeline once
+LLM_PROVIDER=gemini GEMINI_API_KEY=<key> ./gradlew run --args="pipeline"
 
-# Step 2: Enrich with LLM (summaries, entities, topics)
-./gradlew run --args="enrichment"
-
-# Step 3: Group into thematic clusters
-./gradlew run --args="clustering"
-
-# Explore database
-./gradlew explore
+# View output
+cat output/jvm-daily-$(date +%Y-%m-%d).md
 ```
 
-**Ingress reliability semantics:**
-- `SUCCESS` — run completed and no feed-level failures blocked coverage (including valid zero-new-items days)
-- `SUCCESS_WITH_WARNINGS` — run completed with partial feed failures or malformed-entry warnings
-- `FAIL` — all feeds failed (ingest reliability failure)
+Or build and run the distribution:
 
-Ingress output now includes a per-feed summary with status, fetched/new/duplicate counts, and error reasons.
-
-**Raw article ID validation/backfill (Phase 3):**
 ```bash
-# Dry-run: report mismatches/collisions without mutating rows
-./gradlew run --args="validate-raw-ids"
-
-# Apply mode: update mismatched IDs when collision-free
-./gradlew run --args="validate-raw-ids --apply"
+./gradlew installDist
+LLM_PROVIDER=gemini GEMINI_API_KEY=<key> ./app/build/install/app/bin/app pipeline
 ```
-Recommended operator flow:
-1. Run dry-run and check mismatch/collision counters.
-2. Only run `--apply` when collisions are `0`.
-3. Re-run dry-run to confirm mismatches are cleared.
 
-**Summarization core contract (Phase 4):**
-- Enrichment expects strict JSON from the LLM (`summary`, `entities`, `topics`).
-- Invalid JSON or blank summary produces explicit failed outcomes in processed storage.
-- Transport/provider failures retry up to 3 attempts (2 retries, fixed 2s backoff).
-- Pipeline continues on partial failures and reports warning status instead of aborting the entire run.
+## CLI Commands
 
-**Recoverability controls (Phase 5):**
 ```bash
-# Preview failed enrichment candidates from the last 7 days (default selector)
-./gradlew run --args="enrichment-replay --dry-run"
-
-# Replay last N failed items from a time window
-./gradlew run --args="enrichment-replay --since-hours 48 --limit 20"
-
-# Replay explicit failed IDs only
-./gradlew run --args="enrichment-replay --ids a1,a2,a3"
+app pipeline                    # Full pipeline (ingress → enrichment → clustering → outgress)
+app ingress                     # Collect articles from all sources
+app enrichment                  # LLM-process unprocessed articles
+app clustering                  # Group articles into thematic clusters
+app outgress                    # Write markdown + JSON digests
+app reprocess [--since-hours N] # Clear and re-enrich recent articles (default: 2h)
+app enrichment-replay [opts]    # Replay only failed enrichment items
+app quality-report [opts]       # Quality metrics (duplicates, failures, thresholds)
+app inspect-quality [opts]      # Inspect low-quality / failed articles
+app validate-raw-ids [--apply]  # Check/fix article ID collisions
+# (no args)                     # Start JobRunr daemon + scheduler (dashboard at :8000)
 ```
 
-Replay selector rules:
-1. Use either `--ids` OR the range selector (`--since-hours` + `--limit`), not both.
-2. Start with `--dry-run` before mutating runs.
-3. Replay targets failed enrichment records only; no ingest rerun is required.
+### reprocess
 
-### Recoverability Runbook (Phase 5)
+Useful when enrichment ran with the mock LLM and you want to redo it with a real provider:
 
-1. Preview candidates:
 ```bash
-./gradlew run --args="enrichment-replay --dry-run --since-hours 24 --limit 20"
+# Re-enrich + re-cluster articles from the last 2 hours (default)
+LLM_PROVIDER=gemini GEMINI_API_KEY=<key> app reprocess
+
+# Custom window
+app reprocess --since-hours 6
 ```
-2. Validate candidate IDs and failure reasons in DB explorer/logs.
-3. Execute replay:
+
+### enrichment-replay
+
+Replay only *failed* enrichment items (not mock-processed ones — use `reprocess` for that):
+
 ```bash
-./gradlew run --args="enrichment-replay --since-hours 24 --limit 20"
-```
-4. Verify outcomes:
-   - rerun dry-run and confirm failed candidate count dropped
-   - inspect `still-failed` output from replay command
-5. If failures remain, rerun with focused IDs:
-```bash
-./gradlew run --args="enrichment-replay --ids <id1,id2,...>"
+app enrichment-replay --dry-run                       # preview candidates
+app enrichment-replay --since-hours 48 --limit 20     # replay by time window
+app enrichment-replay --ids id1,id2,id3               # replay specific IDs
 ```
 
-**Daily automation telemetry (Phase 6):**
-- `PipelineService` emits structured stage telemetry lines:
-  - `run_id`, `stage`, `status`, `started_at`, `ended_at`, `duration_ms`, optional `error`
-- Example log prefix: `[pipeline][telemetry] ...`
-- Stage status is emitted on both success and failure paths for quick diagnosis.
+## Configuration
 
-**Scheduler + telemetry smoke check (Phase 6):**
-```bash
-# Local smoke: run full pipeline once and inspect telemetry lines
-./gradlew run --args="pipeline" | rg "\\[pipeline\\]\\[telemetry\\]"
-
-# Test smoke in CI/local tests
-./gradlew test --tests 'jvm.daily.PipelineServiceTest'
-```
-
-**Quality gates report (Phase 7):**
-```bash
-# Last 24h counters (default)
-./gradlew run --args="quality-report"
-
-# Custom window and output directory
-./gradlew run --args="quality-report --since-hours 48 --output output"
-
-# Fail command when thresholds are breached
-./gradlew run --args="quality-report --max-duplicates 20 --max-feed-failures 0 --max-summarization-failures 5 --fail-on-threshold"
-```
-Required counters include:
-- new items
-- duplicates
-- feed failures
-- summarization failures
-
-Quality gate thresholds:
-- `--max-duplicates <n>`
-- `--max-feed-failures <n>`
-- `--max-summarization-failures <n>`
-- `--fail-on-threshold` to make routine runs/CI fail fast on breaches
-
-**Failed/low-quality inspection report (Phase 8):**
-```bash
-# Last 24h (default) failed + low-quality candidates
-./gradlew run --args="inspect-quality"
-
-# Custom window, warning threshold, and output directory
-./gradlew run --args="inspect-quality --since-hours 72 --limit 100 --min-warnings 2 --output output"
-```
-
-Manual follow-up workflow:
-1. Review `FAILED` records first and inspect `failure_reason`.
-2. Review low-quality warning-heavy records (`warnings` count >= threshold) for connector/content issues.
-3. Fix connector/parsing inputs, then replay targeted IDs with `enrichment-replay --ids ...`.
-4. Re-run `inspect-quality` to confirm candidate counts drop.
-
-**Environment Variables:**
+### Environment Variables
 
 | Variable | Default | Description |
-|----------|---------|-------------|
+|---|---|---|
+| `LLM_PROVIDER` | `mock` | `mock` / `gemini` / `openai` / `groq` / `openai-compatible` |
+| `GEMINI_API_KEY` | — | Required when `LLM_PROVIDER=gemini` |
+| `LLM_API_KEY` | — | Required for `openai` / `groq` / `openai-compatible` |
+| `LLM_MODEL` | `gpt-4` | Model name passed to the provider |
 | `DUCKDB_PATH` | `jvm-daily.duckdb` | Database file path |
-| `CONFIG_PATH` | `config/sources.yml` | RSS feed configuration |
-| `LLM_PROVIDER` | `mock` | LLM provider (`mock`, `openai`, `anthropic`) |
-| `LLM_API_KEY` | - | API key for LLM provider |
-| `LLM_MODEL` | `gpt-4` | Model to use |
+| `CONFIG_PATH` | `config/sources.yml` | Sources configuration |
+| `ENRICHMENT_SINCE_DAYS` | `1` | How many days back to enrich |
+| `OUTPUT_DIR` | `output` | Directory for generated digests |
+| `OUTGRESS_DAYS` | `30` | Digest window (days back to include) |
+| `PIPELINE_CRON` | `0 7 * * *` | Cron schedule in daemon mode (7am UTC) |
+| `GITHUB_TOKEN` | — | Required for GitHub Trending + Releases sources |
 
-### Option 2: Run with Airflow Orchestration
+### sources.yml
 
-**Prerequisites:** Docker or Podman, Docker Compose
+`config/sources.yml` controls all data sources:
 
-```bash
-# 1. Setup Podman machine (if using Podman)
-podman machine init --cpus 2 --memory 4096 --disk-size 20
-podman machine start
+```yaml
+rss:
+  - url: "https://inside.java/feed.xml"
 
-# 2. Start Airflow
-cd airflow
-cp .env.example .env
-docker-compose up airflow-init
-docker-compose up -d
+reddit:
+  - subreddit: "java"
+    timeWindow: "day"   # hour | day | week | month | year | all
 
-# 3. Access UI
-open http://localhost:8080
-# Login: airflow / airflow
+githubTrending:
+  languages: ["java", "kotlin", "scala"]
+  sinceDays: 1
+  minStars: 10
 
-# 4. Configure LLM in UI (Admin → Variables)
-#    - llm_provider: mock (or openai, anthropic)
-#    - llm_api_key: your-key
-#    - llm_model: gpt-4
+githubReleases:
+  sinceDays: 1
+  repos:
+    - "spring-projects/spring-boot"
 
-# 5. Enable and trigger DAG 'jvm_daily_pipeline'
+bluesky:
+  sinceDays: 1
+  accounts:
+    - "nipafx.dev"
+
+openjdkMail:
+  - list: "jdk-dev"
+    minReplies: 3
 ```
 
-**Airflow Features:**
-- 📅 Daily schedule at 7am UTC
-- 🔀 Conditional execution (skip if no new articles)
-- 🔄 Retry logic (2 retries, 5min delay)
-- ⏱️ Timeouts (30min enrichment, 20min clustering)
-- 📊 Web UI for monitoring
+## Fly.io Deployment
 
-**Resource Requirements:** 2 CPUs, 4GB RAM, 20GB disk ([details](airflow/RESOURCES.md))
+```bash
+fly auth login
+fly app create jvm-daily
+fly volumes create jvm_daily_data --size 5 --region fra
 
-## RSS Sources
+fly secrets set \
+  LLM_PROVIDER=gemini \
+  GEMINI_API_KEY=<key> \
+  GITHUB_TOKEN=<token>
 
-Currently aggregating from 17 feeds:
+fly deploy
+```
 
-| Source | URL |
-|--------|-----|
-| Inside Java | https://inside.java/feed.xml |
-| Spring Blog | https://spring.io/blog.atom |
-| Kotlin Blog | https://blog.jetbrains.com/kotlin/feed/ |
-| Baeldung | https://feeds.feedblitz.com/baeldung |
-| InfoQ Java | https://feed.infoq.com/java |
-| Quarkus | https://quarkus.io/feed.xml |
-| Micronaut | https://micronaut.io/feed/ |
-| Foojay | https://foojay.io/feed/ |
-| Gradle Blog | https://feed.gradle.org/blog.atom |
-| JetBrains Blog | https://blog.jetbrains.com/feed/ |
-| Vlad Mihalcea | https://vladmihalcea.com/feed/ |
-| Thorben Janssen | https://thorben-janssen.com/feed/ |
-| Marco Behler | https://dev.to/feed/marcobehler |
-| Adam Bien | https://adambien.blog/roller/abien/feed/entries/atom |
-| DZone Java | https://feeds.dzone.com/java |
-| Hacker News (JVM) | https://hnrss.org/newest?q=java+OR+kotlin+OR+jvm+OR+spring+OR+graalvm |
-| GraalVM Medium | https://medium.com/feed/graalvm |
+Monitor:
+
+```bash
+fly logs --app jvm-daily
+fly ssh console --app jvm-daily -C "/app/bin/app pipeline"   # manual run
+fly proxy 8000                                                # JobRunr dashboard
+```
+
+The app starts a JobRunr daemon that runs the pipeline on a cron schedule (default 7am UTC). The article viewer is served on port 8888.
+
+**Auto-deploy via GitHub Actions:** set `FLY_API_TOKEN` as a repository secret — pushing to `main` deploys automatically.
 
 ## Architecture
 
 ```
-jvm-daily/
-├── app/src/main/kotlin/jvm/daily/
-│   ├── model/          # Data models (Article)
-│   ├── source/         # Plugin sources (RssSource, MarkdownFileSource)
-│   ├── storage/        # DuckDB repository & connection factory
-│   ├── workflow/       # Multi-stage workflows (IngressWorkflow)
-│   └── config/         # Configuration models (SourcesConfig)
-├── config/
-│   └── sources.yml     # RSS feed configuration
-├── run-ingress.sh      # Cron-friendly wrapper script
-└── PLAN.md             # Detailed project roadmap
+app/src/main/kotlin/jvm/daily/
+├── model/       # Article, ProcessedArticle, ArticleCluster
+├── source/      # RssSource, RedditSource, GitHubTrendingSource,
+│                #   BlueskySource, OpenJdkMailSource, GitHubReleasesSource
+├── storage/     # DuckDbArticleRepository, DuckDbProcessedArticleRepository,
+│                #   DuckDbClusterRepository
+├── workflow/    # IngressWorkflow, EnrichmentWorkflow,
+│                #   ClusteringWorkflow, OutgressWorkflow
+├── ai/          # LLMClient, OpenAiCompatibleLLMClient
+└── config/      # SourcesConfig (loads sources.yml)
+
+config/          # sources.yml
+output/          # generated digests (*.md + *.json)
+viewer/          # Python HTTP server for the digest viewer
 ```
 
 ### Core Abstractions
 
-- **`Source`** — Plugin interface for data sources (RSS, Twitter, Reddit, etc.)
-- **`SourceRegistry`** — Registry for managing source plugins
-- **`Workflow`** — Pipeline stage interface (ingress, processing, publishing)
-- **`ArticleRepository`** — Storage abstraction (DuckDB via JDBC)
+- **`Source`** — Plugin interface; each data source implements it
+- **`SourceRegistry`** — Registers and manages source plugins
+- **`Workflow`** — Pipeline stage interface
+- **`ArticleRepository`** / **`ProcessedArticleRepository`** — Storage abstraction (DuckDB via JDBC)
 
-### Architecture Guardrails
-
-- Source adapters must implement `Source` and return normalized `Article` records.
-- Workflow layer should not import concrete source implementations or concrete DuckDB repositories.
-- Source and storage layers should stay independent from workflow package internals.
-- Guard tests in `app/src/test/kotlin/jvm/daily/architecture/` enforce these boundaries on every `./gradlew test`.
-
-### Connector Certification Checklist (Phase 8)
-
-Before enabling a new connector in routine runs:
-
-1. Contract tests pass:
-   - `./gradlew test --tests 'jvm.daily.source.SourceContractTest' --tests 'jvm.daily.source.SourceRegistryContractTest'`
-2. Adapter contract is satisfied:
-   - emits normalized required fields (`id`, `title`, `sourceType`, `sourceId`, `ingestedAt`)
-   - supports optional nullable fields (`url`, `author`, `comments`) without failing
-   - `sourceType` is stable, non-blank, trimmed, and unique in `SourceRegistry`
-3. Outcome semantics are validated:
-   - successful adapter fetch maps to deterministic `SUCCESS` feed outcome
-   - adapter failures map to deterministic `FAILED` feed outcome with error reason
-4. Operator readiness:
-   - run inspection report flow from Phase 8 to review failed/low-quality records before rollout
-
-### Connector Skeleton Dry-Run Workflow (Phase 8)
-
-Use this before implementing a full non-RSS connector:
-
-1. Add a connector skeleton fixture test (example: `ConnectorDryRunContractTest`) implementing only `Source`.
-2. Register the skeleton in `SourceRegistry` from test scope and verify uniqueness/guardrails.
-3. Run certification suite:
-   - `./gradlew test --tests 'jvm.daily.source.ConnectorDryRunContractTest' --tests 'jvm.daily.source.SourceContractTest' --tests 'jvm.daily.source.SourceRegistryContractTest'`
-4. Run inspection report to validate operational follow-up path:
-   - `./gradlew run --args="inspect-quality --since-hours 24 --limit 50 --min-warnings 1"`
-5. If failed/low-quality items appear, perform manual follow-up and replay targeted IDs before enabling the connector.
+Architecture boundaries are enforced by guard tests in `app/src/test/kotlin/jvm/daily/architecture/`.
 
 ## Tech Stack
 
-- **Language:** Kotlin 2.2
-- **JVM:** 21
-- **Build:** Gradle (Kotlin DSL)
-- **Database:** DuckDB 1.1.3 (via JDBC)
-- **Orchestration:** Apache Airflow 2.8.1 (Docker/Podman)
-- **RSS:** Rome 2.1.0
-- **Config:** kaml 0.67.0 (YAML + kotlinx.serialization)
-- **AI:** Koog 0.6.1 (LLM abstraction layer)
-- **Testing:** JUnit 5 + kotlin-test
+| Layer | Technology |
+|---|---|
+| Language | Kotlin 2.2 |
+| JVM | 21 |
+| Build | Gradle (Kotlin DSL) |
+| Database | DuckDB (JDBC) |
+| Scheduling | JobRunr |
+| HTTP | Ktor Client |
+| RSS/Atom | Rome |
+| Config | kaml (YAML) |
+| AI / LLM | Koog Agents |
+| Serialization | kotlinx.serialization |
+| Testing | JUnit 5 + kotlin-test |
 
 ## Development
 
-### Build
-
 ```bash
-./gradlew build
+./gradlew build        # compile + test
+./gradlew test         # tests only
+./gradlew explore      # interactive DB explorer
 ```
 
-### Run Tests
+**Conventions:** minimal implementation, unit tests required, feature branches, document findings in `Findings.md`. See [`CLAUDE.md`](CLAUDE.md) for full rules.
 
-```bash
-# Unit tests only
-./gradlew test
+## Other Docs
 
-# Integration tests (requires network)
-./gradlew integrationTest
-```
-
-### Project Conventions
-
-- **Minimal implementation** — no over-engineering
-- **Unit tests required** — every component must have tests
-- **Branch workflow** — feature branches → PR → main
-- **Findings** — document discoveries in `Findings.md`
-- **Always run build** — `./gradlew build` after every change
-
-See [`CLAUDE.md`](CLAUDE.md) and [`Agent.md`](Agent.md) for detailed conventions.
-
-## CI/CD
-
-- **Build CI:** Runs on every push/PR to `main` (`.github/workflows/gradle.yml`)
-- **RSS Feed Verification:** Daily at 07:00 UTC (`.github/workflows/rss-feed-check.yml`)
-
-## Roadmap
-
-- [x] Plugin-based source engine
-- [x] DuckDB storage with deduplication
-- [x] RSS source with 17 feeds
-- [x] Ingress workflow
-- [x] Enrichment workflow (LLM summaries, entities, topics)
-- [x] Clustering workflow (thematic grouping)
-- [x] Apache Airflow orchestration
-- [x] Command-line workflow execution
-- [ ] Real LLM integration (OpenAI, Anthropic, Koog Agents)
-- [ ] Cluster persistence (save to DuckDB)
-- [ ] Compilation workflow (newsletter generation)
-- [ ] Publishing workflow (static site, email)
-- [ ] Twitter/X source plugin
-- [ ] Reddit source plugin
-- [ ] Discord source plugin
-- [ ] GitHub Trending source plugin
-
-See [`PLAN.md`](PLAN.md) for the full roadmap.
+- [`QUICKSTART.md`](QUICKSTART.md) — detailed local setup walkthrough
+- [`EXPLORER.md`](EXPLORER.md) — interactive database explorer CLI
+- [`Findings.md`](Findings.md) — technical discoveries and gotchas
+- [`airflow/README.md`](airflow/README.md) — Apache Airflow orchestration setup
+- [`PLAN.md`](PLAN.md) — full system design and roadmap
 
 ## License
 
-MIT
-
-## Credits
-
-Inspired by [Latent Space AI News](https://news.smol.ai) by [@swyx](https://twitter.com/swyx)
+MIT — inspired by [Latent Space AI News](https://news.smol.ai) by [@swyx](https://twitter.com/swyx)
