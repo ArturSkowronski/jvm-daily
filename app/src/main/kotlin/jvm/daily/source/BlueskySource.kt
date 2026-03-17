@@ -101,8 +101,7 @@ class BlueskySource(
         val rkey = uri.substringAfterLast("/")
         val postUrl = "https://bsky.app/profile/$authorHandle/post/$rkey"
 
-        val title = if (text.length > 120) text.take(117) + "..." else text
-        val titleWithAuthor = "[$displayName] ${externalTitle ?: title}"
+        val titleWithAuthor = "[$displayName] ${externalTitle ?: text}"
 
         val content = buildString {
             appendLine("$displayName (@$authorHandle) on Bluesky:")

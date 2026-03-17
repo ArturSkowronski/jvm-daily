@@ -244,6 +244,7 @@ class OutgressWorkflowTest {
         override fun findUnprocessedRawArticles(since: Instant): List<String> = emptyList()
         override fun existsById(id: String): Boolean = false
         override fun count(): Long = articles.size.toLong()
+        override fun deleteByProcessedAtSince(since: Instant): Int = 0
     }
 
     private fun stubRepoWithData(articles: List<ProcessedArticle>) = object : ProcessedArticleRepository {
@@ -260,6 +261,7 @@ class OutgressWorkflowTest {
         override fun findUnprocessedRawArticles(since: Instant): List<String> = emptyList()
         override fun existsById(id: String): Boolean = false
         override fun count(): Long = articles.size.toLong()
+        override fun deleteByProcessedAtSince(since: Instant): Int = 0
     }
 
     private fun stubClusterRepo(clusters: List<ArticleCluster>) = object : ClusterRepository {
