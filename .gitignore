@@ -24,3 +24,6 @@ local.properties
 
 # Ingress logs
 logs/
+
+# Generated outputs
+output/

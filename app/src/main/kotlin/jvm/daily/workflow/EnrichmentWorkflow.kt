@@ -94,6 +94,11 @@ class EnrichmentWorkflow(
     }
 
     private suspend fun enrichArticle(article: Article): ProcessedArticle {
+        if (article.sourceType in RELEVANCE_GATED_SOURCES && !isRelevant(article)) {
+            println("[enrichment] ${article.id}: SKIPPED (not relevant for digest)")
+            return skippedArticle(article)
+        }
+
         val prompt = "$ENRICHMENT_SYSTEM_PROMPT\n\n${buildEnrichmentPrompt(article)}"
         val warnings = mutableListOf<String>()
         var attempt = 0
@@ -218,6 +223,59 @@ class EnrichmentWorkflow(
         return score.coerceIn(0.0, 100.0)
     }
 
+    /**
+     * Asks the LLM if this article is worth including in the daily digest.
+     * Cheap pre-filter: runs one small LLM call before full enrichment.
+     * Defaults to true (include) on any error to avoid false negatives.
+     */
+    private suspend fun isRelevant(article: Article): Boolean {
+        val prompt = """
+Is this content worth featuring in a daily digest for experienced JVM/backend developers?
+
+Title: ${article.title}
+Content preview: ${article.content.take(600)}
+
+Reply YES if the content covers:
+- JVM language features, releases, or roadmap (Java, Kotlin, Scala, Groovy)
+- JVM frameworks, libraries, or tools (Spring, Quarkus, Micronaut, Gradle, etc.)
+- JVM performance, security vulnerabilities, or architecture
+- OpenJDK development, JEPs, runtime internals
+- Developer tooling, build systems, or CI/CD relevant to JVM ecosystem
+- Technical community news with clear relevance to backend/JVM engineers
+
+Reply NO if the content is:
+- Politics, social commentary, or cultural criticism unrelated to software
+- General world news, sports, entertainment
+- Personal opinions on non-technical topics
+- Minor housekeeping (CI failures, dependency bumps, copyright updates)
+- Very narrow implementation detail with no broad interest
+
+Answer with exactly YES or NO.
+        """.trimIndent()
+        return try {
+            val response = llmClient.chat(prompt)
+            !response.trim().uppercase().startsWith("NO")
+        } catch (e: Exception) {
+            true // default to including on LLM error
+        }
+    }
+
+    private fun skippedArticle(article: Article): ProcessedArticle = ProcessedArticle(
+        id = article.id,
+        originalTitle = article.title,
+        normalizedTitle = normalizeTitle(article.title),
+        summary = "[SKIPPED]",
+        originalContent = article.content,
+        sourceType = article.sourceType,
+        sourceId = article.sourceId,
+        url = article.url,
+        author = article.author,
+        publishedAt = article.ingestedAt,
+        ingestedAt = article.ingestedAt,
+        processedAt = clock.now(),
+        outcomeStatus = EnrichmentOutcomeStatus.SKIPPED,
+    )
+
     private fun failedArticle(article: Article, reason: String, attempt: Int): ProcessedArticle {
         println("[enrichment] Failed to process ${article.id}: $reason")
         return ProcessedArticle(
@@ -246,6 +304,9 @@ class EnrichmentWorkflow(
     companion object {
         private const val MAX_ATTEMPTS = 3
         private const val RETRY_BACKOFF_MS = 2_000L
+
+        /** Source types where a cheap relevance check runs before full enrichment. */
+        private val RELEVANCE_GATED_SOURCES = setOf("openjdk_mail", "bluesky", "rss")
         private const val ENRICHMENT_SYSTEM_PROMPT = """
 You are a JVM ecosystem news analyst writing for experienced engineers.
 

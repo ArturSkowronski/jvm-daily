@@ -204,7 +204,7 @@ class EnrichmentWorkflowReliabilityTest {
         id = id,
         title = title,
         content = content,
-        sourceType = "rss",
+        sourceType = "reddit",  // not relevance-gated — avoids interfering with stub LLM call counts
         sourceId = "test-source",
         url = "https://example.com/$id",
         ingestedAt = Clock.System.now(),
@@ -266,5 +266,6 @@ class EnrichmentWorkflowReliabilityTest {
         override fun findUnprocessedRawArticles(since: Instant) = unprocessedIds
         override fun existsById(id: String) = storage.any { it.id == id }
         override fun count(): Long = storage.size.toLong()
+        override fun deleteByProcessedAtSince(since: Instant): Int = 0
     }
 }
