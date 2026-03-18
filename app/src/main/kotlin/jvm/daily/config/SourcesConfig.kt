@@ -13,6 +13,7 @@ data class SourcesConfig(
     val githubReleases: GitHubReleasesConfig? = null,
     val openjdkMail: List<OpenJdkMailConfig> = emptyList(),
     val bluesky: BlueskyConfig? = null,
+    val jep: JepConfig? = null,
 ) {
     companion object {
         fun load(path: Path): SourcesConfig {
@@ -53,6 +54,15 @@ data class BlueskyConfig(
     val accounts: List<String>,
     val limit: Int = 20,
     val sinceDays: Int = 7,
+)
+
+@Serializable
+data class JepConfig(
+    val enabled: Boolean = false,
+    val initialSeed: Boolean = false,
+    val activeStatuses: List<String> = listOf(
+        "Draft", "Candidate", "Proposed to Target", "Targeted", "Integrated"
+    ),
 )
 
 @Serializable

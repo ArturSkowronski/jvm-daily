@@ -1,10 +1,12 @@
 package jvm.daily.config
 
+import com.charleskorn.kaml.Yaml
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Path
 import kotlin.io.path.writeText
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class SourcesConfigTest {
@@ -52,5 +54,24 @@ class SourcesConfigTest {
         val config = SourcesConfig.load(configFile)
 
         assertTrue(config.rss.isEmpty())
+    }
+
+    @Test
+    fun `jep config parses from yaml`() {
+        val yaml = """
+            jep:
+              enabled: true
+              initialSeed: false
+              activeStatuses: [Targeted, Integrated]
+        """.trimIndent()
+        val config = Yaml.default.decodeFromString(SourcesConfig.serializer(), yaml)
+        assertEquals(true, config.jep?.enabled)
+        assertEquals(listOf("Targeted", "Integrated"), config.jep?.activeStatuses)
+    }
+
+    @Test
+    fun `jep config defaults to null when missing`() {
+        val config = Yaml.default.decodeFromString(SourcesConfig.serializer(), "{}")
+        assertNull(config.jep)
     }
 }

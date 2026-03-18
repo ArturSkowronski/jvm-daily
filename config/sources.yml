@@ -167,3 +167,13 @@ openjdkMail:
     minReplies: 0
   - list: "vuln-announce"
     minReplies: 0
+
+jep:
+  enabled: true
+  initialSeed: false
+  activeStatuses:
+    - Draft
+    - Candidate
+    - "Proposed to Target"
+    - Targeted
+    - Integrated
