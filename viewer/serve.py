@@ -264,7 +264,7 @@ HTML = r"""<!DOCTYPE html>
   }
 
   function renderClusters(data) {
-    const clusters = [...data.clusters].sort((a, b) => b.engagementScore - a.engagementScore);
+    const clusters = data.clusters; // order is authoritative from backend (major → normal → Releases)
     const clusterCount = clusters.reduce((s, c) => s + c.articles.length, 0);
     const unclusteredCount = (data.unclustered || []).length;
 
