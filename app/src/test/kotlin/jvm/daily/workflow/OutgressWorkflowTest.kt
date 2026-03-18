@@ -224,6 +224,30 @@ class OutgressWorkflowTest {
         assertEquals(1, digest.unclustered.size)
     }
 
+    @Test
+    fun `Releases cluster always appears last in digest JSON`(@TempDir tempDir: Path) = runTest {
+        val fixedNow = Instant.parse("2026-03-15T12:00:00Z")
+        val clock = object : Clock { override fun now() = fixedNow }
+
+        val articles = listOf(
+            processedArticle("a1", "JDK Roadmap", "https://example.com/jdk", listOf("jdk"), 467.0, fixedNow),
+            processedArticle("a2", "Hibernate 7.3.0", "https://example.com/h", listOf("releases"), 452.0, fixedNow),
+            processedArticle("a3", "IntelliJ IDEA 2025.3.4", "https://example.com/ij", listOf("tools"), 353.0, fixedNow),
+        )
+        val clusters = listOf(
+            ArticleCluster("c1", "JDK Roadmap", "roadmap stuff", listOf("a1"), listOf("rss"), 467.0, fixedNow),
+            ArticleCluster("c2", "Releases", "releases roundup", listOf("a2"), listOf("rss"), 452.0, fixedNow),
+            ArticleCluster("c3", "IntelliJ IDEA News", "ide stuff", listOf("a3"), listOf("rss"), 353.0, fixedNow),
+        )
+
+        val repo = stubRepoWithData(articles)
+        OutgressWorkflow(repo, tempDir, clock = clock, clusterRepository = stubClusterRepo(clusters)).execute()
+
+        val digest = Json.decodeFromString<DigestJson>(tempDir.resolve("daily-2026-03-15.json").readText())
+        assertEquals("Releases", digest.clusters.last().title, "Releases cluster should be last")
+        assertEquals("JDK Roadmap", digest.clusters.first().title, "Highest-engagement non-Releases cluster should be first")
+    }
+
     // --- stubs ---
 
     private fun stubRepo(articles: List<ProcessedArticle>) = object : ProcessedArticleRepository {
