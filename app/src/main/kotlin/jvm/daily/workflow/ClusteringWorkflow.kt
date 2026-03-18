@@ -68,9 +68,13 @@ class ClusteringWorkflow(
 
     private suspend fun clusterArticles(articles: List<ProcessedArticle>): List<ArticleCluster> {
         val groups = groupBySemantic(articles)
-        return groups
+        val clusters = groups
             .map { (name, articleGroup) -> createCluster(articleGroup, name) }
             .sortedByDescending { it.totalEngagement }
+        // Generic "Releases" roundup always sinks to the bottom of named clusters
+        val releases = clusters.filter { it.title.equals("Releases", ignoreCase = true) }
+        val specific = clusters.filter { !it.title.equals("Releases", ignoreCase = true) }
+        return specific + releases
     }
 
     /**
