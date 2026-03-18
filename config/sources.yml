@@ -170,7 +170,7 @@ openjdkMail:
 
 jep:
   enabled: true
-  initialSeed: true    # set to false after first run
+  initialSeed: false
   activeStatuses:
     - Draft
     - Candidate
