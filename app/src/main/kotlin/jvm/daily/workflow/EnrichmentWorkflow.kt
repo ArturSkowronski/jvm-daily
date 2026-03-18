@@ -96,7 +96,7 @@ class EnrichmentWorkflow(
     private suspend fun enrichArticle(article: Article): ProcessedArticle {
         if (article.sourceType in RELEVANCE_GATED_SOURCES && !isRelevant(article)) {
             println("[enrichment] ${article.id}: SKIPPED (not relevant for digest)")
-            return skippedArticle(article)
+            return skippedArticle(article, reason = "relevance_gate")
         }
 
         val prompt = "$ENRICHMENT_SYSTEM_PROMPT\n\n${buildEnrichmentPrompt(article)}"
@@ -260,7 +260,7 @@ Answer with exactly YES or NO.
         }
     }
 
-    private fun skippedArticle(article: Article): ProcessedArticle = ProcessedArticle(
+    private fun skippedArticle(article: Article, reason: String = "relevance_gate"): ProcessedArticle = ProcessedArticle(
         id = article.id,
         originalTitle = article.title,
         normalizedTitle = normalizeTitle(article.title),
@@ -274,6 +274,7 @@ Answer with exactly YES or NO.
         ingestedAt = article.ingestedAt,
         processedAt = clock.now(),
         outcomeStatus = EnrichmentOutcomeStatus.SKIPPED,
+        failureReason = reason,
     )
 
     private fun failedArticle(article: Article, reason: String, attempt: Int): ProcessedArticle {

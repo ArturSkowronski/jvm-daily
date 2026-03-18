@@ -11,6 +11,15 @@ data class DigestJson(
     val totalArticles: Int,
     val clusters: List<DigestCluster>,
     val unclustered: List<DigestArticle>,
+    val debug: List<DebugRejected> = emptyList(),
+)
+
+@Serializable
+data class DebugRejected(
+    val title: String,
+    val url: String?,
+    val sourceType: String,
+    val reason: String,   // e.g. "relevance_gate", "enrichment_failed", "event_logistics"
 )
 
 @Serializable

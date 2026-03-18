@@ -25,6 +25,7 @@ data class SourcesConfig(
 @Serializable
 data class RssFeedConfig(
     val url: String,
+    val sinceDays: Int = 1,
 )
 
 @Serializable
