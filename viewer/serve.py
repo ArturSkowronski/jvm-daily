@@ -129,6 +129,8 @@ HTML = r"""<!DOCTYPE html>
                     border-radius: 3px; letter-spacing: 0.03em; text-transform: uppercase; }
     .source-reddit { background: #fff1f0; color: #e25822; }
     .source-rss { background: #f0f4ff; color: #2563eb; }
+    .source-bluesky { background: #e8f4ff; color: #0085ff; }
+    .source-openjdk { background: #f0fff4; color: #16a34a; }
 
     /* ── Pipeline view ── */
     #pipeline-view { flex: 1; overflow-y: auto; padding: 32px; }
@@ -165,6 +167,16 @@ HTML = r"""<!DOCTYPE html>
                    color: #888; font-size: 0.75rem; padding: 3px 10px;
                    cursor: pointer; margin-left: 8px; }
     .refresh-btn:hover { background: #eee; }
+
+    .debug-panel { margin-top: 60px; border-top: 1px solid #e5e5e5; padding-top: 20px; }
+    .debug-toggle { background: none; border: none; cursor: pointer; font-size: 0.75rem; color: #bbb; padding: 0; }
+    .debug-toggle:hover { color: #888; }
+    .debug-list { margin-top: 12px; display: none; }
+    .debug-list.open { display: block; }
+    .debug-item { padding: 6px 0; border-bottom: 1px solid #f5f5f5; font-size: 0.78rem; color: #aaa; display: flex; gap: 8px; align-items: baseline; }
+    .debug-reason { font-size: 0.65rem; background: #f5f5f5; color: #999; padding: 1px 6px; border-radius: 3px; white-space: nowrap; }
+    .debug-title { color: #bbb; }
+    .debug-url { color: #c5d5f5; font-size: 0.7rem; }
   </style>
 </head>
 <body>
@@ -220,6 +232,8 @@ HTML = r"""<!DOCTYPE html>
 
   function sourceBadge(a) {
     if (a.sourceType === 'reddit') return '<span class="source-badge source-reddit">Reddit</span>';
+    if (a.sourceType === 'bluesky') return '<span class="source-badge source-bluesky">Bluesky</span>';
+    if (a.sourceType === 'openjdk_mail') return '<span class="source-badge source-openjdk">OpenJDK</span>';
     return '<span class="source-badge source-rss">RSS</span>';
   }
 
@@ -228,10 +242,11 @@ HTML = r"""<!DOCTYPE html>
     return d.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   }
 
-  async function loadDate(date, btn) {
+  async function loadDate(date, btn, pushState = true) {
     document.querySelectorAll('.date-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     document.getElementById('no-files').classList.add('hidden');
+    if (pushState) history.pushState({date}, '', '?date=' + date);
 
     const jsonRes = await fetch('/api/daily/' + date);
     if (jsonRes.ok) {
@@ -249,7 +264,7 @@ HTML = r"""<!DOCTYPE html>
   }
 
   function renderClusters(data) {
-    const clusters = [...data.clusters].sort((a, b) => b.engagementScore - a.engagementScore);
+    const clusters = data.clusters; // order is authoritative from backend (major → normal → Releases)
     const clusterCount = clusters.reduce((s, c) => s + c.articles.length, 0);
     const unclusteredCount = (data.unclustered || []).length;
 
@@ -317,6 +332,20 @@ HTML = r"""<!DOCTYPE html>
       );
     }
 
+    if (data.debug && data.debug.length > 0) {
+      const items = data.debug.map(d =>
+        `<div class="debug-item">
+          <span class="debug-reason">${esc(d.reason)}</span>
+          <span class="debug-title">${esc(d.title)}</span>
+          ${d.url ? `<a class="debug-url" href="${esc(d.url)}" target="_blank">${esc(getDomain(d.url))}</a>` : ''}
+        </div>`
+      ).join('');
+      html += `<div class="debug-panel">
+        <button class="debug-toggle" data-count="${data.debug.length}" onclick="toggleDebug(this)">▼ Debug (${data.debug.length} rejected)</button>
+        <div class="debug-list">${items}</div>
+      </div>`;
+    }
+
     document.getElementById('md').innerHTML = html;
     applyDismissed(data.date);
   }
@@ -345,6 +374,12 @@ HTML = r"""<!DOCTYPE html>
     });
   }
 
+  function toggleDebug(btn) {
+    const list = btn.nextElementSibling;
+    list.classList.toggle('open');
+    btn.textContent = list.classList.contains('open') ? '▲ Debug' : '▼ Debug (' + btn.dataset.count + ' rejected)';
+  }
+
   function toggleDismiss(btn) {
     const cluster = btn.closest('.cluster');
     const key = cluster.dataset.key;
@@ -365,6 +400,8 @@ HTML = r"""<!DOCTYPE html>
     const files = await fetch('/api/files').then(r => r.json());
     const sidebar = document.getElementById('date-sidebar');
     if (!files.length) { document.getElementById('no-files').classList.remove('hidden'); return; }
+    const requestedDate = new URLSearchParams(location.search).get('date');
+    const btnMap = {};
     files.forEach((f, i) => {
       const date = f.replace('jvm-daily-', '').replace('.md', '');
       const btn = document.createElement('button');
@@ -373,7 +410,14 @@ HTML = r"""<!DOCTYPE html>
       btn.textContent = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
       btn.onclick = () => loadDate(date, btn);
       sidebar.appendChild(btn);
-      if (i === 0) loadDate(date, btn);
+      btnMap[date] = btn;
+    });
+    const initialDate = (requestedDate && btnMap[requestedDate]) ? requestedDate : files[0].replace('jvm-daily-', '').replace('.md', '');
+    loadDate(initialDate, btnMap[initialDate], false);
+
+    window.addEventListener('popstate', e => {
+      const d = e.state?.date || files[0].replace('jvm-daily-', '').replace('.md', '');
+      if (btnMap[d]) loadDate(d, btnMap[d], false);
     });
   }
 

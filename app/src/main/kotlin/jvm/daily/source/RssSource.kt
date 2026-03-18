@@ -9,8 +9,10 @@ import jvm.daily.model.FeedIngestResult
 import jvm.daily.model.FeedIngestStatus
 import jvm.daily.model.SourceFetchOutcome
 import kotlinx.datetime.Clock
+import kotlinx.datetime.Instant
 import java.net.HttpURLConnection
 import java.net.URI
+import kotlin.time.Duration.Companion.days
 
 class RssSource(
     private val feeds: List<RssFeedConfig>,
@@ -64,6 +66,7 @@ class RssSource(
 
             inputStream.use { stream ->
                 val feed = SyndFeedInput().build(XmlReader(stream))
+                val cutoff = clock.now().minus(feedConfig.sinceDays.days)
                 var skippedEntries = 0
                 val articles = feed.entries.mapNotNull { entry ->
                     val link = entry.link ?: run {
@@ -74,6 +77,10 @@ class RssSource(
                         skippedEntries++
                         return@mapNotNull null
                     }
+
+                    val publishedDate = (entry.publishedDate ?: entry.updatedDate)
+                        ?.let { Instant.fromEpochMilliseconds(it.time) }
+                    if (publishedDate != null && publishedDate < cutoff) return@mapNotNull null
 
                     val content = entry.description?.value
                         ?: entry.contents.firstOrNull()?.value

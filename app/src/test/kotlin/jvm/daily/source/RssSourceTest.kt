@@ -115,7 +115,7 @@ class RssSourceTest {
 
         val articles = source.fetch()
 
-        assertEquals("rss:https://example.com/first", articles[0].id)
+        assertEquals("https://example.com/first", articles[0].id)
     }
 
     @Test
@@ -189,6 +189,50 @@ class RssSourceTest {
         val articles = source.fetch()
 
         assertEquals(Instant.parse("2026-02-09T12:00:00Z"), articles[0].ingestedAt)
+    }
+
+    @Test
+    fun `fetch filters out entries older than sinceDays`() = runTest {
+        // fixedClock = 2026-02-09T12:00:00Z, sinceDays=1 → cutoff = 2026-02-08T12:00:00Z
+        val feedXml = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <rss version="2.0">
+              <channel>
+                <title>Test Feed</title>
+                <link>https://example.com</link>
+                <item>
+                  <title>Recent Article</title>
+                  <link>https://example.com/recent</link>
+                  <description>Recent content</description>
+                  <pubDate>Mon, 09 Feb 2026 10:00:00 GMT</pubDate>
+                </item>
+                <item>
+                  <title>Old Article</title>
+                  <link>https://example.com/old</link>
+                  <description>Old content</description>
+                  <pubDate>Sat, 07 Feb 2026 10:00:00 GMT</pubDate>
+                </item>
+              </channel>
+            </rss>
+        """.trimIndent()
+        val feedFile = writeFeedFile("dated.xml", feedXml)
+        val source = RssSource(listOf(RssFeedConfig(feedFile, sinceDays = 1)), fixedClock)
+
+        val articles = source.fetch()
+
+        assertEquals(1, articles.size)
+        assertEquals("Recent Article", articles[0].title)
+    }
+
+    @Test
+    fun `fetch keeps entries without pubDate`() = runTest {
+        // Entries with no date should pass through (don't filter on missing date)
+        val feedFile = writeFeedFile("feed.xml", sampleRss)
+        val source = RssSource(listOf(RssFeedConfig(feedFile, sinceDays = 1)), fixedClock)
+
+        val articles = source.fetch()
+
+        assertEquals(2, articles.size)
     }
 
     private fun writeFeedFile(name: String, content: String): String {

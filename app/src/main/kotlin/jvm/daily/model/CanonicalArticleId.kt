@@ -9,8 +9,9 @@ object CanonicalArticleId {
         url: String? = null,
         sourceNativeId: String? = null,
     ): String {
-        val key = normalizeUrl(url)
-            ?: normalizeToken(sourceNativeId)
+        // URL is a global cross-source key — same URL from any source maps to the same ID
+        normalizeUrl(url)?.let { return it }
+        val key = normalizeToken(sourceNativeId)
             ?: normalizeToken(title)
             ?: normalizeToken(sourceId)
             ?: "unknown"
