@@ -95,7 +95,12 @@ class OutgressWorkflow(
                     .sortedByDescending { it.engagementScore }
                     .map { it.toDigestArticle() },
             )
-        }.sortedByDescending { it.engagementScore }
+        }
+        // Mirror ClusteringWorkflow ordering: generic "Releases" roundup sinks to bottom
+        val releasesDigest = digestClusters.filter { it.title.equals("Releases", ignoreCase = true) }
+        val normalDigest   = digestClusters.filter { !it.title.equals("Releases", ignoreCase = true) }
+                                           .sortedByDescending { it.engagementScore }
+        val sortedDigestClusters = normalDigest + releasesDigest
 
         val rejected = allIngested
             .filter { it.outcomeStatus == EnrichmentOutcomeStatus.SKIPPED || it.outcomeStatus == EnrichmentOutcomeStatus.FAILED }
@@ -110,7 +115,7 @@ class OutgressWorkflow(
             date = now.toLocalDateTime(TimeZone.UTC).date.toString(),
             generatedAt = now.toString(),
             totalArticles = totalArticles,
-            clusters = digestClusters,
+            clusters = sortedDigestClusters,
             unclustered = unclusteredArticles.sortedByDescending { it.engagementScore }.map { it.toDigestArticle() },
             debug = rejected,
         )
