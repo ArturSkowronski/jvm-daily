@@ -242,10 +242,11 @@ HTML = r"""<!DOCTYPE html>
     return d.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   }
 
-  async function loadDate(date, btn) {
+  async function loadDate(date, btn, pushState = true) {
     document.querySelectorAll('.date-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     document.getElementById('no-files').classList.add('hidden');
+    if (pushState) history.pushState({date}, '', '?date=' + date);
 
     const jsonRes = await fetch('/api/daily/' + date);
     if (jsonRes.ok) {
@@ -399,6 +400,8 @@ HTML = r"""<!DOCTYPE html>
     const files = await fetch('/api/files').then(r => r.json());
     const sidebar = document.getElementById('date-sidebar');
     if (!files.length) { document.getElementById('no-files').classList.remove('hidden'); return; }
+    const requestedDate = new URLSearchParams(location.search).get('date');
+    const btnMap = {};
     files.forEach((f, i) => {
       const date = f.replace('jvm-daily-', '').replace('.md', '');
       const btn = document.createElement('button');
@@ -407,7 +410,14 @@ HTML = r"""<!DOCTYPE html>
       btn.textContent = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
       btn.onclick = () => loadDate(date, btn);
       sidebar.appendChild(btn);
-      if (i === 0) loadDate(date, btn);
+      btnMap[date] = btn;
+    });
+    const initialDate = (requestedDate && btnMap[requestedDate]) ? requestedDate : files[0].replace('jvm-daily-', '').replace('.md', '');
+    loadDate(initialDate, btnMap[initialDate], false);
+
+    window.addEventListener('popstate', e => {
+      const d = e.state?.date || files[0].replace('jvm-daily-', '').replace('.md', '');
+      if (btnMap[d]) loadDate(d, btnMap[d], false);
     });
   }
 
