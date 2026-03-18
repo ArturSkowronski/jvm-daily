@@ -86,11 +86,31 @@ class EnrichmentWorkflowTest {
         assertEquals("spring boot 40 new features 2026", processedArticles[0].normalizedTitle)
     }
 
-    private fun article(id: String, title: String) = Article(
+    @Test
+    fun `jep topic is injected when LLM omits it for JEP TRACKING articles`() = runTest {
+        val rawArticles = mutableListOf(
+            article("jep-491", "JEP 491: Null-Restricted — status: Candidate → Targeted",
+                content = "[JEP TRACKING]\ntopics: jep\nstatus: Candidate → Targeted",
+                sourceType = "jep"),
+        )
+        val rawRepo = inMemoryRawRepo(rawArticles)
+        val processedArticles = mutableListOf<ProcessedArticle>()
+        val processedRepo = inMemoryProcessedRepo(processedArticles, listOf("jep-491"))
+        val llmClient = stubLLMClient(
+            """{"summary":"JEP 491 moved from Candidate to Targeted status, indicating it is scheduled for inclusion in a future JDK release and has been accepted by the relevant expert group after review.","entities":["JEP 491"],"topics":["java","openjdk"]}"""
+        )
+
+        EnrichmentWorkflow(rawRepo, processedRepo, llmClient).execute()
+
+        assertEquals(1, processedArticles.size)
+        assertTrue(processedArticles.first().topics.contains("jep"), "jep topic must be injected")
+    }
+
+    private fun article(id: String, title: String, content: String? = null, sourceType: String = "rss") = Article(
         id = id,
         title = title,
-        content = "Content of $title with detailed information about the topic",
-        sourceType = "rss",
+        content = content ?: "Content of $title with detailed information about the topic",
+        sourceType = sourceType,
         sourceId = "test-source",
         ingestedAt = Clock.System.now(),
     )

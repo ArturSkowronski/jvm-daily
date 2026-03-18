@@ -4,6 +4,7 @@ import jvm.daily.ai.LLMClient
 import jvm.daily.ai.OpenAiCompatibleLLMClient
 import jvm.daily.config.SourcesConfig
 import jvm.daily.source.BlueskySource
+import jvm.daily.source.JepSource
 import jvm.daily.source.GitHubReleasesSource
 import jvm.daily.source.GitHubTrendingSource
 import jvm.daily.source.MarkdownFileSource
@@ -13,6 +14,7 @@ import jvm.daily.source.RssSource
 import jvm.daily.source.SourceRegistry
 import jvm.daily.storage.DuckDbArticleRepository
 import jvm.daily.storage.DuckDbClusterRepository
+import jvm.daily.storage.DuckDbJepSnapshotRepository
 import jvm.daily.storage.DuckDbConnectionFactory
 import jvm.daily.storage.DuckDbProcessedArticleRepository
 import jvm.daily.tools.ValidateRawArticleIds
@@ -149,6 +151,10 @@ internal fun runIngress(dbPath: String) {
             config.githubReleases?.let { register(GitHubReleasesSource(it)) }
             if (config.openjdkMail.isNotEmpty()) register(OpenJdkMailSource(config.openjdkMail))
             config.bluesky?.let { register(BlueskySource(it)) }
+            config.jep?.takeIf { it.enabled }?.let {
+                val jepRepo = DuckDbJepSnapshotRepository(connection)
+                register(JepSource(jepRepo, it))
+            }
         }
         val workflow = IngressWorkflow(sourceRegistry, repository)
         runBlocking { workflow.execute() }

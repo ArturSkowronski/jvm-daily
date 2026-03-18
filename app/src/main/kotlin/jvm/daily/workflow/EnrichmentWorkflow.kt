@@ -140,7 +140,8 @@ class EnrichmentWorkflow(
                         ingestedAt = article.ingestedAt,
                         processedAt = clock.now(),
                         entities = result.entities,
-                        topics = result.topics,
+                        topics = if (article.content.startsWith("[JEP TRACKING]") && "jep" !in result.topics)
+                            result.topics + "jep" else result.topics,
                         engagementScore = calculateEngagementScore(article),
                         outcomeStatus = EnrichmentOutcomeStatus.SUCCESS,
                         attemptCount = attempt,
