@@ -129,6 +129,8 @@ HTML = r"""<!DOCTYPE html>
                     border-radius: 3px; letter-spacing: 0.03em; text-transform: uppercase; }
     .source-reddit { background: #fff1f0; color: #e25822; }
     .source-rss { background: #f0f4ff; color: #2563eb; }
+    .source-bluesky { background: #e8f4ff; color: #0085ff; }
+    .source-openjdk { background: #f0fff4; color: #16a34a; }
 
     /* ── Pipeline view ── */
     #pipeline-view { flex: 1; overflow-y: auto; padding: 32px; }
@@ -230,6 +232,8 @@ HTML = r"""<!DOCTYPE html>
 
   function sourceBadge(a) {
     if (a.sourceType === 'reddit') return '<span class="source-badge source-reddit">Reddit</span>';
+    if (a.sourceType === 'bluesky') return '<span class="source-badge source-bluesky">Bluesky</span>';
+    if (a.sourceType === 'openjdk_mail') return '<span class="source-badge source-openjdk">OpenJDK</span>';
     return '<span class="source-badge source-rss">RSS</span>';
   }
 

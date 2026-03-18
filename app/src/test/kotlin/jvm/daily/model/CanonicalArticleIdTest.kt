@@ -15,7 +15,7 @@ class CanonicalArticleIdTest {
             sourceNativeId = "urn:entry:1",
         )
 
-        assertEquals("rss:https://example.com/article/path", id)
+        assertEquals("https://example.com/article/path", id)
     }
 
     @Test
@@ -56,7 +56,16 @@ class CanonicalArticleIdTest {
             url = "https://EXAMPLE.com/post/1?utm_source=rss",
         )
         assertEquals(a, b)
-        assertEquals("rss:https://example.com/post/1utm_sourcerss", a)
+        assertEquals("https://example.com/post/1utm_sourcerss", a)
+    }
+
+    @Test
+    fun `same url from different sources produces same id`() {
+        val url = "https://example.com/post/1"
+        val fromRss = CanonicalArticleId.from(namespace = "rss", sourceId = "feed-a", title = "T", url = url)
+        val fromBluesky = CanonicalArticleId.from(namespace = "bluesky", sourceId = "user.bsky", title = "T", url = url)
+        assertEquals(fromRss, fromBluesky)
+        assertEquals("https://example.com/post/1", fromRss)
     }
 
     @Test

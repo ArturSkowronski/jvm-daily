@@ -63,14 +63,14 @@ class ValidateRawArticleIdsTest {
 
         assertEquals(1, summary.mismatches)
         assertEquals(1, summary.updated)
-        assertTrue(repository.existsById("rss:https://example.com/post-1"))
+        assertTrue(repository.existsById("https://example.com/post-1"))
     }
 
     @Test
     fun `apply mode reports collision and keeps original id`() {
         repository.save(
             article(
-                id = "rss:https://example.com/post-1",
+                id = "https://example.com/post-1",
                 title = "First canonical",
                 sourceType = "rss",
                 sourceId = "https://example.com/feed.xml",
@@ -93,7 +93,7 @@ class ValidateRawArticleIdsTest {
         assertEquals(1, summary.collisions)
         assertEquals(0, summary.updated)
         assertTrue(repository.existsById("rss:legacy-id"))
-        assertTrue(repository.existsById("rss:https://example.com/post-1"))
+        assertTrue(repository.existsById("https://example.com/post-1"))
     }
 
     private fun article(

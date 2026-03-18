@@ -175,3 +175,10 @@
 - Feed failure/duplicate counters are derived from persisted `ingest_feed_runs` snapshots in DuckDB.
 - Threshold evaluation (`max-duplicates`, `max-feed-failures`, `max-summarization-failures`) can optionally fail runs via `--fail-on-threshold`.
 - Practical caveat: canonical URL normalization currently strips query punctuation characters (`?`, `=`), which is now explicitly regression-tested.
+
+## 2026-03-17 — launchd Service / JOBRUNR_STORE absolute path gotcha
+
+- `App.kt:startDaemon` builds the H2 JDBC URL as `"jdbc:h2:file:./$storePath"` (with `./` prefix).
+- When `JOBRUNR_STORE` is an **absolute path** (e.g. `/Users/foo/.jvm-daily/jobrunr`), the URL becomes `jdbc:h2:file:.//Users/foo/.jvm-daily/jobrunr`.
+- On POSIX systems `.//abs` resolves to `/abs`, so H2 should handle this correctly, but it is untested. If the daemon fails to start with H2 errors, the fix is to remove the `./` prefix in `App.kt` or change the URL to use `Path.of(storePath).toAbsolutePath()`.
+- The `launchd` plist sets `JOBRUNR_STORE` to `$HOME/.jvm-daily/jobrunr` (absolute), so this path is exercised when using the local service.
