@@ -69,20 +69,21 @@ class ClusteringWorkflow(
     private suspend fun clusterArticles(articles: List<ProcessedArticle>): List<ArticleCluster> {
         val groups = groupBySemantic(articles)
         val clusters = groups
-            .map { (name, articleGroup) -> createCluster(articleGroup, name) }
-            .sortedByDescending { it.totalEngagement }
-        // Generic "Releases" roundup always sinks to the bottom of named clusters
-        val releases = clusters.filter { it.title.equals("Releases", ignoreCase = true) }
-        val specific = clusters.filter { !it.title.equals("Releases", ignoreCase = true) }
-        return specific + releases
+            .map { (name, articleGroup, isMajor) -> Pair(createCluster(articleGroup, name), isMajor) }
+        // 3-tier sort: MAJOR releases first → normal by engagement → Releases last
+        val major    = clusters.filter { (c, m) -> m }.sortedByDescending { (c, _) -> c.totalEngagement }.map { it.first }
+        val releases = clusters.filter { (c, _) -> c.title.equals("Releases", ignoreCase = true) }.map { it.first }
+        val normal   = clusters.filter { (c, m) -> !m && !c.title.equals("Releases", ignoreCase = true) }
+                               .sortedByDescending { (c, _) -> c.totalEngagement }.map { it.first }
+        return major + normal + releases
     }
 
     /**
      * Asks the LLM to semantically group articles into thematic clusters.
-     * Returns pairs of (cluster name, articles) so synthesis can use the intended name.
+     * Returns triples of (cluster name, articles, isMajor) so synthesis and sorting can use them.
      * Falls back to a single group if the response cannot be parsed.
      */
-    private suspend fun groupBySemantic(articles: List<ProcessedArticle>): List<Pair<String, List<ProcessedArticle>>> {
+    private suspend fun groupBySemantic(articles: List<ProcessedArticle>): List<Triple<String, List<ProcessedArticle>, Boolean>> {
         val listing = articles.mapIndexed { i, a ->
             "[$i] ${a.originalTitle} | ${a.topics.take(3).joinToString(", ")}"
         }.joinToString("\n")
@@ -110,8 +111,17 @@ Group these ${articles.size} articles into thematic clusters following these rul
   - A release that generated notable community discussion across multiple sources
 - When in doubt, put the release in the "Releases" cluster
 
+**Priority rule**:
+- Add `MAJOR: YES` for clusters covering a milestone that every JVM developer should read today:
+  - Java/JDK GA releases (any version number)
+  - Kotlin feature releases (X.Y.Z where Z=0 or Z=20)
+  - Spring Boot major or minor (e.g. 3.5.0, 4.0.0)
+  - Any other platform-level milestone that overshadows all other news
+- Omit the MAJOR line (or write `MAJOR: NO`) for everything else
+
 Output ONLY the groups in this exact format (no extra text):
 GROUP: [cluster name]
+MAJOR: YES   ← only when applicable
 INDICES: [comma-separated indices]
         """.trimIndent()
 
@@ -120,7 +130,7 @@ INDICES: [comma-separated indices]
 
         if (groups.isEmpty()) {
             println("[clustering] Warning: semantic grouping returned no groups, falling back to single cluster")
-            return listOf(Pair("", articles))
+            return listOf(Triple("", articles, false))
         }
         return groups
     }
@@ -128,11 +138,12 @@ INDICES: [comma-separated indices]
     private fun parseGroupResponse(
         response: String,
         articles: List<ProcessedArticle>,
-    ): List<Pair<String, List<ProcessedArticle>>> {
-        val groups = mutableListOf<Pair<String, List<ProcessedArticle>>>()
+    ): List<Triple<String, List<ProcessedArticle>, Boolean>> {
+        val groups = mutableListOf<Triple<String, List<ProcessedArticle>, Boolean>>()
         val assignedIndices = mutableSetOf<Int>()
 
         var pendingName = ""
+        var pendingMajor = false
         var pendingIndices: List<Int> = emptyList()
 
         for (line in response.lines()) {
@@ -141,10 +152,14 @@ INDICES: [comma-separated indices]
                     // flush previous group
                     if (pendingIndices.isNotEmpty()) {
                         val group = pendingIndices.mapNotNull { articles.getOrNull(it) }
-                        if (group.isNotEmpty()) { groups.add(Pair(pendingName, group)); assignedIndices.addAll(pendingIndices) }
+                        if (group.isNotEmpty()) { groups.add(Triple(pendingName, group, pendingMajor)); assignedIndices.addAll(pendingIndices) }
                     }
                     pendingName = line.substringAfter("GROUP:").trim()
+                    pendingMajor = false
                     pendingIndices = emptyList()
+                }
+                line.startsWith("MAJOR:") -> {
+                    pendingMajor = line.substringAfter("MAJOR:").trim().uppercase() == "YES"
                 }
                 line.startsWith("INDICES:") -> {
                     pendingIndices = line.substringAfter("INDICES:")
@@ -156,12 +171,12 @@ INDICES: [comma-separated indices]
         // flush last group
         if (pendingIndices.isNotEmpty()) {
             val group = pendingIndices.mapNotNull { articles.getOrNull(it) }
-            if (group.isNotEmpty()) { groups.add(Pair(pendingName, group)); assignedIndices.addAll(pendingIndices) }
+            if (group.isNotEmpty()) { groups.add(Triple(pendingName, group, pendingMajor)); assignedIndices.addAll(pendingIndices) }
         }
 
         // Any article the LLM missed goes into a catch-all group
         val unassigned = articles.indices.filter { it !in assignedIndices }.map { articles[it] }
-        if (unassigned.isNotEmpty()) groups.add(Pair("", unassigned))
+        if (unassigned.isNotEmpty()) groups.add(Triple("", unassigned, false))
 
         return groups.filter { it.second.isNotEmpty() }
     }
