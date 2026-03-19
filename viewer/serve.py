@@ -147,6 +147,15 @@ HTML = r"""<!DOCTYPE html>
     .social-card-author:hover { text-decoration: underline; }
     .social-card-text { color: #444; font-size: 0.85rem; line-height: 1.5; margin: 0; }
 
+    /* ── Standalone tweets section ── */
+    .tweets-section { margin-top: 48px; }
+    .tweets-section-title { font-size: 0.68rem; text-transform: uppercase; letter-spacing: .1em;
+                            color: #aaa; margin-bottom: 12px; font-weight: 600; }
+    .tweets-grid { display: flex; flex-direction: column; gap: 8px; }
+    .tweet-card { background: #fff; border: 1px solid #e8e8e8; border-radius: 8px;
+                  padding: 10px 14px; }
+    .tweet-card .social-card-text { font-size: 0.82rem; }
+
     /* ── Pipeline view ── */
     #pipeline-view { flex: 1; overflow-y: auto; padding: 32px; }
     #pipeline-view .content-scroll { max-width: 720px; margin: 0 auto; }
@@ -361,8 +370,14 @@ HTML = r"""<!DOCTYPE html>
       </div>`;
     }
 
+    const standaloneTweets = [];
+
     for (const cluster of clusters) {
       const arts = [...cluster.articles].sort((a, b) => b.engagementScore - a.engagementScore);
+      if (arts.length === 1 && isSocialPost(arts[0])) {
+        standaloneTweets.push(arts[0]);
+        continue;
+      }
       html += clusterHtml(
         cluster.title,
         `<div class="cluster-title">${esc(cluster.title)}<span class="cluster-count">${arts.length} articles</span></div>`,
@@ -373,14 +388,39 @@ HTML = r"""<!DOCTYPE html>
     }
 
     if (data.unclustered && data.unclustered.length > 0) {
-      const arts = [...data.unclustered].sort((a, b) => b.engagementScore - a.engagementScore);
-      html += clusterHtml(
-        '__unclustered__',
-        `<div class="cluster-title">Other<span class="cluster-count">${arts.length} articles</span></div>`,
-        '',
-        arts.map(a => articleHtml(a, arts.length)).join(''),
-        'unclustered'
-      );
+      const allUnclustered = [...data.unclustered].sort((a, b) => b.engagementScore - a.engagementScore);
+      const unclusteredNormal = allUnclustered.filter(a => !isSocialPost(a));
+      allUnclustered.filter(isSocialPost).forEach(a => standaloneTweets.push(a));
+
+      if (unclusteredNormal.length > 0) {
+        html += clusterHtml(
+          '__unclustered__',
+          `<div class="cluster-title">Other<span class="cluster-count">${unclusteredNormal.length} articles</span></div>`,
+          '',
+          unclusteredNormal.map(a => articleHtml(a, unclusteredNormal.length)).join(''),
+          'unclustered'
+        );
+      }
+    }
+
+    if (standaloneTweets.length > 0) {
+      const cards = standaloneTweets.map(a => {
+        const handle = a.handle ? '@' + a.handle : 'Bluesky';
+        const text = extractTweetText(a.title);
+        const topics = (a.topics || []).map(t => `<span class="topic-tag">${esc(t)}</span>`).join('');
+        return `<div class="tweet-card">
+          <div class="social-card-header">
+            <span class="social-card-icon">🦋</span>
+            <a class="social-card-author" href="${esc(a.url || '#')}" target="_blank" rel="noopener">${esc(handle)}</a>
+          </div>
+          <p class="social-card-text">${esc(text)}</p>
+          <div class="article-meta">${topics}</div>
+        </div>`;
+      }).join('');
+      html += `<div class="tweets-section">
+        <div class="tweets-section-title">Tweets</div>
+        <div class="tweets-grid">${cards}</div>
+      </div>`;
     }
 
     if (data.debug && data.debug.length > 0) {
