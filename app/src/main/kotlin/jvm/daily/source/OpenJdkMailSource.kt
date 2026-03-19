@@ -7,13 +7,17 @@ import jvm.daily.model.FeedIngestResult
 import jvm.daily.model.FeedIngestStatus
 import jvm.daily.model.SourceFetchOutcome
 import kotlinx.datetime.Clock
+import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import java.net.HttpURLConnection
 import java.net.URI
 import java.time.YearMonth
 import java.time.format.TextStyle
+import java.time.format.DateTimeFormatter
+import java.time.ZonedDateTime
 import java.util.Locale
+import kotlin.time.Duration.Companion.days
 
 /**
  * OpenJDK mailing list source — fetches monthly archives and aggregates threads.
@@ -61,18 +65,23 @@ class OpenJdkMailSource(
 
             val messages = parseMbox(mbox)
             val threads = groupIntoThreads(messages)
+            val windowStart = clock.now().minus(config.sinceDays.days)
 
             var skippedLowActivity = 0
             val articles = threads.mapNotNull { (subject, msgs) ->
-                if (msgs.size - 1 < config.minReplies) {
+                val windowMsgs = msgs.filter { it.parsedDate != null && it.parsedDate >= windowStart }
+                if (windowMsgs.size < config.minReplies) {
                     skippedLowActivity++
                     return@mapNotNull null
                 }
-                threadToArticle(listName, subject, msgs)
+                val lastActiveDay = windowMsgs.mapNotNull { it.parsedDate }
+                    .maxOrNull()!!
+                    .toLocalDateTime(TimeZone.UTC).date.toString()
+                threadToArticle(listName, subject, msgs, windowMsgs, lastActiveDay)
             }
 
             val errors = buildList {
-                if (skippedLowActivity > 0) add("Skipped $skippedLowActivity threads with < ${config.minReplies} replies")
+                if (skippedLowActivity > 0) add("Skipped $skippedLowActivity threads with < ${config.minReplies} replies in last ${config.sinceDays}d")
             }
 
             SourceFetchOutcome(
@@ -103,6 +112,7 @@ class OpenJdkMailSource(
         val subject: String,
         val from: String,
         val date: String,
+        val parsedDate: Instant?,
         val body: String,
     )
 
@@ -150,6 +160,7 @@ class OpenJdkMailSource(
                     subject = decodeMimeSubject(subject),
                     from = cleanFrom(decodeMimeSubject(from)),
                     date = date,
+                    parsedDate = parseMailDate(date),
                     body = bodyLines.joinToString("\n").trim().take(3000),
                 ))
             }
@@ -194,26 +205,34 @@ class OpenJdkMailSource(
             .ifBlank { from.substringBefore("@").substringBefore(" at ") }
     }
 
-    private fun threadToArticle(listName: String, subject: String, messages: List<MailMessage>): Article {
-        val starter = messages.first()
-        val participants = messages.map { it.from }.distinct()
+    private fun threadToArticle(
+        listName: String,
+        subject: String,
+        allMessages: List<MailMessage>,
+        windowMessages: List<MailMessage>,
+        lastActiveDay: String,
+    ): Article {
+        val starter = allMessages.first()
+        val participants = allMessages.map { it.from }.distinct()
         val archiveUrl = "https://mail.openjdk.org/pipermail/$listName/"
 
         val content = buildString {
             appendLine("Thread: $subject")
-            appendLine("List: $listName@openjdk.org | Messages: ${messages.size} | Participants: ${participants.size}")
+            appendLine("List: $listName@openjdk.org | Total messages: ${allMessages.size} | New in window: ${windowMessages.size} | Participants: ${participants.size}")
             appendLine("Participants: ${participants.joinToString(", ")}")
             appendLine()
-            for ((i, msg) in messages.withIndex()) {
-                val prefix = if (i == 0) "[OP]" else "[Reply ${i}]"
+            appendLine("=== Recent messages (last ${windowMessages.size}) ===")
+            for ((i, msg) in windowMessages.withIndex()) {
+                val prefix = if (i == 0) "[OP]" else "[Reply $i]"
                 appendLine("$prefix ${msg.from} (${msg.date})")
                 appendLine(msg.body.take(1500))
                 appendLine()
             }
         }
 
+        // ID includes lastActiveDay so re-active threads generate a fresh article each day
         val canonicalId = CanonicalArticleId.from(
-            sourceType, listName, subject, archiveUrl
+            sourceType, listName, "$subject::$lastActiveDay", archiveUrl
         )
 
         return Article(
@@ -226,6 +245,22 @@ class OpenJdkMailSource(
             author = starter.from,
             ingestedAt = clock.now(),
         )
+    }
+
+    private fun parseMailDate(date: String): Instant? {
+        if (date.isBlank()) return null
+        val formatters = listOf(
+            DateTimeFormatter.ofPattern("EEE, d MMM yyyy HH:mm:ss Z", Locale.US),
+            DateTimeFormatter.ofPattern("d MMM yyyy HH:mm:ss Z", Locale.US),
+            DateTimeFormatter.ofPattern("EEE, d MMM yyyy HH:mm:ss zzz", Locale.US),
+        )
+        for (fmt in formatters) {
+            try {
+                val zdt = ZonedDateTime.parse(date.trim(), fmt)
+                return Instant.fromEpochMilliseconds(zdt.toInstant().toEpochMilli())
+            } catch (_: Exception) {}
+        }
+        return null
     }
 
     private fun fetchMbox(listName: String, yearMonth: YearMonth): String? {
