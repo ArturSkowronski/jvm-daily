@@ -10,6 +10,7 @@ import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 import java.util.UUID
 import kotlin.time.Duration.Companion.days
+import kotlin.time.Duration.Companion.hours
 
 /**
  * Clustering Workflow (Stage 2 of processing pipeline).
@@ -27,6 +28,7 @@ class ClusteringWorkflow(
     private val clusterRepository: ClusterRepository,
     private val llmClient: LLMClient,
     private val clock: Clock = Clock.System,
+    private val sinceHours: Int = 24,
 ) : Workflow {
 
     override val name: String = "clustering"
@@ -35,7 +37,7 @@ class ClusteringWorkflow(
         println("[clustering] Starting clustering workflow")
 
         val now = clock.now()
-        val yesterday = now.minus(1.days)
+        val yesterday = now.minus(sinceHours.hours)
         val candidates = processedArticleRepository.findByIngestedAtRange(yesterday, now)
             .filter { it.outcomeStatus == EnrichmentOutcomeStatus.SUCCESS }
 
@@ -46,14 +48,20 @@ class ClusteringWorkflow(
             println("[clustering] Moved $skippedCount event-logistics post(s) to unclustered")
         }
 
-        if (articles.isEmpty()) {
+        val deduped = deduplicateByUrl(articles)
+        val dupCount = articles.size - deduped.size
+        if (dupCount > 0) {
+            println("[clustering] Removed $dupCount duplicate(s) by URL (social reposts of RSS articles)")
+        }
+
+        if (deduped.isEmpty()) {
             println("[clustering] No processed articles found in last 24h")
             return
         }
 
-        println("[clustering] Found ${articles.size} processed articles")
+        println("[clustering] Found ${deduped.size} processed articles")
 
-        val clusters = clusterArticles(articles)
+        val clusters = clusterArticles(deduped)
 
         println("[clustering] Created ${clusters.size} thematic clusters")
         clusters.forEachIndexed { i, cluster ->
@@ -130,6 +138,7 @@ INDICES: [comma-separated indices]
 
         if (groups.isEmpty()) {
             println("[clustering] Warning: semantic grouping returned no groups, falling back to single cluster")
+            println("[clustering] LLM response (first 500 chars): ${response.take(500)}")
             return listOf(Triple("", articles, false))
         }
         return groups
@@ -146,7 +155,11 @@ INDICES: [comma-separated indices]
         var pendingMajor = false
         var pendingIndices: List<Int> = emptyList()
 
-        for (line in response.lines()) {
+        for (rawLine in response.lines()) {
+            // Strip leading whitespace and markdown bold markers (**TEXT:** → TEXT:)
+            val line = rawLine.trim().removePrefix("**").let {
+                if (it.contains("**")) it.substringBefore("**") + it.substringAfter("**") else it
+            }
             when {
                 line.startsWith("GROUP:") -> {
                     // flush previous group
@@ -159,7 +172,7 @@ INDICES: [comma-separated indices]
                     pendingIndices = emptyList()
                 }
                 line.startsWith("MAJOR:") -> {
-                    pendingMajor = line.substringAfter("MAJOR:").trim().uppercase() == "YES"
+                    pendingMajor = line.substringAfter("MAJOR:").trim().uppercase().startsWith("YES")
                 }
                 line.startsWith("INDICES:") -> {
                     pendingIndices = line.substringAfter("INDICES:")
@@ -249,7 +262,9 @@ SYNTHESIS: [your synthesis]
     }
 
     private fun parseClusterResponse(response: String): ClusterSynthesis {
-        val lines = response.lines()
+        val lines = response.lines().map { it.trim().let { l ->
+            l.removePrefix("**").let { if (it.contains("**")) it.substringBefore("**") + it.substringAfter("**") else it }
+        } }
         val title = lines.find { it.startsWith("TITLE:") }
             ?.substringAfter("TITLE:")?.trim()
             ?: "Untitled Cluster"
@@ -300,8 +315,37 @@ Answer with exactly YES or NO.
         }
     }
 
+    /**
+     * Removes duplicate articles that share the same URL.
+     * When a Bluesky/Reddit post embeds a link to an RSS article, both end up with identical URLs.
+     * We keep the highest-priority source type per URL (canonical article beats social repost).
+     */
+    private fun deduplicateByUrl(articles: List<ProcessedArticle>): List<ProcessedArticle> {
+        val byUrl = articles
+            .filter { !it.url.isNullOrBlank() }
+            .groupBy { it.url!! }
+        val noUrl = articles.filter { it.url.isNullOrBlank() }
+
+        val deduped = byUrl.values.map { group ->
+            group.minByOrNull { SOURCE_PRIORITY.getOrDefault(it.sourceType, 99) }!!
+        }
+        return (deduped + noUrl).sortedByDescending { it.ingestedAt }
+    }
+
     companion object {
         private val SOCIAL_SOURCES = setOf("bluesky", "twitter")
+
+        /** Lower = higher priority. Social sources are kept only when no canonical source has the same URL. */
+        private val SOURCE_PRIORITY = mapOf(
+            "rss"              to 1,
+            "github-releases"  to 2,
+            "github-trending"  to 3,
+            "openjdk-mail"     to 4,
+            "jep"              to 5,
+            "reddit"           to 10,
+            "bluesky"          to 11,
+            "twitter"          to 12,
+        )
 
         private const val CLUSTERING_SYSTEM_PROMPT = """
 You are an expert JVM news curator. Your job is to analyze clusters of related

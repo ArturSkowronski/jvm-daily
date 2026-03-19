@@ -16,7 +16,6 @@ Enhance JVM Daily with a Latent Space AI News-style morning digest viewer. Each 
 
 ## Out of Scope
 
-- Reddit/HN discussion links (future milestone)
 - Real-time updates
 
 ---
@@ -114,7 +113,7 @@ Note on naming: the existing markdown uses `jvm-daily-YYYY-MM-DD.md`. The JSON u
 - `date`: UTC calendar date of `clock.now()` at outgress run time, formatted as `YYYY-MM-DD`. If the pipeline runs at 01:00 UTC, this may be a different calendar date than the articles' `ingestedAt` dates — it represents the run date, not the ingest window.
 - `generatedAt`: `clock.now()` at the start of `OutgressWorkflow.execute()`, ISO 8601 UTC.
 - `windowHours`: constant `24`. Not configurable — distinct from `outgressDays` which controls the `.md` window. The JSON path always uses a 24-hour window regardless of `outgressDays`.
-- `totalArticles`: distinct article ID count. Computed as `(allClusterArticleIds + unclusteredIds).size`. If an article appears in multiple clusters (inconsistent data), it is counted once.
+- `totalArticles`: `allClusterArticleIds.size + unclusteredArticles.size`, where `allClusterArticleIds = clusters.flatMap { it.articles }.toSet()` (deduplicated). This means `clusteredCount` is the size of the deduplicated union of all cluster article ID sets — not the raw sum of each cluster's `articles.size`. An article that appears in two clusters is counted once.
 - Cluster `summary`: mapped from `ArticleCluster.summary` (the cross-source synthesis field). JSON key is `summary`.
 - Cluster `engagementScore`: mapped from `ArticleCluster.totalEngagement`. JSON key is `engagementScore` (normalized for the viewer).
 - `unclustered`: articles where `ingestedAt in [now-24h, now]` but ID is not in any cluster's `articles` list. Same article object shape as cluster articles.
@@ -366,6 +365,81 @@ New CSS classes (append to existing `<style>`):
 .article-summary { color: #8b949e; font-size: 0.85rem; line-height: 1.5; margin: 0;
                    overflow: hidden; display: -webkit-box;
                    -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+```
+
+---
+
+## Section 4: Reddit / HN Discussion Rendering
+
+### Design Decisions
+
+Each article may have associated social discussion links (Reddit, Hacker News, Lobsters, etc.). These are **conditionally** rendered based on discussion quality — assessed historically at ingestion time or pipeline time.
+
+**Two rendering modes:**
+
+**A. Valuable discussion** (AI-assessed quality threshold met):
+- Render as a discussion block below the article row
+- Left orange border (`border-left: 3px solid #e06c00`)
+- Label: "Reddit Discussion" / "Hacker News" / etc.
+- AI-generated summary of the discussion (key points, sentiment, controversy)
+- Link to original thread
+
+**B. Low-value / no discussion**:
+- Render only as a small icon + link in the article footer (no summary block)
+- Example: small Reddit icon with link, inline with chips
+
+### Quality Assessment
+
+Discussion quality is assessed by the pipeline (not the viewer). The pipeline stores a `discussionQuality` flag per social link:
+- `"full"` → render mode A (block with summary)
+- `"link_only"` → render mode B (icon + link)
+- absent / null → skip entirely
+
+Assessment criteria for `"full"`:
+- Comment count above threshold (e.g. >20 for Reddit, >10 for HN)
+- Substantive discussion (not just reposts/upvotes)
+- Can use historical data: look at past snapshots to assess if thread grew over time
+
+### Data Model Extension (future)
+
+Article objects in the JSON gain an optional `discussions` array:
+
+```json
+"discussions": [
+  {
+    "source": "reddit",
+    "url": "https://reddit.com/r/java/...",
+    "quality": "full",
+    "summary": "AI-generated summary of key discussion points...",
+    "commentCount": 87,
+    "subreddit": "r/java"
+  },
+  {
+    "source": "hackernews",
+    "url": "https://news.ycombinator.com/item?id=...",
+    "quality": "link_only",
+    "commentCount": 8
+  }
+]
+```
+
+### CSS (additions)
+
+```css
+.discussion-block {
+  margin-top: 8px;
+  border-left: 3px solid #e06c00;
+  padding: 8px 12px;
+  background: #1a1208;
+  border-radius: 0 6px 6px 0;
+}
+.discussion-label { color: #e06c00; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; }
+.discussion-summary { color: #8b949e; font-size: 0.82rem; line-height: 1.5; margin: 4px 0; }
+.discussion-link { color: #e06c00; font-size: 0.78rem; text-decoration: none; }
+.discussion-link:hover { text-decoration: underline; }
+.discussion-icon { display: inline-flex; align-items: center; gap: 4px;
+                   color: #8b949e; font-size: 0.75rem; text-decoration: none; }
+.discussion-icon:hover { color: #e06c00; }
 ```
 
 ---

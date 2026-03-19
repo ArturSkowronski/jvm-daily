@@ -6,6 +6,7 @@ import jvm.daily.model.FeedRunSnapshot
 import jvm.daily.model.IngestRunStatus
 import jvm.daily.source.SourceRegistry
 import jvm.daily.storage.ArticleRepository
+import jvm.daily.storage.ProcessedArticleRepository
 import kotlinx.datetime.Clock
 import java.util.UUID
 
@@ -13,6 +14,7 @@ class IngressWorkflow(
     private val sourceRegistry: SourceRegistry,
     private val articleRepository: ArticleRepository,
     private val clock: Clock = Clock.System,
+    private val processedArticleRepository: ProcessedArticleRepository? = null,
 ) : Workflow {
 
     override val name: String = "ingress"
@@ -39,6 +41,12 @@ class IngressWorkflow(
                 for (article in outcome.articles) {
                     // Dedup quality gate: cardinality must remain stable for repeated canonical IDs.
                     if (articleRepository.existsById(article.id)) {
+                        // For Bluesky: if a real external URL exists, sync title+url to both raw and processed records
+                        if (article.sourceType == "bluesky" && article.url?.startsWith("https://bsky.app") == false) {
+                            articleRepository.save(article)
+                            processedArticleRepository?.updateUrl(article.id, article.url!!)
+                            processedArticleRepository?.updateTitle(article.id, article.title, article.title.lowercase())
+                        }
                         skippedCount++
                     } else {
                         articleRepository.save(article)
