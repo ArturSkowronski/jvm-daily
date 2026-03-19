@@ -25,6 +25,7 @@ import java.net.URLEncoder
 class BlueskySource(
     private val config: BlueskyConfig,
     private val clock: Clock = Clock.System,
+    private val urlShortenerResolver: UrlShortenerResolver = UrlShortenerResolver(),
 ) : Source {
 
     override val sourceType: String = "bluesky"
@@ -124,8 +125,9 @@ class BlueskySource(
             ?: embed?.get("media")?.jsonObject?.get("external")?.jsonObject?.get("description")?.jsonPrimitive?.contentOrNull
         val embedTitle = embed?.get("external")?.jsonObject?.get("title")?.jsonPrimitive?.contentOrNull
             ?: embed?.get("media")?.jsonObject?.get("external")?.jsonObject?.get("title")?.jsonPrimitive?.contentOrNull
+        val resolvedExternalUrl = externalUrl?.let { urlShortenerResolver.resolve(it) }
         // For facet links (no embed card), fetch page meta to get real title + description
-        val pageMeta = if (embedTitle == null && externalUrl != null) fetchPageMeta(externalUrl) else null
+        val pageMeta = if (embedTitle == null && resolvedExternalUrl != null) fetchPageMeta(resolvedExternalUrl) else null
         val externalTitle = embedTitle ?: pageMeta?.title
         val externalDesc  = embedDesc  ?: pageMeta?.description
 
@@ -141,8 +143,8 @@ class BlueskySource(
             appendLine(text)
             appendLine()
             appendLine("Likes: $likeCount | Reposts: $repostCount | Replies: $replyCount")
-            if (externalUrl != null) {
-                appendLine("Link: $externalUrl")
+            if (resolvedExternalUrl != null) {
+                appendLine("Link: $resolvedExternalUrl")
                 if (externalTitle != null) appendLine("Title: $externalTitle")
                 if (externalDesc != null) appendLine("Description: $externalDesc")
             }
@@ -156,7 +158,7 @@ class BlueskySource(
             content = content,
             sourceType = sourceType,
             sourceId = "$handle/$rkey",
-            url = externalUrl ?: postUrl,
+            url = resolvedExternalUrl ?: postUrl,
             author = "$displayName (@$authorHandle)",
             ingestedAt = clock.now(),
         )
@@ -222,7 +224,7 @@ class BlueskySource(
                     ?: embed?.get("media")?.jsonObject?.get("external")?.jsonObject?.get("uri")?.jsonPrimitive?.contentOrNull
                 val externalTitle = embed?.get("external")?.jsonObject?.get("title")?.jsonPrimitive?.contentOrNull
                     ?: embed?.get("media")?.jsonObject?.get("external")?.jsonObject?.get("title")?.jsonPrimitive?.contentOrNull
-                if (externalUrl != null) return ThreadLink(externalUrl, externalTitle)
+                if (externalUrl != null) return ThreadLink(urlShortenerResolver.resolve(externalUrl), externalTitle)
 
                 val record = replyPost["record"]?.jsonObject ?: continue
                 val facetUrl = record["facets"]?.jsonArray?.firstNotNullOfOrNull { facet ->
@@ -233,7 +235,10 @@ class BlueskySource(
                         else null
                     }
                 }
-                if (facetUrl != null) return ThreadLink(facetUrl, fetchPageMeta(facetUrl).title)
+                if (facetUrl != null) {
+                    val resolvedFacetUrl = urlShortenerResolver.resolve(facetUrl)
+                    return ThreadLink(resolvedFacetUrl, fetchPageMeta(resolvedFacetUrl).title)
+                }
             }
             null
         } catch (_: Exception) { null }
