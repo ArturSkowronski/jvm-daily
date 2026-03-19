@@ -64,7 +64,7 @@ fun main(args: Array<String>) {
         "enrichment-replay" -> { println("JVM Daily — enrichment-replay"); runEnrichmentReplay(dbPath, args.drop(1)) }
         "quality-report" -> { println("JVM Daily — quality-report"); runQualityReport(dbPath, args.drop(1)) }
         "inspect-quality" -> { println("JVM Daily — inspect-quality"); runInspectQuality(dbPath, args.drop(1)) }
-        "clustering"  -> { println("JVM Daily — clustering");  runClustering(dbPath) }
+        "clustering"  -> { println("JVM Daily — clustering");  runClustering(dbPath, args.drop(1)) }
         "outgress"    -> { println("JVM Daily — outgress");     runOutgress(dbPath) }
         "reprocess"   -> { println("JVM Daily — reprocess");    runReprocess(dbPath, args.drop(1)) }
         "validate-raw-ids" -> { println("JVM Daily — validate-raw-ids"); runValidateRawIds(dbPath, args.drop(1)) }
@@ -568,7 +568,7 @@ private fun buildInspectionReport(
     }.trimEnd()
 }
 
-internal fun runClustering(dbPath: String) {
+internal fun runClustering(dbPath: String, args: List<String> = emptyList()) {
     val llmProvider = System.getenv("LLM_PROVIDER") ?: "mock"
     val llmApiKey   = System.getenv("LLM_API_KEY")
     val llmModel    = System.getenv("LLM_MODEL") ?: "gpt-4"
@@ -577,10 +577,13 @@ internal fun runClustering(dbPath: String) {
         error("LLM_API_KEY required for provider '$llmProvider'")
     }
 
+    val sinceHours = args.indexOf("--since-hours").takeIf { it >= 0 }
+        ?.let { args.getOrNull(it + 1)?.toIntOrNull() } ?: 24
+
     DuckDbConnectionFactory.persistent(dbPath).use { connection ->
         val processedRepo = DuckDbProcessedArticleRepository(connection)
         val clusterRepo = DuckDbClusterRepository(connection)
-        runBlocking { ClusteringWorkflow(processedRepo, clusterRepo, createLLMClient(llmProvider, llmApiKey, llmModel)).execute() }
+        runBlocking { ClusteringWorkflow(processedRepo, clusterRepo, createLLMClient(llmProvider, llmApiKey, llmModel), sinceHours = sinceHours).execute() }
     }
 }
 
