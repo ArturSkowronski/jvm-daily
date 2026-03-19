@@ -51,7 +51,7 @@ import kotlin.time.Duration.Companion.hours
  * inspect-quality       → report failed/low-quality processed items for manual follow-up
  */
 fun main(args: Array<String>) {
-    val dbPath = System.getenv("DUCKDB_PATH") ?: "jvm-daily.duckdb"
+    val dbPath = System.getenv("DUCKDB_PATH") ?: DEFAULT_DB_PATH
 
     when (val cmd = args.getOrNull(0)) {
         null       -> startDaemon(dbPath)
@@ -156,7 +156,8 @@ internal fun runIngress(dbPath: String) {
                 register(JepSource(jepRepo, it))
             }
         }
-        val workflow = IngressWorkflow(sourceRegistry, repository)
+        val processedRepo = DuckDbProcessedArticleRepository(connection)
+        val workflow = IngressWorkflow(sourceRegistry, repository, processedArticleRepository = processedRepo)
         runBlocking { workflow.execute() }
         println("Ingest status: ${workflow.lastRunStatus}")
         println("Total articles in DB: ${repository.count()}")
@@ -669,3 +670,4 @@ private class MockLLMClient : LLMClient {
 }
 
 internal const val DEFAULT_PIPELINE_CRON = "0 7 * * *"
+internal val DEFAULT_DB_PATH: String get() = "${System.getProperty("user.home")}/.jvm-daily/jvm-daily.duckdb"
