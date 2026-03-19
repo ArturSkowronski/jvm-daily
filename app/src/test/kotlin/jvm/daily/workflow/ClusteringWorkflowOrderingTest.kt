@@ -183,6 +183,88 @@ class ClusteringWorkflowOrderingTest {
         assertEquals("Normal Low", saved[3].title, "Lower normal engagement fourth")
     }
 
+    @Test
+    fun `Bluesky repost of RSS article is deduplicated — RSS article wins`() = runTest {
+        val sharedUrl = "https://foojay.io/articles/leyden-part2"
+        val rssArticle = article("rss-1", "Leyden Part 2", sourceType = "rss", url = sharedUrl, score = 5.0)
+        val bskyArticle = article("bsky-1", "[Foojay] Leyden Part 2", sourceType = "bluesky", url = sharedUrl, score = 15.0)
+        val uniqueArticle = article("rss-2", "Other News", sourceType = "rss", url = "https://example.com/other", score = 8.0)
+
+        val saved = captureSaved(
+            listOf(rssArticle, bskyArticle, uniqueArticle),
+            groupResponse = "GROUP: Leyden\nINDICES: 0\nGROUP: Other\nINDICES: 1",
+            synthesisTitles = listOf("Leyden", "Other"),
+        )
+
+        val allArticleIds = saved.flatMap { it.articles }
+        assertTrue("rss-1" in allArticleIds, "RSS article should be kept")
+        assertTrue("bsky-1" !in allArticleIds, "Bluesky repost should be removed")
+        assertTrue("rss-2" in allArticleIds, "Unique article should be kept")
+        assertEquals(2, allArticleIds.size)
+    }
+
+    @Test
+    fun `GROUP response with leading whitespace is parsed correctly`() = runTest {
+        val articles = articles("a1" to "Kotlin 2.3.20", "a2" to "Hibernate 7.3.0")
+
+        val saved = captureSaved(
+            articles,
+            // Gemini sometimes adds leading spaces or indentation
+            groupResponse = "  GROUP: Kotlin 2.3.20\n  INDICES: 0\n  GROUP: Releases\n  INDICES: 1",
+            synthesisTitles = listOf("Kotlin 2.3.20", "Releases"),
+        )
+
+        assertEquals(2, saved.size)
+        assertEquals("Kotlin 2.3.20", saved.first().title)
+    }
+
+    @Test
+    fun `GROUP response with markdown bold markers is parsed correctly`() = runTest {
+        val articles = articles("a1" to "Spring Boot 4", "a2" to "Micronaut 4.x")
+
+        val saved = captureSaved(
+            articles,
+            // Gemini sometimes wraps keys in **bold**
+            groupResponse = "**GROUP:** Spring Boot 4\n**INDICES:** 0\n**GROUP:** Releases\n**INDICES:** 1",
+            synthesisTitles = listOf("Spring Boot 4", "Releases"),
+        )
+
+        assertEquals(2, saved.size)
+        assertEquals("Spring Boot 4", saved.first().title)
+    }
+
+    @Test
+    fun `MAJOR YES with trailing comment is still recognized`() = runTest {
+        val articles = articles("a1" to "JDK 26 GA", "a2" to "Micronaut")
+
+        val saved = captureSaved(
+            articles,
+            groupResponse = "GROUP: JDK 26 GA\nMAJOR: YES   ← important\nINDICES: 0\nGROUP: Releases\nINDICES: 1",
+            synthesisTitles = listOf("JDK 26 GA", "Releases"),
+        )
+
+        assertEquals(2, saved.size)
+        assertEquals("JDK 26 GA", saved.first().title, "MAJOR cluster should be first")
+    }
+
+    @Test
+    fun `Reddit repost is also deduplicated when URL matches RSS`() = runTest {
+        val sharedUrl = "https://spring.io/blog/spring-boot-4"
+        val rssArticle = article("rss-1", "Spring Boot 4", sourceType = "rss", url = sharedUrl, score = 10.0)
+        val redditArticle = article("reddit-1", "Spring Boot 4 on Reddit", sourceType = "reddit", url = sharedUrl, score = 50.0)
+
+        val saved = captureSaved(
+            listOf(rssArticle, redditArticle),
+            groupResponse = "GROUP: Spring Boot\nINDICES: 0",
+            synthesisTitles = listOf("Spring Boot"),
+        )
+
+        val allArticleIds = saved.flatMap { it.articles }
+        assertTrue("rss-1" in allArticleIds, "RSS article should be kept")
+        assertTrue("reddit-1" !in allArticleIds, "Reddit repost should be removed")
+        assertEquals(1, allArticleIds.size)
+    }
+
     // Helpers
 
     private fun articles(vararg pairs: Pair<String, String>): List<ProcessedArticle> =
@@ -196,6 +278,19 @@ class ClusteringWorkflowOrderingTest {
                 engagementScore = 10.0 * (i + 1),
             )
         }
+
+    private fun article(
+        id: String, title: String,
+        sourceType: String = "rss",
+        url: String = "https://example.com/$id",
+        score: Double = 10.0,
+    ) = ProcessedArticle(
+        id = id, originalTitle = title, normalizedTitle = title.lowercase(),
+        summary = "Summary of $title", originalContent = "content",
+        sourceType = sourceType, sourceId = "test", url = url,
+        publishedAt = fixedNow, ingestedAt = fixedNow, processedAt = fixedNow,
+        topics = listOf("jvm"), engagementScore = score,
+    )
 
     /**
      * LLM mock: call 0 = grouping response; calls 1+ = synthesis in GROUP order.
