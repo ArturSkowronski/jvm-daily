@@ -44,22 +44,25 @@ class JepSourceSimulationTest {
             <html><body>
             <table>
               <tr>
-                <td><a href="/jeps/491">JEP 491</a></td>
-                <td><a href="/jeps/491">Null-Restricted Value Class Types</a></td>
-                <td>Targeted</td>
-                <td>JDK 26</td>
+                <td><span title="Type: Feature">F</span></td>
+                <td><span title="Status: Targeted">Tar</span></td>
+                <td><span title="Release: JDK 26">JDK 26</span></td>
+                <td class="jep">491</td>
+                <td><a href="491">Null-Restricted Value Class Types</a></td>
               </tr>
               <tr>
-                <td><a href="/jeps/495">JEP 495</a></td>
-                <td><a href="/jeps/495">Simple Source Files and Instance Main Methods</a></td>
-                <td>Candidate</td>
-                <td>JDK 25</td>
+                <td><span title="Type: Feature">F</span></td>
+                <td><span title="Status: Candidate">Can</span></td>
+                <td><span title="Release: JDK 25">JDK 25</span></td>
+                <td class="jep">495</td>
+                <td><a href="495">Simple Source Files and Instance Main Methods</a></td>
               </tr>
               <tr>
-                <td><a href="/jeps/502">JEP 502</a></td>
-                <td><a href="/jeps/502">Stable Values</a></td>
-                <td>Targeted</td>
-                <td>JDK 26</td>
+                <td><span title="Type: Feature">F</span></td>
+                <td><span title="Status: Targeted">Tar</span></td>
+                <td><span title="Release: JDK 26">JDK 26</span></td>
+                <td class="jep">502</td>
+                <td><a href="502">Stable Values</a></td>
               </tr>
             </table>
             </body></html>

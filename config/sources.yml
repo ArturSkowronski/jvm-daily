@@ -97,7 +97,6 @@ bluesky:
     - "thomaswue.dev"           # Thomas Wuerthinger — GraalVM founder
     - "alina-yurenko.bsky.social" # Alina Yurenko — GraalVM DevRel
     # Quarkus
-    - "maxandersen.xam.dk"      # Max Rydahl Andersen — Quarkus co-lead
     - "cescoffier.bsky.social"  # Clement Escoffier — Quarkus co-lead
     - "sannegrinovero.bsky.social" # Sanne Grinovero — Quarkus/Hibernate
     # Kotlin
