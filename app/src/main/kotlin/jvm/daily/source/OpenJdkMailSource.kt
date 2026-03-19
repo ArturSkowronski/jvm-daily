@@ -33,6 +33,7 @@ import kotlin.time.Duration.Companion.days
 class OpenJdkMailSource(
     private val configs: List<OpenJdkMailConfig>,
     private val clock: Clock = Clock.System,
+    private val mboxFetcher: ((listName: String, yearMonth: java.time.YearMonth) -> String?)? = null,
 ) : Source {
 
     override val sourceType: String = "openjdk_mail"
@@ -230,9 +231,10 @@ class OpenJdkMailSource(
             }
         }
 
-        // ID includes lastActiveDay so re-active threads generate a fresh article each day
+        // ID includes lastActiveDay so re-active threads generate a fresh article each day.
+        // archiveUrl is NOT passed — it's the same for all threads in a list and would collapse IDs.
         val canonicalId = CanonicalArticleId.from(
-            sourceType, listName, "$subject::$lastActiveDay", archiveUrl
+            sourceType, listName, "$subject::$lastActiveDay"
         )
 
         return Article(
@@ -264,6 +266,7 @@ class OpenJdkMailSource(
     }
 
     private fun fetchMbox(listName: String, yearMonth: YearMonth): String? {
+        if (mboxFetcher != null) return mboxFetcher.invoke(listName, yearMonth)
         val monthName = yearMonth.month.getDisplayName(TextStyle.FULL, Locale.US)
         val url = "https://mail.openjdk.org/pipermail/$listName/${yearMonth.year}-$monthName.txt"
         return try { httpGet(url) } catch (_: Exception) { null }
