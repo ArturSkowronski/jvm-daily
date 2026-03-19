@@ -86,7 +86,6 @@ bluesky:
     - "ogkittylyst.bsky.social" # Ben Evans — JVM performance
     - "danielbryantuk.com"      # Daniel Bryant — Platform engineering
     - "kousenit.com"            # Ken Kousen — Kotlin/Groovy trainer
-    - "sheratchander.bsky.social" # Sharat Chander — Oracle Java DevRel
     # Organizations
     - "kotlinlang.org"          # Kotlin by JetBrains
     - "openjdk.org"             # OpenJDK official
