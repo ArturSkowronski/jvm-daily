@@ -61,7 +61,7 @@ class PipelineService(
     /** Entry point called by JobRunr — JobContext is injected automatically. */
     @Job(name = "JVM Daily Pipeline")
     fun run(jobContext: JobContext) {
-        val dbPath = System.getenv("DUCKDB_PATH") ?: "jvm-daily.duckdb"
+        val dbPath = System.getenv("DUCKDB_PATH") ?: DEFAULT_DB_PATH
         runSteps(dbPath) { msg -> jobContext.logger().info(msg) }
     }
 

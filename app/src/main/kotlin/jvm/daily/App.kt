@@ -51,7 +51,7 @@ import kotlin.time.Duration.Companion.hours
  * inspect-quality       → report failed/low-quality processed items for manual follow-up
  */
 fun main(args: Array<String>) {
-    val dbPath = System.getenv("DUCKDB_PATH") ?: "jvm-daily.duckdb"
+    val dbPath = System.getenv("DUCKDB_PATH") ?: DEFAULT_DB_PATH
 
     when (val cmd = args.getOrNull(0)) {
         null       -> startDaemon(dbPath)
@@ -64,7 +64,7 @@ fun main(args: Array<String>) {
         "enrichment-replay" -> { println("JVM Daily — enrichment-replay"); runEnrichmentReplay(dbPath, args.drop(1)) }
         "quality-report" -> { println("JVM Daily — quality-report"); runQualityReport(dbPath, args.drop(1)) }
         "inspect-quality" -> { println("JVM Daily — inspect-quality"); runInspectQuality(dbPath, args.drop(1)) }
-        "clustering"  -> { println("JVM Daily — clustering");  runClustering(dbPath) }
+        "clustering"  -> { println("JVM Daily — clustering");  runClustering(dbPath, args.drop(1)) }
         "outgress"    -> { println("JVM Daily — outgress");     runOutgress(dbPath) }
         "reprocess"   -> { println("JVM Daily — reprocess");    runReprocess(dbPath, args.drop(1)) }
         "validate-raw-ids" -> { println("JVM Daily — validate-raw-ids"); runValidateRawIds(dbPath, args.drop(1)) }
@@ -156,7 +156,8 @@ internal fun runIngress(dbPath: String) {
                 register(JepSource(jepRepo, it))
             }
         }
-        val workflow = IngressWorkflow(sourceRegistry, repository)
+        val processedRepo = DuckDbProcessedArticleRepository(connection)
+        val workflow = IngressWorkflow(sourceRegistry, repository, processedArticleRepository = processedRepo)
         runBlocking { workflow.execute() }
         println("Ingest status: ${workflow.lastRunStatus}")
         println("Total articles in DB: ${repository.count()}")
@@ -567,7 +568,7 @@ private fun buildInspectionReport(
     }.trimEnd()
 }
 
-internal fun runClustering(dbPath: String) {
+internal fun runClustering(dbPath: String, args: List<String> = emptyList()) {
     val llmProvider = System.getenv("LLM_PROVIDER") ?: "mock"
     val llmApiKey   = System.getenv("LLM_API_KEY")
     val llmModel    = System.getenv("LLM_MODEL") ?: "gpt-4"
@@ -576,10 +577,13 @@ internal fun runClustering(dbPath: String) {
         error("LLM_API_KEY required for provider '$llmProvider'")
     }
 
+    val sinceHours = args.indexOf("--since-hours").takeIf { it >= 0 }
+        ?.let { args.getOrNull(it + 1)?.toIntOrNull() } ?: 24
+
     DuckDbConnectionFactory.persistent(dbPath).use { connection ->
         val processedRepo = DuckDbProcessedArticleRepository(connection)
         val clusterRepo = DuckDbClusterRepository(connection)
-        runBlocking { ClusteringWorkflow(processedRepo, clusterRepo, createLLMClient(llmProvider, llmApiKey, llmModel)).execute() }
+        runBlocking { ClusteringWorkflow(processedRepo, clusterRepo, createLLMClient(llmProvider, llmApiKey, llmModel), sinceHours = sinceHours).execute() }
     }
 }
 
@@ -669,3 +673,4 @@ private class MockLLMClient : LLMClient {
 }
 
 internal const val DEFAULT_PIPELINE_CRON = "0 7 * * *"
+internal val DEFAULT_DB_PATH: String get() = "${System.getProperty("user.home")}/.jvm-daily/jvm-daily.duckdb"

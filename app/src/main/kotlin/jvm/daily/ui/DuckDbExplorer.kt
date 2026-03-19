@@ -7,7 +7,7 @@ import kotlin.system.exitProcess
 object DuckDbExplorer {
     private lateinit var connection: Connection
 
-    fun start(dbPath: String = "jvm-daily.duckdb") {
+    fun start(dbPath: String = "${System.getProperty("user.home")}/.jvm-daily/jvm-daily.duckdb") {
         connection = DuckDbConnectionFactory.persistent(dbPath)
         println("\n🔍 DuckDB Explorer — Interactive Database Browser")
         println("Database: $dbPath")
@@ -228,6 +228,6 @@ object DuckDbExplorer {
 }
 
 fun main(args: Array<String>) {
-    val dbPath = args.getOrNull(0) ?: "jvm-daily.duckdb"
+    val dbPath = args.getOrNull(0) ?: "${System.getProperty("user.home")}/.jvm-daily/jvm-daily.duckdb"
     DuckDbExplorer.start(dbPath)
 }

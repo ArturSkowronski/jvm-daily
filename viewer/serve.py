@@ -131,6 +131,13 @@ HTML = r"""<!DOCTYPE html>
     .source-rss { background: #f0f4ff; color: #2563eb; }
     .source-bluesky { background: #e8f4ff; color: #0085ff; }
     .source-openjdk { background: #f0fff4; color: #16a34a; }
+    .social-links { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 5px; }
+    .social-link { font-size: 0.68rem; color: #999; text-decoration: none;
+                   padding: 1px 7px; border: 1px solid #e5e5e5; border-radius: 3px;
+                   transition: all 0.12s; white-space: nowrap; }
+    .social-link:hover { border-color: #bbb; color: #555; }
+    .social-link-bluesky:hover { border-color: #0085ff; color: #0085ff; }
+    .social-link-reddit:hover  { border-color: #e25822; color: #e25822; }
 
     /* ── Pipeline view ── */
     #pipeline-view { flex: 1; overflow-y: auto; padding: 32px; }
@@ -277,6 +284,15 @@ HTML = r"""<!DOCTYPE html>
       </div>
     </div>`;
 
+    function socialLinksHtml(links) {
+      if (!links || !links.length) return '';
+      const items = links.map(l => {
+        const label = l.source === 'bluesky' ? '🦋 ' + esc(l.handle || 'Bluesky') : l.source === 'reddit' ? '↗ ' + esc(l.handle || 'Reddit') : '↗ ' + esc(l.handle || l.source);
+        return `<a class="social-link social-link-${esc(l.source)}" href="${esc(l.url)}" target="_blank" rel="noopener">${label}</a>`;
+      }).join('');
+      return `<div class="social-links">${items}</div>`;
+    }
+
     function articleHtml(a) {
       const domain = getDomain(a.url || '');
       const favicon = faviconUrl(a.url || '');
@@ -293,6 +309,7 @@ HTML = r"""<!DOCTYPE html>
           </div>
           <p class="article-summary">${esc(a.summary)}</p>
           <div class="article-meta">${sourceBadge(a)}${topics}</div>
+          ${socialLinksHtml(a.socialLinks)}
         </div>
       </div>`;
     }
