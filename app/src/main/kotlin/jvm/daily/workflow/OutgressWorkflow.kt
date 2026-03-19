@@ -83,7 +83,22 @@ class OutgressWorkflow(
             .associateBy { it.id }
         val allIngested = processedArticleRepository.findByIngestedAtRange(windowStart, now)
         val successIngested = allIngested.filter { it.outcomeStatus == EnrichmentOutcomeStatus.SUCCESS }
-        val unclusteredArticles = successIngested.filter { it.id !in allClusterArticleIds }
+
+        // Social articles grouped by URL — used to attach social links to primary articles
+        val socialByUrl: Map<String, List<ProcessedArticle>> = successIngested
+            .filter { it.sourceType in SOCIAL_SOURCES && !it.url.isNullOrBlank() }
+            .groupBy { it.url!! }
+
+        // URLs already covered by clustered primary articles — social articles with these URLs
+        // are shown as social links, not as standalone unclustered entries
+        val clusteredPrimaryUrls = clusterArticlesById.values
+            .filter { it.sourceType !in SOCIAL_SOURCES && !it.url.isNullOrBlank() }
+            .map { it.url!! }.toSet()
+
+        val unclusteredArticles = successIngested.filter { a ->
+            a.id !in allClusterArticleIds &&
+                !(a.sourceType in SOCIAL_SOURCES && a.url != null && a.url in clusteredPrimaryUrls)
+        }
         val totalArticles = allClusterArticleIds.size + unclusteredArticles.size
 
         val digestClusters = clusters.map { cluster ->
@@ -93,7 +108,7 @@ class OutgressWorkflow(
                 articles = cluster.articles
                     .mapNotNull { clusterArticlesById[it] }
                     .sortedByDescending { it.engagementScore }
-                    .map { it.toDigestArticle() },
+                    .map { it.toDigestArticle(socialByUrl) },
             )
         }
         // Mirror ClusteringWorkflow ordering: generic "Releases" roundup sinks to bottom
@@ -116,7 +131,7 @@ class OutgressWorkflow(
             generatedAt = now.toString(),
             totalArticles = totalArticles,
             clusters = sortedDigestClusters,
-            unclustered = unclusteredArticles.sortedByDescending { it.engagementScore }.map { it.toDigestArticle() },
+            unclustered = unclusteredArticles.sortedByDescending { it.engagementScore }.map { it.toDigestArticle(socialByUrl) },
             debug = rejected,
         )
 
@@ -126,9 +141,48 @@ class OutgressWorkflow(
         println("[outgress] Wrote digest JSON to ${outputDir.resolve("daily-$date.json")}")
     }
 
-    private fun ProcessedArticle.toDigestArticle() = DigestArticle(
-        id = id, title = originalTitle, url = url, summary = summary,
-        topics = topics, entities = entities, engagementScore = engagementScore,
-        publishedAt = publishedAt, ingestedAt = ingestedAt, sourceType = sourceType,
-    )
+    private fun ProcessedArticle.toDigestArticle(
+        socialByUrl: Map<String, List<ProcessedArticle>> = emptyMap(),
+    ): DigestArticle {
+        val handle = blueskyHandle()
+        // Strip "[DisplayName] " prefix that BlueskySource prepends to titles
+        val cleanTitle = if (sourceType == "bluesky" && originalTitle.startsWith("["))
+            originalTitle.substringAfter("] ").ifBlank { originalTitle }
+        else originalTitle
+        // For Bluesky articles with external URL, expose the bsky.app post as a social link
+        val selfLink = if (sourceType == "bluesky" && !url.isNullOrBlank() && !url.startsWith("https://bsky.app"))
+            toSocialLink()
+        else null
+        val companionLinks = url?.let { socialByUrl[it] }
+            ?.filter { it.id != id }
+            ?.mapNotNull { it.toSocialLink() }
+            ?: emptyList()
+        return DigestArticle(
+            id = id, title = cleanTitle, url = url, summary = summary,
+            topics = topics, entities = entities, engagementScore = engagementScore,
+            publishedAt = publishedAt, ingestedAt = ingestedAt, sourceType = sourceType,
+            handle = handle,
+            socialLinks = listOfNotNull(selfLink) + companionLinks,
+        )
+    }
+
+    private fun ProcessedArticle.blueskyHandle(): String? =
+        if (sourceType == "bluesky") sourceId.substringBefore('/').ifBlank { null } else null
+
+    private fun ProcessedArticle.toSocialLink(): DigestSocialLink? = when (sourceType) {
+        "bluesky" -> {
+            val slash = sourceId.indexOf('/')
+            if (slash > 0) {
+                val handle = sourceId.substring(0, slash)
+                val rkey = sourceId.substring(slash + 1)
+                DigestSocialLink("bluesky", "https://bsky.app/profile/$handle/post/$rkey", handle)
+            } else null
+        }
+        "reddit" -> url?.let { DigestSocialLink("reddit", it, sourceId) }
+        else -> null
+    }
+
+    companion object {
+        private val SOCIAL_SOURCES = setOf("bluesky", "twitter", "reddit")
+    }
 }

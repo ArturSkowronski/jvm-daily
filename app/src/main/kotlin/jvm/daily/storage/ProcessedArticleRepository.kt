@@ -19,4 +19,6 @@ interface ProcessedArticleRepository {
     fun existsById(id: String): Boolean
     fun count(): Long
     fun deleteByProcessedAtSince(since: Instant): Int
+    fun updateUrl(id: String, url: String) {}
+    fun updateTitle(id: String, originalTitle: String, normalizedTitle: String) {}
 }

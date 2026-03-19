@@ -43,4 +43,13 @@ data class DigestArticle(
     val publishedAt: Instant,
     val ingestedAt: Instant,
     val sourceType: String,
+    val handle: String? = null,           // bluesky: account handle, reddit: subreddit
+    val socialLinks: List<DigestSocialLink> = emptyList(),
+)
+
+@Serializable
+data class DigestSocialLink(
+    val source: String,   // "bluesky", "reddit"
+    val url: String,      // bsky.app post URL or reddit thread URL
+    val handle: String,   // bluesky: "foojay.io", reddit: "r/java"
 )

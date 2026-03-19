@@ -336,6 +336,25 @@ class DuckDbProcessedArticleRepository(private val connection: Connection) : Pro
             stmt.executeUpdate()
         }
 
+    override fun updateUrl(id: String, url: String) {
+        connection.prepareStatement("UPDATE processed_articles SET url = ? WHERE id = ?").use { stmt ->
+            stmt.setString(1, url)
+            stmt.setString(2, id)
+            stmt.executeUpdate()
+        }
+    }
+
+    override fun updateTitle(id: String, originalTitle: String, normalizedTitle: String) {
+        connection.prepareStatement(
+            "UPDATE processed_articles SET original_title = ?, normalized_title = ? WHERE id = ?"
+        ).use { stmt ->
+            stmt.setString(1, originalTitle)
+            stmt.setString(2, normalizedTitle)
+            stmt.setString(3, id)
+            stmt.executeUpdate()
+        }
+    }
+
     private fun ensureColumn(table: String, column: String, definition: String) {
         runCatching {
             connection.createStatement().use { stmt ->
