@@ -46,7 +46,8 @@ data class GitHubReleasesConfig(
 @Serializable
 data class OpenJdkMailConfig(
     val list: String,          // e.g. "jdk-dev", "amber-dev"
-    val minReplies: Int = 2,   // skip threads with fewer replies (noise filter)
+    val minReplies: Int = 2,   // min messages in time window (noise filter)
+    val sinceDays: Int = 2,    // only count messages from last N days
 )
 
 @Serializable
