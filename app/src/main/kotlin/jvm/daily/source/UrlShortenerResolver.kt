@@ -25,6 +25,8 @@ class UrlShortenerResolver(
             "bit.ly",
             "ow.ly",
             "tinyurl.com",
+            "buff.ly",
+            "kotl.in",
         )
 
         private fun resolveViaHead(url: String): String? {
