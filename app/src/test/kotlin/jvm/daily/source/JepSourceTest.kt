@@ -138,13 +138,14 @@ class JepSourceTest {
         JepSnapshot(number, title, status, release, updatedDate, null, fixedNow.toString())
 
     private fun listPageWith(number: Int, title: String, status: String, release: String?): String {
-        val releaseCell = if (release != null) "<td>$release</td>" else "<td></td>"
+        val releaseSpan = if (release != null) """<span title="Release: $release">$release</span>""" else ""
         return """
             <html><body><table>
-            <tr><td><a href="/jeps/$number">JEP $number</a></td>
-                <td><a href="/jeps/$number">$title</a></td>
-                <td>$status</td>
-                $releaseCell</tr>
+            <tr><td><span title="Type: Feature">F</span></td>
+                <td><span title="Status: $status">$status</span></td>
+                <td>$releaseSpan</td>
+                <td class="jep">$number</td>
+                <td><a href="$number">$title</a></td></tr>
             </table></body></html>
         """.trimIndent()
     }

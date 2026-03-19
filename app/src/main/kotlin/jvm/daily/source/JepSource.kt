@@ -128,18 +128,21 @@ class JepSource(
     private fun parseListPage(html: String): List<FetchedJep> {
         val results = mutableListOf<FetchedJep>()
         val rowRegex = Regex("""<tr[^>]*>(.*?)</tr>""", RegexOption.DOT_MATCHES_ALL)
-        val hrefRegex = Regex("""href="/jeps/(\d+)"""")
-        val tdRegex = Regex("""<td[^>]*>(.*?)</td>""", RegexOption.DOT_MATCHES_ALL)
+        // New format: href="123" (relative) instead of href="/jeps/123"
+        val hrefRegex = Regex("""href="(\d+)"""")
+        val statusRegex = Regex("""title="Status:\s*([^"]+)"""")
+        val releaseRegex = Regex("""title="Release:\s*([^"]+)"""")
+        val titleRegex = Regex("""<a\s[^>]*href="\d+"[^>]*>(.*?)</a>""", RegexOption.DOT_MATCHES_ALL)
         val tagRegex = Regex("""<[^>]+>""")
 
         for (row in rowRegex.findAll(html)) {
             val rowContent = row.groupValues[1]
             val jepNumber = hrefRegex.find(rowContent)?.groupValues?.get(1)?.toIntOrNull() ?: continue
-            val cells = tdRegex.findAll(rowContent).map { it.groupValues[1].replace(tagRegex, "").trim() }.toList()
-            if (cells.size < 3) continue
-            val title = cells.getOrElse(1) { cells[0] }.ifBlank { continue }
-            val status = cells.getOrElse(2) { "" }.ifBlank { continue }
-            val release = cells.getOrNull(3)?.takeIf { it.isNotBlank() }
+            val title = titleRegex.find(rowContent)?.groupValues?.get(1)
+                ?.replace(tagRegex, "")?.replace("&amp;", "&")?.trim()
+                ?.ifBlank { null } ?: continue
+            val status = statusRegex.find(rowContent)?.groupValues?.get(1)?.trim()?.ifBlank { null } ?: continue
+            val release = releaseRegex.find(rowContent)?.groupValues?.get(1)?.trim()?.takeIf { it.isNotBlank() }
             results.add(FetchedJep(jepNumber, title, status, release))
         }
         return results
