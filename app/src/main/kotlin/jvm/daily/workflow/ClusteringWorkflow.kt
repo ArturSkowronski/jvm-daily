@@ -10,6 +10,7 @@ import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 import java.util.UUID
 import kotlin.time.Duration.Companion.days
+import kotlin.time.Duration.Companion.hours
 
 /**
  * Clustering Workflow (Stage 2 of processing pipeline).
@@ -27,6 +28,7 @@ class ClusteringWorkflow(
     private val clusterRepository: ClusterRepository,
     private val llmClient: LLMClient,
     private val clock: Clock = Clock.System,
+    private val sinceHours: Int = 24,
 ) : Workflow {
 
     override val name: String = "clustering"
@@ -35,7 +37,7 @@ class ClusteringWorkflow(
         println("[clustering] Starting clustering workflow")
 
         val now = clock.now()
-        val yesterday = now.minus(1.days)
+        val yesterday = now.minus(sinceHours.hours)
         val candidates = processedArticleRepository.findByIngestedAtRange(yesterday, now)
             .filter { it.outcomeStatus == EnrichmentOutcomeStatus.SUCCESS }
 
