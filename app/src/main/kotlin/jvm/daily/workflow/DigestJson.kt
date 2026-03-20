@@ -29,6 +29,8 @@ data class DigestCluster(
     val summary: String,
     val engagementScore: Double,
     val articles: List<DigestArticle>,
+    val type: String = "topic",
+    val bullets: List<String> = emptyList(),
 )
 
 @Serializable
