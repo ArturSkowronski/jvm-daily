@@ -139,6 +139,12 @@ HTML = r"""<!DOCTYPE html>
     .social-link-bluesky:hover { border-color: #0085ff; color: #0085ff; }
     .social-link-reddit:hover  { border-color: #e25822; color: #e25822; }
 
+    /* ── Release cluster ── */
+    .cluster-release .cluster-head { background: #fffbf0; border-left: 3px solid #f59e0b; }
+    .cluster-title-release { color: #92400e; }
+    .release-bullets { margin: 8px 0 8px 18px; padding: 0; font-size: 0.9rem; line-height: 1.6; color: #374151; }
+    .release-bullets li { margin-bottom: 4px; }
+
     /* ── Compact social card (bluesky pure post in cluster) ── */
     .article-row-social { padding: 8px 0; gap: 8px; }
     .social-card-header { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; }
@@ -319,6 +325,20 @@ HTML = r"""<!DOCTYPE html>
       return `<div class="social-links">${items}</div>`;
     }
 
+    function releaseBadgesHtml(arts) {
+      if (!arts || arts.length === 0) return '';
+      const items = arts.map(a => {
+        const label = a.sourceType === 'bluesky' ? '🦋 ' + esc(a.handle || 'Bluesky')
+                    : a.sourceType === 'reddit'  ? '↗ ' + esc(a.handle || 'Reddit')
+                    : a.sourceType === 'github-releases' ? '⬡ GitHub Release'
+                    : a.sourceType === 'rss'     ? '↗ ' + esc(a.handle || 'Article')
+                    : '↗ ' + esc(a.sourceType);
+        const url = a.url || '#';
+        return `<a class="social-link social-link-${esc(a.sourceType)}" href="${esc(url)}" target="_blank" rel="noopener">${label}</a>`;
+      }).join('');
+      return `<div class="social-links">${items}</div>`;
+    }
+
     function socialCardHtml(a) {
       const topics = (a.topics || []).map(t => `<span class="topic-tag">${esc(t)}</span>`).join('');
       const handle = a.handle ? '@' + a.handle : 'Bluesky';
@@ -378,13 +398,26 @@ HTML = r"""<!DOCTYPE html>
         standaloneTweets.push(arts[0]);
         continue;
       }
-      html += clusterHtml(
-        cluster.title,
-        `<div class="cluster-title">${esc(cluster.title)}<span class="cluster-count">${arts.length} articles</span></div>`,
-        `<div class="cluster-synthesis">${marked.parse(cluster.summary)}</div>`,
-        arts.map(a => articleHtml(a, arts.length)).join(''),
-        ''
-      );
+      if (cluster.type === 'release') {
+        const bulletsHtml = (cluster.bullets && cluster.bullets.length > 0)
+          ? '<ul class="release-bullets">' + cluster.bullets.map(b => `<li>${esc(b)}</li>`).join('') + '</ul>'
+          : `<div class="cluster-synthesis">${marked.parse(cluster.summary)}</div>`;
+        html += clusterHtml(
+          cluster.title,
+          `<div class="cluster-title cluster-title-release">${esc(cluster.title)}<span class="cluster-count">${arts.length} sources</span></div>`,
+          bulletsHtml,
+          releaseBadgesHtml(arts),
+          'cluster-release'
+        );
+      } else {
+        html += clusterHtml(
+          cluster.title,
+          `<div class="cluster-title">${esc(cluster.title)}<span class="cluster-count">${arts.length} articles</span></div>`,
+          `<div class="cluster-synthesis">${marked.parse(cluster.summary)}</div>`,
+          arts.map(a => articleHtml(a, arts.length)).join(''),
+          ''
+        );
+      }
     }
 
     if (data.unclustered && data.unclustered.length > 0) {
