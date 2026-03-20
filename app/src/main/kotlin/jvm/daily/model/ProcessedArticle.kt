@@ -51,6 +51,8 @@ data class ArticleCluster(
     val sources: List<String>,      // Unique source types in cluster
     val totalEngagement: Double,
     val createdAt: Instant,
+    val type: String = "topic",              // "topic" | "release"
+    val bullets: List<String> = emptyList(), // up to 5 bullets for release clusters
 )
 
 /**
