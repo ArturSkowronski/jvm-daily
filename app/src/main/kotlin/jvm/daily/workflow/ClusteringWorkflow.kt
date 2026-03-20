@@ -78,10 +78,10 @@ class ClusteringWorkflow(
         val groups = groupBySemantic(articles)
         val clusters = groups
             .map { group -> Pair(createCluster(group.articles, group.name, group.isRelease), group.isMajor) }
-        // Sort: MAJOR first → normal by engagement → "Releases" last (title-based, NOT isRelease-based)
+        // Sort: MAJOR first → topic clusters by engagement → release clusters by engagement last
         val major    = clusters.filter { (_, m) -> m }.sortedByDescending { (c, _) -> c.totalEngagement }.map { it.first }
-        val releases = clusters.filter { (c, _) -> c.title.equals("Releases", ignoreCase = true) }.map { it.first }
-        val normal   = clusters.filter { (c, m) -> !m && !c.title.equals("Releases", ignoreCase = true) }
+        val releases = clusters.filter { (c, m) -> !m && c.type == "release" }.sortedByDescending { (c, _) -> c.totalEngagement }.map { it.first }
+        val normal   = clusters.filter { (c, m) -> !m && c.type != "release" }
                                .sortedByDescending { (c, _) -> c.totalEngagement }.map { it.first }
         return major + normal + releases
     }
@@ -111,13 +111,10 @@ Group these ${articles.size} articles into thematic clusters following these rul
 - Use precise, specific cluster names (e.g. "Kotlin 2.3.20 Release", "GraalVM Native Image Performance", "Spring Security 6.5 Hardening")
 
 **Releases rule** (important):
-- Routine library releases (e.g. "Hibernate 7.3.0", "Ktor 3.1.2", "Micronaut 4.x.y", random OSS patch) must be grouped together into a single cluster named exactly: "Releases"
-- Only give a release its own dedicated cluster if it is a significant milestone with real impact, for example:
-  - Java GA release (any version)
-  - Kotlin feature releases: Kotlin uses X.Y.Z versioning where Z=20 is a full feature release (e.g. 2.3.20 is major), Z=0 is a new minor (2.3.0), only Z=10/30/40 are incremental
-  - Spring Boot major/minor (e.g. 3.5.0, 4.0.0)
-  - A release that generated notable community discussion across multiple sources
-- When in doubt, put the release in the "Releases" cluster
+- Every distinct software release must be its own cluster, even routine patch releases
+- Name the cluster after the specific release (e.g. "Hibernate 7.3.0", "Ktor 3.1.2", "Spring Boot 4.0.4")
+- Multiple articles about the same release belong together (e.g. the GitHub Release entry + a blog post about it)
+- Do NOT group unrelated releases into a single catch-all cluster
 
 **Priority rule**:
 - Add `MAJOR: YES` for clusters covering a milestone that every JVM developer should read today:
@@ -128,9 +125,7 @@ Group these ${articles.size} articles into thematic clusters following these rul
 - Omit the MAJOR line (or write `MAJOR: NO`) for everything else
 
 **Release type rule**:
-- Add `RELEASE: YES` for any cluster primarily about a software release:
-  - The generic "Releases" roundup
-  - Any dedicated release cluster (e.g. "Spring Boot 4.1.0", "Kotlin 2.3.20 Release")
+- Add `RELEASE: YES` for any cluster primarily about a software release (any patch, minor, or major)
 - Omit for non-release clusters (discussions, tutorials, blog series, performance analysis)
 
 Output ONLY the groups in this exact format (no extra text):
