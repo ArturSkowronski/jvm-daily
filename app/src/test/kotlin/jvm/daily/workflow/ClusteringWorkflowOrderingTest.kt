@@ -10,6 +10,7 @@ import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
 /**
@@ -265,6 +266,98 @@ class ClusteringWorkflowOrderingTest {
         assertEquals(1, allArticleIds.size)
     }
 
+    @Test
+    fun `RELEASE YES produces cluster with type release`() = runTest {
+        val articles = articles("a1" to "Spring Boot 4.1.0-M3 Announced", "a2" to "Kotlin 2.3.20")
+
+        val saved = captureSavedRaw(
+            articles,
+            groupResponse = """
+                GROUP: Spring Boot 4.1.0-M3
+                RELEASE: YES
+                INDICES: 0
+                GROUP: Kotlin 2.3.20
+                RELEASE: YES
+                INDICES: 1
+            """.trimIndent(),
+            synthesisResponses = listOf(
+                "TITLE: Spring Boot 4.1.0-M3\nBULLET: Virtual threads on by default\nBULLET: New @RestClientTest slice",
+                "TITLE: Kotlin 2.3.20\nBULLET: Context parameters preview\nBULLET: K2 compiler stabilized",
+            ),
+        )
+
+        assertEquals(2, saved.size)
+        val springCluster = saved.first { it.title == "Spring Boot 4.1.0-M3" }
+        assertEquals("release", springCluster.type)
+        assertEquals(listOf("Virtual threads on by default", "New @RestClientTest slice"), springCluster.bullets)
+        assertEquals("", springCluster.summary, "Release clusters have empty summary")
+    }
+
+    @Test
+    fun `RELEASE NO is treated same as omitting RELEASE line — type is topic`() = runTest {
+        val articles = articles("a1" to "Spring Security Discussion")
+
+        val saved = captureSavedRaw(
+            articles,
+            groupResponse = "GROUP: Spring Security\nRELEASE: NO\nINDICES: 0",
+            synthesisResponses = listOf("TITLE: Spring Security\nSYNTHESIS: Spring security discussion."),
+        )
+
+        assertEquals(1, saved.size)
+        assertEquals("topic", saved.first().type)
+        assertEquals(emptyList<String>(), saved.first().bullets)
+    }
+
+    @Test
+    fun `bullet synthesis caps at 5 even if LLM returns more`() = runTest {
+        val articles = articles("a1" to "Spring Boot 4.1.0-M3")
+
+        val saved = captureSavedRaw(
+            articles,
+            groupResponse = "GROUP: Spring Boot 4.1.0-M3\nRELEASE: YES\nINDICES: 0",
+            synthesisResponses = listOf(
+                "TITLE: Spring Boot 4.1.0-M3\n" +
+                "BULLET: One\nBULLET: Two\nBULLET: Three\nBULLET: Four\nBULLET: Five\nBULLET: Six\nBULLET: Seven",
+            ),
+        )
+
+        assertEquals(1, saved.size)
+        assertEquals(5, saved.first().bullets.size, "bullets must be capped at 5")
+    }
+
+    @Test
+    fun `RELEASE YES cluster does not sink to bottom — sort stays title-based`() = runTest {
+        // "Releases" roundup sinks to bottom; dedicated release cluster stays in normal position
+        val articles = articles(
+            "a1" to "Spring Boot 4.1.0-M3",  // score=10, isRelease=true
+            "a2" to "Hibernate 7.3.0",        // score=20, in generic Releases roundup
+            "a3" to "JVM Roadmap Discussion", // score=30, topic cluster
+        )
+
+        val saved = captureSavedRaw(
+            articles,
+            groupResponse = """
+                GROUP: Spring Boot 4.1.0-M3
+                RELEASE: YES
+                INDICES: 0
+                GROUP: JVM Roadmap Discussion
+                INDICES: 2
+                GROUP: Releases
+                RELEASE: YES
+                INDICES: 1
+            """.trimIndent(),
+            synthesisResponses = listOf(
+                "TITLE: Spring Boot 4.1.0-M3\nBULLET: Something new",
+                "TITLE: JVM Roadmap Discussion\nSYNTHESIS: Roadmap stuff.",
+                "TITLE: Releases\nBULLET: Hibernate 7.3.0 released",
+            ),
+        )
+
+        assertEquals(3, saved.size)
+        assertEquals("Releases", saved.last().title, "Generic Releases roundup must be last (title-based sort)")
+        assertNotEquals("Spring Boot 4.1.0-M3", saved.last().title, "Dedicated release cluster must NOT be sorted to bottom")
+    }
+
     // Helpers
 
     private fun articles(vararg pairs: Pair<String, String>): List<ProcessedArticle> =
@@ -308,6 +401,57 @@ class ClusteringWorkflowOrderingTest {
                 "TITLE: $name\nSYNTHESIS: Synthesis about $name."
             }
         }
+    }
+
+    /**
+     * LLM mock with explicit raw synthesis responses.
+     * Call 0 = grouping; calls 1+ = synthesis responses in GROUP order.
+     */
+    private fun llmWithRaw(groupResponse: String, synthesisResponses: List<String>) = object : LLMClient {
+        private var callCount = 0
+        override suspend fun chat(prompt: String): String {
+            return if (callCount == 0) {
+                callCount++
+                groupResponse
+            } else {
+                val r = synthesisResponses.getOrElse(callCount - 1) { "TITLE: Cluster\nSYNTHESIS: ..." }
+                callCount++
+                r
+            }
+        }
+    }
+
+    private suspend fun captureSavedRaw(
+        articles: List<ProcessedArticle>,
+        groupResponse: String,
+        synthesisResponses: List<String>,
+    ): List<ArticleCluster> {
+        val saved = mutableListOf<ArticleCluster>()
+        val clusterRepo = object : ClusterRepository {
+            override fun save(c: ArticleCluster) {}
+            override fun saveAll(clusters: List<ArticleCluster>) { saved.addAll(clusters) }
+            override fun findByDateRange(start: Instant, end: Instant): List<ArticleCluster> = emptyList()
+            override fun deleteByDateRange(start: Instant, end: Instant) {}
+        }
+        val articleRepo = object : ProcessedArticleRepository {
+            override fun save(a: ProcessedArticle) {}
+            override fun saveAll(a: List<ProcessedArticle>) {}
+            override fun findAll(): List<ProcessedArticle> = articles
+            override fun findByDateRange(s: Instant, e: Instant): List<ProcessedArticle> = articles
+            override fun findFailedSince(since: Instant): List<ProcessedArticle> = emptyList()
+            override fun findFailedRawArticleIds(since: Instant, limit: Int): List<String> = emptyList()
+            override fun findFailedByIds(ids: List<String>): List<ProcessedArticle> = emptyList()
+            override fun findInspectionCandidates(since: Instant, limit: Int, minWarnings: Int): List<ProcessedArticle> = emptyList()
+            override fun findByIds(ids: List<String>): List<ProcessedArticle> = articles.filter { it.id in ids }
+            override fun findByIngestedAtRange(s: Instant, e: Instant): List<ProcessedArticle> = articles
+            override fun findUnprocessedRawArticles(since: Instant): List<String> = emptyList()
+            override fun existsById(id: String): Boolean = false
+            override fun count(): Long = articles.size.toLong()
+            override fun deleteByProcessedAtSince(since: Instant): Int = 0
+        }
+        ClusteringWorkflow(articleRepo, clusterRepo, llmWithRaw(groupResponse, synthesisResponses), clock).execute()
+        assertTrue(saved.isNotEmpty(), "ClusteringWorkflow should produce at least one cluster")
+        return saved
     }
 
     private suspend fun captureSaved(
