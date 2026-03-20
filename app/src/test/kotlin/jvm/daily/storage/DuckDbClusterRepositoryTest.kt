@@ -133,6 +133,7 @@ class DuckDbClusterRepositoryTest {
             end = Instant.parse("2026-03-15T23:59:59Z"),
         )
 
+        assertEquals(1, results.size)
         assertEquals("topic", results[0].type)
         assertEquals(emptyList<String>(), results[0].bullets)
     }
