@@ -105,6 +105,8 @@ class OutgressWorkflow(
             DigestCluster(
                 id = cluster.id, title = cluster.title, summary = cluster.summary,
                 engagementScore = cluster.totalEngagement,
+                type = cluster.type,
+                bullets = cluster.bullets,
                 articles = cluster.articles
                     .mapNotNull { clusterArticlesById[it] }
                     .sortedByDescending { it.engagementScore }
