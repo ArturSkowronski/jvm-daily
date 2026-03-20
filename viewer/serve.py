@@ -18,7 +18,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).parent.parent
-OUTPUT_DIR   = Path(os.environ.get("OUTPUT_DIR", str(PROJECT_ROOT / "output")))
+OUTPUT_DIR   = Path(os.environ.get("OUTPUT_DIR", str(Path.home() / ".jvm-daily" / "output")))
 PORT         = int(sys.argv[1]) if len(sys.argv) > 1 else 8888
 JOBRUNR_URL  = os.environ.get("JOBRUNR_URL", "http://localhost:8000")
 DATE_PATTERN = re.compile(r'^\d{4}-\d{2}-\d{2}$')
