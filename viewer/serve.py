@@ -18,7 +18,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).parent.parent
-OUTPUT_DIR   = Path(os.environ.get("OUTPUT_DIR", str(PROJECT_ROOT / "output")))
+OUTPUT_DIR   = Path(os.environ.get("OUTPUT_DIR", str(Path.home() / ".jvm-daily" / "output")))
 PORT         = int(sys.argv[1]) if len(sys.argv) > 1 else 8888
 JOBRUNR_URL  = os.environ.get("JOBRUNR_URL", "http://localhost:8000")
 DATE_PATTERN = re.compile(r'^\d{4}-\d{2}-\d{2}$')
@@ -138,6 +138,23 @@ HTML = r"""<!DOCTYPE html>
     .social-link:hover { border-color: #bbb; color: #555; }
     .social-link-bluesky:hover { border-color: #0085ff; color: #0085ff; }
     .social-link-reddit:hover  { border-color: #e25822; color: #e25822; }
+
+    /* ── Compact social card (bluesky pure post in cluster) ── */
+    .article-row-social { padding: 8px 0; gap: 8px; }
+    .social-card-header { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; }
+    .social-card-icon { font-size: 0.75rem; flex-shrink: 0; }
+    .social-card-author { font-size: 0.72rem; color: #0085ff; text-decoration: none; white-space: nowrap; }
+    .social-card-author:hover { text-decoration: underline; }
+    .social-card-text { color: #444; font-size: 0.85rem; line-height: 1.5; margin: 0; }
+
+    /* ── Standalone tweets section ── */
+    .tweets-section { margin-top: 48px; }
+    .tweets-section-title { font-size: 0.68rem; text-transform: uppercase; letter-spacing: .1em;
+                            color: #aaa; margin-bottom: 12px; font-weight: 600; }
+    .tweets-grid { display: flex; flex-direction: column; gap: 8px; }
+    .tweet-card { background: #fff; border: 1px solid #e8e8e8; border-radius: 8px;
+                  padding: 10px 14px; }
+    .tweet-card .social-card-text { font-size: 0.82rem; }
 
     /* ── Pipeline view ── */
     #pipeline-view { flex: 1; overflow-y: auto; padding: 32px; }
@@ -284,6 +301,15 @@ HTML = r"""<!DOCTYPE html>
       </div>
     </div>`;
 
+    function isSocialPost(a) {
+      return a.sourceType === 'bluesky' && (a.url || '').includes('bsky.app');
+    }
+
+    function extractTweetText(title) {
+      const m = title.match(/^\[.*?\]\s*([\s\S]+)/);
+      return m ? m[1] : title;
+    }
+
     function socialLinksHtml(links) {
       if (!links || !links.length) return '';
       const items = links.map(l => {
@@ -293,7 +319,24 @@ HTML = r"""<!DOCTYPE html>
       return `<div class="social-links">${items}</div>`;
     }
 
-    function articleHtml(a) {
+    function socialCardHtml(a) {
+      const topics = (a.topics || []).map(t => `<span class="topic-tag">${esc(t)}</span>`).join('');
+      const handle = a.handle ? '@' + a.handle : 'Bluesky';
+      const text = extractTweetText(a.title);
+      return `<div class="article-row article-row-social">
+        <div class="article-body">
+          <div class="social-card-header">
+            <span class="social-card-icon">🦋</span>
+            <a class="social-card-author" href="${esc(a.url || '#')}" target="_blank" rel="noopener">${esc(handle)}</a>
+          </div>
+          <p class="social-card-text">${esc(text)}</p>
+          <div class="article-meta">${sourceBadge(a)}${topics}</div>
+        </div>
+      </div>`;
+    }
+
+    function articleHtml(a, clusterSize) {
+      if (clusterSize > 1 && isSocialPost(a)) return socialCardHtml(a);
       const domain = getDomain(a.url || '');
       const favicon = faviconUrl(a.url || '');
       const topics = (a.topics || []).map(t => `<span class="topic-tag">${esc(t)}</span>`).join('');
@@ -327,26 +370,57 @@ HTML = r"""<!DOCTYPE html>
       </div>`;
     }
 
+    const standaloneTweets = [];
+
     for (const cluster of clusters) {
       const arts = [...cluster.articles].sort((a, b) => b.engagementScore - a.engagementScore);
+      if (arts.length === 1 && isSocialPost(arts[0])) {
+        standaloneTweets.push(arts[0]);
+        continue;
+      }
       html += clusterHtml(
         cluster.title,
         `<div class="cluster-title">${esc(cluster.title)}<span class="cluster-count">${arts.length} articles</span></div>`,
         `<div class="cluster-synthesis">${marked.parse(cluster.summary)}</div>`,
-        arts.map(articleHtml).join(''),
+        arts.map(a => articleHtml(a, arts.length)).join(''),
         ''
       );
     }
 
     if (data.unclustered && data.unclustered.length > 0) {
-      const arts = [...data.unclustered].sort((a, b) => b.engagementScore - a.engagementScore);
-      html += clusterHtml(
-        '__unclustered__',
-        `<div class="cluster-title">Other<span class="cluster-count">${arts.length} articles</span></div>`,
-        '',
-        arts.map(articleHtml).join(''),
-        'unclustered'
-      );
+      const allUnclustered = [...data.unclustered].sort((a, b) => b.engagementScore - a.engagementScore);
+      const unclusteredNormal = allUnclustered.filter(a => !isSocialPost(a));
+      allUnclustered.filter(isSocialPost).forEach(a => standaloneTweets.push(a));
+
+      if (unclusteredNormal.length > 0) {
+        html += clusterHtml(
+          '__unclustered__',
+          `<div class="cluster-title">Other<span class="cluster-count">${unclusteredNormal.length} articles</span></div>`,
+          '',
+          unclusteredNormal.map(a => articleHtml(a, unclusteredNormal.length)).join(''),
+          'unclustered'
+        );
+      }
+    }
+
+    if (standaloneTweets.length > 0) {
+      const cards = standaloneTweets.map(a => {
+        const handle = a.handle ? '@' + a.handle : 'Bluesky';
+        const text = extractTweetText(a.title);
+        const topics = (a.topics || []).map(t => `<span class="topic-tag">${esc(t)}</span>`).join('');
+        return `<div class="tweet-card">
+          <div class="social-card-header">
+            <span class="social-card-icon">🦋</span>
+            <a class="social-card-author" href="${esc(a.url || '#')}" target="_blank" rel="noopener">${esc(handle)}</a>
+          </div>
+          <p class="social-card-text">${esc(text)}</p>
+          <div class="article-meta">${topics}</div>
+        </div>`;
+      }).join('');
+      html += `<div class="tweets-section">
+        <div class="tweets-section-title">Tweets</div>
+        <div class="tweets-grid">${cards}</div>
+      </div>`;
     }
 
     if (data.debug && data.debug.length > 0) {
