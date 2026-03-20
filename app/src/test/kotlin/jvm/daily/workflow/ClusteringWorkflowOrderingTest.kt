@@ -356,6 +356,8 @@ class ClusteringWorkflowOrderingTest {
         assertEquals(3, saved.size)
         assertEquals("Releases", saved.last().title, "Generic Releases roundup must be last (title-based sort)")
         assertNotEquals("Spring Boot 4.1.0-M3", saved.last().title, "Dedicated release cluster must NOT be sorted to bottom")
+        val springCluster = saved.first { it.title == "Spring Boot 4.1.0-M3" }
+        assertEquals("release", springCluster.type, "Dedicated release cluster still has type=release despite not sinking to bottom")
     }
 
     // Helpers
@@ -406,6 +408,9 @@ class ClusteringWorkflowOrderingTest {
     /**
      * LLM mock with explicit raw synthesis responses.
      * Call 0 = grouping; calls 1+ = synthesis responses in GROUP order.
+     * NOTE: assumes all articles are non-social (rss/github). Social articles (bluesky/twitter)
+     * trigger an extra isEventLogisticsPost LLM call per article before grouping, which would
+     * misalign the synthesisResponses indices.
      */
     private fun llmWithRaw(groupResponse: String, synthesisResponses: List<String>) = object : LLMClient {
         private var callCount = 0
