@@ -113,10 +113,9 @@ class OutgressWorkflow(
                     .map { it.toDigestArticle(socialByUrl) },
             )
         }
-        // Mirror ClusteringWorkflow ordering: generic "Releases" roundup sinks to bottom
-        val releasesDigest = digestClusters.filter { it.title.equals("Releases", ignoreCase = true) }
-        val normalDigest   = digestClusters.filter { !it.title.equals("Releases", ignoreCase = true) }
-                                           .sortedByDescending { it.engagementScore }
+        // Mirror ClusteringWorkflow ordering: release clusters sink to bottom, sorted by engagement
+        val releasesDigest = digestClusters.filter { it.type == "release" }.sortedByDescending { it.engagementScore }
+        val normalDigest   = digestClusters.filter { it.type != "release" }.sortedByDescending { it.engagementScore }
         val sortedDigestClusters = normalDigest + releasesDigest
 
         val rejected = allIngested
