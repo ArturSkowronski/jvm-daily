@@ -139,7 +139,7 @@ class OutgressWorkflow(
 
         outputDir.createDirectories()
         val date = now.toLocalDateTime(TimeZone.UTC).date
-        outputDir.resolve("daily-$date.json").writeText(Json.encodeToString(digest))
+        outputDir.resolve("daily-$date.json").writeText(json.encodeToString(digest))
         println("[outgress] Wrote digest JSON to ${outputDir.resolve("daily-$date.json")}")
     }
 
@@ -186,5 +186,6 @@ class OutgressWorkflow(
 
     companion object {
         private val SOCIAL_SOURCES = setOf("bluesky", "twitter", "reddit")
+        private val json = Json { encodeDefaults = true }
     }
 }
