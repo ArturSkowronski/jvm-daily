@@ -165,6 +165,22 @@ fly proxy 8000                                                # JobRunr dashboar
 
 The app starts a JobRunr daemon that runs the pipeline on a cron schedule (default 7am UTC). The article viewer is served on port 8888.
 
+## Viewer
+
+The built-in viewer (`viewer/serve.py`) serves the daily digest at `http://localhost:8888`.
+
+### Features
+
+- **Digest view** — clustered articles with topic synthesis, release cards, social posts
+- **Pipeline view** — JobRunr run history and stats
+- **ROTS (Rest of the Story)** — bookmark clusters for the monthly "Rest of the Story" newsletter edition:
+  - Click ★ on any cluster to bookmark it for ROTS
+  - Bookmarked clusters move to a dedicated "★ Rest of the Story" section in the digest (above archived items)
+  - The ROTS tab collects bookmarks across all dates with Copy as Markdown, Share URL, and Clear all
+  - Shared URLs encode cluster indices so recipients see the exact selection without needing localStorage
+- **Dismiss/Archive** — click ✓ to archive clusters you've reviewed; they move to a grayed-out "Archive" section
+- **Persistence** — bookmarks and dismissals are stored in localStorage
+
 **Auto-deploy via GitHub Actions:** set `FLY_API_TOKEN` as a repository secret — pushing to `main` deploys automatically.
 
 ## Architecture
