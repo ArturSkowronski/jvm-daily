@@ -140,9 +140,10 @@ HTML = r"""<!DOCTYPE html>
     .social-link-reddit:hover  { border-color: #e25822; color: #e25822; }
 
     /* ── Release cluster ── */
-    .cluster-release .cluster-head { background: #fff; border-left: 3px solid #fcd34d; }
-    .cluster-title-release { color: #b45309; }
-    .release-bullets { margin: 10px 0 6px 20px; padding: 0; font-size: 0.88rem; line-height: 1.65; color: #374151; }
+    .cluster-release { border-left: 3px solid #fcd34d; padding-left: 14px; }
+    .cluster-release .cluster-head { background: #fff; }
+    .cluster-title-release { color: #111; }
+    .release-bullets { margin: 8px 0 6px 18px; padding: 0; font-size: 0.88rem; line-height: 1.65; color: #374151; }
     .release-bullets li { margin-bottom: 5px; }
     .release-badges { display: flex; flex-wrap: wrap; gap: 5px; padding: 10px 0 2px; }
     .badge-release { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 3px; font-size: 0.75rem; border: 1px solid #e5e5e5; background: #fff; color: #444; text-decoration: none; white-space: nowrap; transition: border-color 0.12s, color 0.12s; }
