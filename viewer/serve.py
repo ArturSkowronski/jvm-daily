@@ -144,16 +144,15 @@ HTML = r"""<!DOCTYPE html>
     .cluster-title-release { color: #92400e; }
     .release-bullets { margin: 10px 0 6px 20px; padding: 0; font-size: 0.88rem; line-height: 1.65; color: #374151; }
     .release-bullets li { margin-bottom: 5px; }
-    .release-badges { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 0 2px; }
-    .badge-github { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 4px; font-size: 0.78rem; font-family: ui-monospace, monospace; background: #24292f; color: #fff; text-decoration: none; transition: background 0.15s; }
-    .badge-github:hover { background: #444d56; }
-    .badge-github svg { flex-shrink: 0; }
-    .badge-reddit { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 4px; font-size: 0.78rem; background: #fff3f0; color: #c0392b; border: 1px solid #ffcdd2; text-decoration: none; transition: background 0.15s; }
-    .badge-reddit:hover { background: #ffe0db; }
-    .badge-rss { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 4px; font-size: 0.78rem; background: #f0f4ff; color: #3b5bdb; border: 1px solid #c5d0f5; text-decoration: none; transition: background 0.15s; }
-    .badge-rss:hover { background: #dce4ff; }
-    .badge-bluesky { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 4px; font-size: 0.78rem; background: #e8f4ff; color: #0057b8; border: 1px solid #bee3f8; text-decoration: none; transition: background 0.15s; }
-    .badge-bluesky:hover { background: #cce5ff; }
+    .release-badges { display: flex; flex-wrap: wrap; gap: 5px; padding: 10px 0 2px; }
+    .badge-release { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 3px; font-size: 0.75rem; border: 1px solid #e5e5e5; background: #fff; color: #444; text-decoration: none; white-space: nowrap; transition: border-color 0.12s, color 0.12s; }
+    .badge-release:hover { border-color: #bbb; color: #222; }
+    .badge-release-github { font-family: ui-monospace, monospace; color: #24292f; }
+    .badge-release-github:hover { border-color: #24292f; }
+    .badge-release-reddit { color: #c0392b; }
+    .badge-release-reddit:hover { border-color: #ff4500; color: #ff4500; }
+    .badge-release-bluesky { color: #0057b8; }
+    .badge-release-bluesky:hover { border-color: #0085ff; color: #0085ff; }
 
     /* ── Compact social card (bluesky pure post in cluster) ── */
     .article-row-social { padding: 8px 0; gap: 8px; }
@@ -351,15 +350,15 @@ HTML = r"""<!DOCTYPE html>
         const url = a.url || '#';
         const slug = githubSlug(url);
         if (slug) {
-          return `<a class="badge-github" href="${esc(url)}" target="_blank" rel="noopener">${GITHUB_ICON}${esc(slug)}</a>`;
+          return `<a class="badge-release badge-release-github" href="${esc(url)}" target="_blank" rel="noopener">${GITHUB_ICON}${esc(slug)}</a>`;
         } else if (a.sourceType === 'reddit') {
           const sub = (url.match(/reddit\.com\/(r\/[^/?#]+)/) || [])[1] || 'Reddit';
-          return `<a class="badge-reddit" href="${esc(url)}" target="_blank" rel="noopener">${REDDIT_ICON}${esc(sub)}</a>`;
+          return `<a class="badge-release badge-release-reddit" href="${esc(url)}" target="_blank" rel="noopener">${REDDIT_ICON}${esc(sub)}</a>`;
         } else if (a.sourceType === 'bluesky') {
-          return `<a class="badge-bluesky" href="${esc(url)}" target="_blank" rel="noopener">🦋 ${esc(a.handle || 'Bluesky')}</a>`;
+          return `<a class="badge-release badge-release-bluesky" href="${esc(url)}" target="_blank" rel="noopener">🦋 ${esc(a.handle || 'Bluesky')}</a>`;
         } else {
           const domain = getDomain(url);
-          return `<a class="badge-rss" href="${esc(url)}" target="_blank" rel="noopener">↗ ${esc(domain || 'Article')}</a>`;
+          return `<a class="badge-release" href="${esc(url)}" target="_blank" rel="noopener">↗ ${esc(domain || 'Article')}</a>`;
         }
       }).join('');
       return `<div class="release-badges">${items}</div>`;
