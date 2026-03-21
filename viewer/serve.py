@@ -140,8 +140,8 @@ HTML = r"""<!DOCTYPE html>
     .social-link-reddit:hover  { border-color: #e25822; color: #e25822; }
 
     /* ── Release cluster ── */
-    .cluster-release .cluster-head { background: #fffbf0; border-left: 4px solid #f59e0b; }
-    .cluster-title-release { color: #92400e; }
+    .cluster-release .cluster-head { background: #fff; border-left: 3px solid #fcd34d; }
+    .cluster-title-release { color: #b45309; }
     .release-bullets { margin: 10px 0 6px 20px; padding: 0; font-size: 0.88rem; line-height: 1.65; color: #374151; }
     .release-bullets li { margin-bottom: 5px; }
     .release-badges { display: flex; flex-wrap: wrap; gap: 5px; padding: 10px 0 2px; }
