@@ -140,10 +140,20 @@ HTML = r"""<!DOCTYPE html>
     .social-link-reddit:hover  { border-color: #e25822; color: #e25822; }
 
     /* ── Release cluster ── */
-    .cluster-release .cluster-head { background: #fffbf0; border-left: 3px solid #f59e0b; }
+    .cluster-release .cluster-head { background: #fffbf0; border-left: 4px solid #f59e0b; }
     .cluster-title-release { color: #92400e; }
-    .release-bullets { margin: 8px 0 8px 18px; padding: 0; font-size: 0.9rem; line-height: 1.6; color: #374151; }
-    .release-bullets li { margin-bottom: 4px; }
+    .release-bullets { margin: 10px 0 6px 20px; padding: 0; font-size: 0.88rem; line-height: 1.65; color: #374151; }
+    .release-bullets li { margin-bottom: 5px; }
+    .release-badges { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 0 2px; }
+    .badge-github { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 4px; font-size: 0.78rem; font-family: ui-monospace, monospace; background: #24292f; color: #fff; text-decoration: none; transition: background 0.15s; }
+    .badge-github:hover { background: #444d56; }
+    .badge-github svg { flex-shrink: 0; }
+    .badge-reddit { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 4px; font-size: 0.78rem; background: #fff3f0; color: #c0392b; border: 1px solid #ffcdd2; text-decoration: none; transition: background 0.15s; }
+    .badge-reddit:hover { background: #ffe0db; }
+    .badge-rss { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 4px; font-size: 0.78rem; background: #f0f4ff; color: #3b5bdb; border: 1px solid #c5d0f5; text-decoration: none; transition: background 0.15s; }
+    .badge-rss:hover { background: #dce4ff; }
+    .badge-bluesky { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 4px; font-size: 0.78rem; background: #e8f4ff; color: #0057b8; border: 1px solid #bee3f8; text-decoration: none; transition: background 0.15s; }
+    .badge-bluesky:hover { background: #cce5ff; }
 
     /* ── Compact social card (bluesky pure post in cluster) ── */
     .article-row-social { padding: 8px 0; gap: 8px; }
@@ -333,25 +343,26 @@ HTML = r"""<!DOCTYPE html>
       return m ? m[1] : null;
     }
 
+    const REDDIT_ICON = `<svg height="13" width="13" viewBox="0 0 20 20" fill="currentColor" style="flex-shrink:0"><circle cx="10" cy="10" r="10" fill="#ff4500"/><path fill="white" d="M16.67 10a1.46 1.46 0 00-2.47-1 7.12 7.12 0 00-3.85-1.23l.65-3.08 2.13.45a1 1 0 101.07-1 1 1 0 00-.96.68l-2.38-.5a.27.27 0 00-.32.2l-.73 3.44a7.14 7.14 0 00-3.89 1.23 1.46 1.46 0 10-1.61 2.39 2.87 2.87 0 000 .44c0 2.24 2.61 4.06 5.83 4.06s5.83-1.82 5.83-4.06a2.87 2.87 0 000-.44 1.46 1.46 0 00.6-1.08zM7.27 11a1 1 0 111 1 1 1 0 01-1-1zm5.58 2.71a3.58 3.58 0 01-2.85.87 3.58 3.58 0 01-2.85-.87.28.28 0 01.4-.4 3.07 3.07 0 002.45.67 3.07 3.07 0 002.45-.67.28.28 0 01.4.4zm-.13-1.71a1 1 0 111-1 1 1 0 01-1 1z"/></svg>`;
+
     function releaseBadgesHtml(arts) {
       if (!arts || arts.length === 0) return '';
       const items = arts.map(a => {
         const url = a.url || '#';
-        let label;
         const slug = githubSlug(url);
         if (slug) {
-          label = GITHUB_ICON + esc(slug);
-        } else if (a.sourceType === 'bluesky') {
-          label = '🦋 ' + esc(a.handle || 'Bluesky');
+          return `<a class="badge-github" href="${esc(url)}" target="_blank" rel="noopener">${GITHUB_ICON}${esc(slug)}</a>`;
         } else if (a.sourceType === 'reddit') {
-          const sub = (url.match(/reddit\.com\/(r\/[^/?#]+)/) || [])[1];
-          label = `<svg height="12" width="12" viewBox="0 0 20 20" fill="#ff4500" style="vertical-align:-1px;margin-right:4px"><circle cx="10" cy="10" r="10"/><path fill="white" d="M16.67 10a1.46 1.46 0 00-2.47-1 7.12 7.12 0 00-3.85-1.23l.65-3.08 2.13.45a1 1 0 101.07-1 1 1 0 00-.96.68l-2.38-.5a.27.27 0 00-.32.2l-.73 3.44a7.14 7.14 0 00-3.89 1.23 1.46 1.46 0 10-1.61 2.39 2.87 2.87 0 000 .44c0 2.24 2.61 4.06 5.83 4.06s5.83-1.82 5.83-4.06a2.87 2.87 0 000-.44 1.46 1.46 0 00.6-1.08zM7.27 11a1 1 0 111 1 1 1 0 01-1-1zm5.58 2.71a3.58 3.58 0 01-2.85.87 3.58 3.58 0 01-2.85-.87.28.28 0 01.4-.4 3.07 3.07 0 002.45.67 3.07 3.07 0 002.45-.67.28.28 0 01.4.4zm-.13-1.71a1 1 0 111-1 1 1 0 01-1 1z"/></svg>` + esc(sub || 'Reddit');
+          const sub = (url.match(/reddit\.com\/(r\/[^/?#]+)/) || [])[1] || 'Reddit';
+          return `<a class="badge-reddit" href="${esc(url)}" target="_blank" rel="noopener">${REDDIT_ICON}${esc(sub)}</a>`;
+        } else if (a.sourceType === 'bluesky') {
+          return `<a class="badge-bluesky" href="${esc(url)}" target="_blank" rel="noopener">🦋 ${esc(a.handle || 'Bluesky')}</a>`;
         } else {
-          label = '↗ ' + esc(a.handle || 'Article');
+          const domain = getDomain(url);
+          return `<a class="badge-rss" href="${esc(url)}" target="_blank" rel="noopener">↗ ${esc(domain || 'Article')}</a>`;
         }
-        return `<a class="social-link social-link-${esc(a.sourceType)}" href="${esc(url)}" target="_blank" rel="noopener">${label}</a>`;
       }).join('');
-      return `<div class="social-links">${items}</div>`;
+      return `<div class="release-badges">${items}</div>`;
     }
 
     function socialCardHtml(a) {
