@@ -344,7 +344,8 @@ HTML = r"""<!DOCTYPE html>
         } else if (a.sourceType === 'bluesky') {
           label = '🦋 ' + esc(a.handle || 'Bluesky');
         } else if (a.sourceType === 'reddit') {
-          label = '↗ ' + esc(a.handle || 'Reddit');
+          const sub = (url.match(/reddit\.com\/(r\/[^/?#]+)/) || [])[1];
+          label = `<svg height="12" width="12" viewBox="0 0 20 20" fill="#ff4500" style="vertical-align:-1px;margin-right:4px"><circle cx="10" cy="10" r="10"/><path fill="white" d="M16.67 10a1.46 1.46 0 00-2.47-1 7.12 7.12 0 00-3.85-1.23l.65-3.08 2.13.45a1 1 0 101.07-1 1 1 0 00-.96.68l-2.38-.5a.27.27 0 00-.32.2l-.73 3.44a7.14 7.14 0 00-3.89 1.23 1.46 1.46 0 10-1.61 2.39 2.87 2.87 0 000 .44c0 2.24 2.61 4.06 5.83 4.06s5.83-1.82 5.83-4.06a2.87 2.87 0 000-.44 1.46 1.46 0 00.6-1.08zM7.27 11a1 1 0 111 1 1 1 0 01-1-1zm5.58 2.71a3.58 3.58 0 01-2.85.87 3.58 3.58 0 01-2.85-.87.28.28 0 01.4-.4 3.07 3.07 0 002.45.67 3.07 3.07 0 002.45-.67.28.28 0 01.4.4zm-.13-1.71a1 1 0 111-1 1 1 0 01-1 1z"/></svg>` + esc(sub || 'Reddit');
         } else {
           label = '↗ ' + esc(a.handle || 'Article');
         }
