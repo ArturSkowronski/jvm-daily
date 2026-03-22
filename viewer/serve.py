@@ -92,7 +92,7 @@ HTML = r"""<!DOCTYPE html>
     /* ── Cluster ── */
     #md { display: flex; flex-direction: column; }
     .cluster { margin-bottom: 48px; order: 0; transition: opacity 0.2s; }
-    .cluster.dismissed { order: 1; opacity: 0.35; }
+    .cluster.dismissed { opacity: 0.35; }
     .cluster-head { margin-bottom: 16px; display: flex; align-items: flex-start; gap: 10px; }
     .cluster-head-text { flex: 1; min-width: 0; }
     .cluster-title { font-family: 'Newsreader', serif; font-size: 1.2rem; font-weight: 600;
@@ -139,13 +139,20 @@ HTML = r"""<!DOCTYPE html>
     .social-link-bluesky:hover { border-color: #0085ff; color: #0085ff; }
     .social-link-reddit:hover  { border-color: #e25822; color: #e25822; }
 
-    /* ── Release cluster ── */
-    .cluster-release { border-left: 3px solid #fcd34d; padding-left: 14px; }
-    .cluster-release .cluster-head { background: #fff; }
-    .cluster-title-release { color: #111; }
-    .release-bullets { margin: 8px 0 6px 18px; padding: 0; font-size: 0.88rem; line-height: 1.65; color: #374151; }
-    .release-bullets li { margin-bottom: 5px; }
-    .release-badges { display: flex; flex-wrap: wrap; gap: 5px; padding: 10px 0 2px; }
+    /* ── Release section (grouped) ── */
+    .releases-section { margin-top: 48px; }
+    .releases-section-title { font-size: 0.68rem; text-transform: uppercase; letter-spacing: .1em;
+                              color: #aaa; margin-bottom: 12px; font-weight: 600; }
+    .releases-grid { display: flex; flex-direction: column; gap: 8px; }
+    .release-card { background: #fff; border: 1px solid #e8e8e8; border-radius: 8px;
+                    padding: 14px 16px; transition: opacity 0.2s; }
+    .release-card.dismissed { opacity: 0.35; }
+    .release-card .cluster-head { margin-bottom: 8px; display: flex; align-items: flex-start; gap: 10px; }
+    .release-card .cluster-head-text { flex: 1; min-width: 0; }
+    .cluster-title-release { color: #111; font-size: 0.95rem; font-weight: 600; line-height: 1.3; }
+    .release-bullets { margin: 6px 0 4px 18px; padding: 0; font-size: 0.85rem; line-height: 1.6; color: #555; }
+    .release-bullets li { margin-bottom: 3px; }
+    .release-badges { display: flex; flex-wrap: wrap; gap: 5px; padding: 6px 0 0; }
     .badge-release { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 3px; font-size: 0.75rem; border: 1px solid #e5e5e5; background: #fff; color: #444; text-decoration: none; white-space: nowrap; transition: border-color 0.12s, color 0.12s; }
     .badge-release:hover { border-color: #bbb; color: #222; }
     .badge-release-github { font-family: ui-monospace, monospace; color: #24292f; }
@@ -217,6 +224,42 @@ HTML = r"""<!DOCTYPE html>
     .debug-reason { font-size: 0.65rem; background: #f5f5f5; color: #999; padding: 1px 6px; border-radius: 3px; white-space: nowrap; }
     .debug-title { color: #bbb; }
     .debug-url { color: #c5d5f5; font-size: 0.7rem; }
+
+    /* ── Bookmark / ROTS ── */
+    .bookmark-btn { flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%;
+                    border: 1.5px solid #ddd; background: transparent; cursor: pointer;
+                    display: flex; align-items: center; justify-content: center;
+                    font-size: 0.75rem; color: #ccc; margin-top: 3px;
+                    transition: all 0.15s; }
+    .bookmark-btn:hover { border-color: #f59e0b; color: #f59e0b; }
+    .bookmark-btn.bookmarked { background: #f59e0b; border-color: #f59e0b; color: #fff; }
+    .rots-badge { font-size: 0.65rem; background: #f5f5f5; color: #888; padding: 1px 6px;
+                  border-radius: 8px; margin-left: 4px; font-weight: 600; }
+    #rots-view { display: flex; flex: 1; overflow: hidden; }
+    #rots-view .content-scroll { max-width: 860px; margin: 0 auto; padding: 40px 24px 80px; flex: 1; overflow-y: auto; }
+    .rots-toolbar { display: flex; gap: 8px; margin-bottom: 24px; }
+    .rots-toolbar button { background: #fff; border: 1px solid #e5e5e5; border-radius: 6px;
+                           color: #555; font-size: 0.78rem; padding: 6px 14px; cursor: pointer;
+                           transition: all 0.12s; }
+    .rots-toolbar button:hover { background: #f5f5f5; border-color: #ccc; }
+    .rots-toolbar button.flash { background: #dcfce7; border-color: #16a34a; color: #16a34a; }
+    .rots-date-header { font-family: 'Newsreader', serif; font-size: 1.2rem; font-weight: 600;
+                        color: #1a1a1a; margin: 28px 0 16px; padding-bottom: 8px;
+                        border-bottom: 1px solid #eee; }
+    .rots-date-header:first-of-type { margin-top: 0; }
+    .rots-empty { color: #999; padding: 60px 0; text-align: center; font-size: 0.9rem; line-height: 1.8; }
+    .rots-empty .hint { font-size: 0.8rem; color: #bbb; margin-top: 8px; }
+    .rots-inline-section { order: 2; margin-top: 48px; padding-top: 24px; border-top: 2px solid #f59e0b33; }
+    .rots-inline-section .rots-section-title { font-size: 0.68rem; text-transform: uppercase; letter-spacing: .1em;
+                          color: #f59e0b; margin-bottom: 16px; font-weight: 600; }
+    .rots-inline-section .cluster { margin-bottom: 32px; opacity: 1 !important; order: unset; }
+    .rots-inline-section .release-card { opacity: 1 !important; order: unset; }
+    .archive-inline-section { order: 4; margin-top: 48px; padding-top: 24px; border-top: 2px solid #e5e5e533; }
+    .archive-inline-section .archive-section-title { font-size: 0.68rem; text-transform: uppercase; letter-spacing: .1em;
+                          color: #bbb; margin-bottom: 16px; font-weight: 600; }
+    .archive-inline-section .cluster { opacity: 0.35; margin-bottom: 32px; order: unset; }
+    .archive-inline-section .release-card { opacity: 0.35; order: unset; }
+    .debug-panel { order: 5; }
   </style>
 </head>
 <body>
@@ -224,6 +267,7 @@ HTML = r"""<!DOCTYPE html>
     <h1>JVM Daily</h1>
     <button class="tab active" onclick="showTab('articles', this)">Digest</button>
     <button class="tab"        onclick="showTab('pipeline', this)">Pipeline</button>
+    <button class="tab"        onclick="showTab('rots', this)">ROTS <span id="rots-badge" class="rots-badge hidden"></span></button>
     <span id="meta"></span>
   </header>
 
@@ -244,6 +288,10 @@ HTML = r"""<!DOCTYPE html>
     <div class="content-scroll" id="pipeline-content"><span style="color:#999">Loading...</span></div>
   </div>
 
+  <div id="rots-view" class="view hidden">
+    <div class="content-scroll" id="rots-content"></div>
+  </div>
+
   <script>
   const JOBRUNR_DASHBOARD = location.hostname + ':8000';
 
@@ -252,7 +300,9 @@ HTML = r"""<!DOCTYPE html>
     btn.classList.add('active');
     document.getElementById('article-view').classList.toggle('hidden', name !== 'articles');
     document.getElementById('pipeline-view').classList.toggle('hidden', name !== 'pipeline');
+    document.getElementById('rots-view').classList.toggle('hidden', name !== 'rots');
     if (name === 'pipeline') loadPipeline();
+    if (name === 'rots') renderRots();
   }
 
   function esc(s) {
@@ -303,6 +353,108 @@ HTML = r"""<!DOCTYPE html>
     }
   }
 
+  /* ── Shared rendering helpers (used by renderClusters + renderRots) ── */
+  function isSocialPost(a) {
+    return a.sourceType === 'bluesky' && (a.url || '').includes('bsky.app');
+  }
+
+  function extractTweetText(title) {
+    const m = title.match(/^\[.*?\]\s*([\s\S]+)/);
+    return m ? m[1] : title;
+  }
+
+  function socialLinksHtml(links) {
+    if (!links || !links.length) return '';
+    const items = links.map(l => {
+      const label = l.source === 'bluesky' ? '🦋 ' + esc(l.handle || 'Bluesky') : l.source === 'reddit' ? '↗ ' + esc(l.handle || 'Reddit') : '↗ ' + esc(l.handle || l.source);
+      return `<a class="social-link social-link-${esc(l.source)}" href="${esc(l.url)}" target="_blank" rel="noopener">${label}</a>`;
+    }).join('');
+    return `<div class="social-links">${items}</div>`;
+  }
+
+  const GITHUB_ICON = `<svg height="12" width="12" viewBox="0 0 16 16" fill="currentColor" style="vertical-align:-1px;margin-right:4px"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>`;
+
+  function githubSlug(url) {
+    if (!url) return null;
+    const m = url.match(/github\.com\/([^/?#]+\/[^/?#]+)/);
+    return m ? m[1] : null;
+  }
+
+  const REDDIT_ICON = `<svg height="13" width="13" viewBox="0 0 20 20" fill="currentColor" style="flex-shrink:0"><circle cx="10" cy="10" r="10" fill="#ff4500"/><path fill="white" d="M16.67 10a1.46 1.46 0 00-2.47-1 7.12 7.12 0 00-3.85-1.23l.65-3.08 2.13.45a1 1 0 101.07-1 1 1 0 00-.96.68l-2.38-.5a.27.27 0 00-.32.2l-.73 3.44a7.14 7.14 0 00-3.89 1.23 1.46 1.46 0 10-1.61 2.39 2.87 2.87 0 000 .44c0 2.24 2.61 4.06 5.83 4.06s5.83-1.82 5.83-4.06a2.87 2.87 0 000-.44 1.46 1.46 0 00.6-1.08zM7.27 11a1 1 0 111 1 1 1 0 01-1-1zm5.58 2.71a3.58 3.58 0 01-2.85.87 3.58 3.58 0 01-2.85-.87.28.28 0 01.4-.4 3.07 3.07 0 002.45.67 3.07 3.07 0 002.45-.67.28.28 0 01.4.4zm-.13-1.71a1 1 0 111-1 1 1 0 01-1 1z"/></svg>`;
+
+  function releaseBadgesHtml(arts) {
+    if (!arts || arts.length === 0) return '';
+    const items = arts.map(a => {
+      const url = a.url || '#';
+      const slug = githubSlug(url);
+      if (slug) {
+        return `<a class="badge-release badge-release-github" href="${esc(url)}" target="_blank" rel="noopener">${GITHUB_ICON}${esc(slug)}</a>`;
+      } else if (a.sourceType === 'reddit') {
+        const sub = (url.match(/reddit\.com\/(r\/[^/?#]+)/) || [])[1] || 'Reddit';
+        return `<a class="badge-release badge-release-reddit" href="${esc(url)}" target="_blank" rel="noopener">${REDDIT_ICON}${esc(sub)}</a>`;
+      } else if (a.sourceType === 'bluesky') {
+        return `<a class="badge-release badge-release-bluesky" href="${esc(url)}" target="_blank" rel="noopener">🦋 ${esc(a.handle || 'Bluesky')}</a>`;
+      } else {
+        const domain = getDomain(url);
+        return `<a class="badge-release" href="${esc(url)}" target="_blank" rel="noopener">↗ ${esc(domain || 'Article')}</a>`;
+      }
+    }).join('');
+    return `<div class="release-badges">${items}</div>`;
+  }
+
+  function socialCardHtml(a) {
+    const topics = (a.topics || []).map(t => `<span class="topic-tag">${esc(t)}</span>`).join('');
+    const handle = a.handle ? '@' + a.handle : 'Bluesky';
+    const text = extractTweetText(a.title);
+    return `<div class="article-row article-row-social">
+      <div class="article-body">
+        <div class="social-card-header">
+          <span class="social-card-icon">🦋</span>
+          <a class="social-card-author" href="${esc(a.url || '#')}" target="_blank" rel="noopener">${esc(handle)}</a>
+        </div>
+        <p class="social-card-text">${esc(text)}</p>
+        <div class="article-meta">${sourceBadge(a)}${topics}</div>
+      </div>
+    </div>`;
+  }
+
+  function articleHtml(a, clusterSize) {
+    if (clusterSize > 1 && isSocialPost(a)) return socialCardHtml(a);
+    const domain = getDomain(a.url || '');
+    const favicon = faviconUrl(a.url || '');
+    const topics = (a.topics || []).map(t => `<span class="topic-tag">${esc(t)}</span>`).join('');
+    const faviconImg = favicon
+      ? `<img class="article-favicon" src="${favicon}" alt="" loading="lazy" onerror="this.style.display='none'">`
+      : '';
+    return `<div class="article-row">
+      ${faviconImg}
+      <div class="article-body">
+        <div class="article-title-row">
+          <a class="article-title" href="${esc(a.url || '#')}" target="_blank" rel="noopener">${esc(a.title)}</a>
+          <span class="article-source">${esc(domain)}</span>
+        </div>
+        <p class="article-summary">${esc(a.summary)}</p>
+        <div class="article-meta">${sourceBadge(a)}${topics}</div>
+        ${socialLinksHtml(a.socialLinks)}
+      </div>
+    </div>`;
+  }
+
+  function clusterHtml(key, titleHtml, synthesisHtml, artsHtml, extraClass) {
+    const bm = isBookmarked(_currentDate, key);
+    return `<div class="cluster${extraClass ? ' ' + extraClass : ''}" data-key="${esc(key)}">
+      <div class="cluster-head">
+        <div class="cluster-head-text">
+          ${titleHtml}
+          ${synthesisHtml}
+        </div>
+        <button class="bookmark-btn${bm ? ' bookmarked' : ''}" title="Bookmark for ROTS" onclick="toggleBookmark(this)">${bm ? '★' : '☆'}</button>
+        <button class="tick-btn" title="Dismiss" onclick="toggleDismiss(this)">✓</button>
+      </div>
+      <div class="article-list">${artsHtml}</div>
+    </div>`;
+  }
+
   function renderClusters(data) {
     const clusters = data.clusters; // order is authoritative from backend (major → normal → Releases)
     const clusterCount = clusters.reduce((s, c) => s + c.articles.length, 0);
@@ -317,106 +469,8 @@ HTML = r"""<!DOCTYPE html>
       </div>
     </div>`;
 
-    function isSocialPost(a) {
-      return a.sourceType === 'bluesky' && (a.url || '').includes('bsky.app');
-    }
-
-    function extractTweetText(title) {
-      const m = title.match(/^\[.*?\]\s*([\s\S]+)/);
-      return m ? m[1] : title;
-    }
-
-    function socialLinksHtml(links) {
-      if (!links || !links.length) return '';
-      const items = links.map(l => {
-        const label = l.source === 'bluesky' ? '🦋 ' + esc(l.handle || 'Bluesky') : l.source === 'reddit' ? '↗ ' + esc(l.handle || 'Reddit') : '↗ ' + esc(l.handle || l.source);
-        return `<a class="social-link social-link-${esc(l.source)}" href="${esc(l.url)}" target="_blank" rel="noopener">${label}</a>`;
-      }).join('');
-      return `<div class="social-links">${items}</div>`;
-    }
-
-    const GITHUB_ICON = `<svg height="12" width="12" viewBox="0 0 16 16" fill="currentColor" style="vertical-align:-1px;margin-right:4px"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>`;
-
-    function githubSlug(url) {
-      if (!url) return null;
-      const m = url.match(/github\.com\/([^/?#]+\/[^/?#]+)/);
-      return m ? m[1] : null;
-    }
-
-    const REDDIT_ICON = `<svg height="13" width="13" viewBox="0 0 20 20" fill="currentColor" style="flex-shrink:0"><circle cx="10" cy="10" r="10" fill="#ff4500"/><path fill="white" d="M16.67 10a1.46 1.46 0 00-2.47-1 7.12 7.12 0 00-3.85-1.23l.65-3.08 2.13.45a1 1 0 101.07-1 1 1 0 00-.96.68l-2.38-.5a.27.27 0 00-.32.2l-.73 3.44a7.14 7.14 0 00-3.89 1.23 1.46 1.46 0 10-1.61 2.39 2.87 2.87 0 000 .44c0 2.24 2.61 4.06 5.83 4.06s5.83-1.82 5.83-4.06a2.87 2.87 0 000-.44 1.46 1.46 0 00.6-1.08zM7.27 11a1 1 0 111 1 1 1 0 01-1-1zm5.58 2.71a3.58 3.58 0 01-2.85.87 3.58 3.58 0 01-2.85-.87.28.28 0 01.4-.4 3.07 3.07 0 002.45.67 3.07 3.07 0 002.45-.67.28.28 0 01.4.4zm-.13-1.71a1 1 0 111-1 1 1 0 01-1 1z"/></svg>`;
-
-    function releaseBadgesHtml(arts) {
-      if (!arts || arts.length === 0) return '';
-      const items = arts.map(a => {
-        const url = a.url || '#';
-        const slug = githubSlug(url);
-        if (slug) {
-          return `<a class="badge-release badge-release-github" href="${esc(url)}" target="_blank" rel="noopener">${GITHUB_ICON}${esc(slug)}</a>`;
-        } else if (a.sourceType === 'reddit') {
-          const sub = (url.match(/reddit\.com\/(r\/[^/?#]+)/) || [])[1] || 'Reddit';
-          return `<a class="badge-release badge-release-reddit" href="${esc(url)}" target="_blank" rel="noopener">${REDDIT_ICON}${esc(sub)}</a>`;
-        } else if (a.sourceType === 'bluesky') {
-          return `<a class="badge-release badge-release-bluesky" href="${esc(url)}" target="_blank" rel="noopener">🦋 ${esc(a.handle || 'Bluesky')}</a>`;
-        } else {
-          const domain = getDomain(url);
-          return `<a class="badge-release" href="${esc(url)}" target="_blank" rel="noopener">↗ ${esc(domain || 'Article')}</a>`;
-        }
-      }).join('');
-      return `<div class="release-badges">${items}</div>`;
-    }
-
-    function socialCardHtml(a) {
-      const topics = (a.topics || []).map(t => `<span class="topic-tag">${esc(t)}</span>`).join('');
-      const handle = a.handle ? '@' + a.handle : 'Bluesky';
-      const text = extractTweetText(a.title);
-      return `<div class="article-row article-row-social">
-        <div class="article-body">
-          <div class="social-card-header">
-            <span class="social-card-icon">🦋</span>
-            <a class="social-card-author" href="${esc(a.url || '#')}" target="_blank" rel="noopener">${esc(handle)}</a>
-          </div>
-          <p class="social-card-text">${esc(text)}</p>
-          <div class="article-meta">${sourceBadge(a)}${topics}</div>
-        </div>
-      </div>`;
-    }
-
-    function articleHtml(a, clusterSize) {
-      if (clusterSize > 1 && isSocialPost(a)) return socialCardHtml(a);
-      const domain = getDomain(a.url || '');
-      const favicon = faviconUrl(a.url || '');
-      const topics = (a.topics || []).map(t => `<span class="topic-tag">${esc(t)}</span>`).join('');
-      const faviconImg = favicon
-        ? `<img class="article-favicon" src="${favicon}" alt="" loading="lazy" onerror="this.style.display='none'">`
-        : '';
-      return `<div class="article-row">
-        ${faviconImg}
-        <div class="article-body">
-          <div class="article-title-row">
-            <a class="article-title" href="${esc(a.url || '#')}" target="_blank" rel="noopener">${esc(a.title)}</a>
-            <span class="article-source">${esc(domain)}</span>
-          </div>
-          <p class="article-summary">${esc(a.summary)}</p>
-          <div class="article-meta">${sourceBadge(a)}${topics}</div>
-          ${socialLinksHtml(a.socialLinks)}
-        </div>
-      </div>`;
-    }
-
-    function clusterHtml(key, titleHtml, synthesisHtml, artsHtml, extraClass) {
-      return `<div class="cluster${extraClass ? ' ' + extraClass : ''}" data-key="${esc(key)}">
-        <div class="cluster-head">
-          <div class="cluster-head-text">
-            ${titleHtml}
-            ${synthesisHtml}
-          </div>
-          <button class="tick-btn" title="Dismiss" onclick="toggleDismiss(this)">✓</button>
-        </div>
-        <div class="article-list">${artsHtml}</div>
-      </div>`;
-    }
-
     const standaloneTweets = [];
+    const releaseClusters = [];
 
     for (const cluster of clusters) {
       const arts = [...cluster.articles].sort((a, b) => b.engagementScore - a.engagementScore);
@@ -425,16 +479,7 @@ HTML = r"""<!DOCTYPE html>
         continue;
       }
       if (cluster.type === 'release') {
-        const bulletsHtml = (cluster.bullets && cluster.bullets.length > 0)
-          ? '<ul class="release-bullets">' + cluster.bullets.map(b => `<li>${esc(b)}</li>`).join('') + '</ul>'
-          : `<div class="cluster-synthesis">${marked.parse(cluster.summary)}</div>`;
-        html += clusterHtml(
-          cluster.title,
-          `<div class="cluster-title cluster-title-release">${esc(cluster.title)}<span class="cluster-count">${arts.length} sources</span></div>`,
-          bulletsHtml,
-          releaseBadgesHtml(arts),
-          'cluster-release'
-        );
+        releaseClusters.push({ cluster, arts });
       } else {
         html += clusterHtml(
           cluster.title,
@@ -460,6 +505,30 @@ HTML = r"""<!DOCTYPE html>
           'unclustered'
         );
       }
+    }
+
+    if (releaseClusters.length > 0) {
+      const cards = releaseClusters.map(({ cluster, arts }) => {
+        const bulletsHtml = (cluster.bullets && cluster.bullets.length > 0)
+          ? '<ul class="release-bullets">' + cluster.bullets.map(b => `<li>${esc(b)}</li>`).join('') + '</ul>'
+          : `<div class="cluster-synthesis">${marked.parse(cluster.summary)}</div>`;
+        const bm = isBookmarked(_currentDate, cluster.title);
+        return `<div class="release-card cluster" data-key="${esc(cluster.title)}">
+          <div class="cluster-head">
+            <div class="cluster-head-text">
+              <div class="cluster-title-release">${esc(cluster.title)}<span class="cluster-count">${arts.length} sources</span></div>
+              ${bulletsHtml}
+            </div>
+            <button class="bookmark-btn${bm ? ' bookmarked' : ''}" title="Bookmark for ROTS" onclick="toggleBookmark(this)">${bm ? '★' : '☆'}</button>
+            <button class="tick-btn" title="Dismiss" onclick="toggleDismiss(this)">✓</button>
+          </div>
+          ${releaseBadgesHtml(arts)}
+        </div>`;
+      }).join('');
+      html += `<div class="releases-section">
+        <div class="releases-section-title">Releases</div>
+        <div class="releases-grid">${cards}</div>
+      </div>`;
     }
 
     if (standaloneTweets.length > 0) {
@@ -514,7 +583,7 @@ HTML = r"""<!DOCTYPE html>
   function applyDismissed(date) {
     _currentDate = date;
     const dismissed = getDismissed(date);
-    document.querySelectorAll('.cluster[data-key]').forEach(el => {
+    document.querySelectorAll('#md > .cluster[data-key]').forEach(el => {
       const key = el.dataset.key;
       const btn = el.querySelector('.tick-btn');
       if (dismissed.has(key)) {
@@ -522,12 +591,129 @@ HTML = r"""<!DOCTYPE html>
         btn && btn.classList.add('ticked');
       }
     });
+    applyRotsSection();
+  }
+
+  function applyRotsSection() {
+    const md = document.getElementById('md');
+    if (!md) return;
+
+    // --- Flatten: move all clusters from special sections back to #md ---
+    function flattenSection(sel) {
+      const sec = md.querySelector(sel);
+      if (!sec) return;
+      const relGrid = md.querySelector(':scope > .releases-section .releases-grid');
+      sec.querySelectorAll('.release-card.cluster[data-key]').forEach(el => {
+        if (relGrid) relGrid.appendChild(el); else md.appendChild(el);
+      });
+      sec.querySelectorAll('.cluster[data-key]:not(.release-card)').forEach(el => md.appendChild(el));
+      sec.remove();
+    }
+    flattenSection('.rots-inline-section');
+    flattenSection('.archive-inline-section');
+
+    // --- Classify all clusters ---
+    const rots = getRots();
+    const bookmarked = new Set(rots[_currentDate] || []);
+    const dismissed = getDismissed(_currentDate);
+
+    const rotsTopic = [], rotsRelease = [];
+    const archTopic = [], archRelease = [];
+
+    const allClusters = [...md.querySelectorAll(':scope > .cluster[data-key], :scope > .releases-section .cluster[data-key]')];
+    for (const el of allClusters) {
+      const key = el.dataset.key;
+      const isRelease = el.classList.contains('release-card');
+      const bmBtn = el.querySelector('.bookmark-btn');
+      const tickBtn = el.querySelector('.tick-btn');
+      if (bookmarked.has(key)) {
+        el.classList.remove('dismissed');
+        if (bmBtn) { bmBtn.classList.add('bookmarked'); bmBtn.textContent = '★'; }
+        if (tickBtn) tickBtn.classList.remove('ticked');
+        (isRelease ? rotsRelease : rotsTopic).push(el);
+      } else if (dismissed.has(key)) {
+        el.classList.add('dismissed');
+        if (tickBtn) tickBtn.classList.add('ticked');
+        if (bmBtn) { bmBtn.classList.remove('bookmarked'); bmBtn.textContent = '☆'; }
+        (isRelease ? archRelease : archTopic).push(el);
+      } else {
+        // Normal — reset both buttons
+        if (bmBtn) { bmBtn.classList.toggle('bookmarked', false); bmBtn.textContent = '☆'; }
+        if (tickBtn) tickBtn.classList.remove('ticked');
+      }
+    }
+
+    // --- Build helper: topic clusters + optional release sub-grid ---
+    function buildSection(className, titleHtml, topics, releases) {
+      if (topics.length === 0 && releases.length === 0) return;
+      const section = document.createElement('div');
+      section.className = className;
+      section.innerHTML = titleHtml;
+      topics.forEach(el => section.appendChild(el));
+      if (releases.length > 0) {
+        const relSec = document.createElement('div');
+        relSec.className = 'releases-section';
+        relSec.innerHTML = '<div class="releases-section-title">Releases</div>';
+        const grid = document.createElement('div');
+        grid.className = 'releases-grid';
+        releases.forEach(el => grid.appendChild(el));
+        relSec.appendChild(grid);
+        section.appendChild(relSec);
+      }
+      md.appendChild(section);
+    }
+
+    // --- ROTS section (order: 2) ---
+    buildSection('rots-inline-section',
+      '<div class="rots-section-title">★ Rest of the Story</div>',
+      rotsTopic, rotsRelease);
+
+    // --- Archive section (order: 4) ---
+    buildSection('archive-inline-section',
+      '<div class="archive-section-title">Archive</div>',
+      archTopic, archRelease);
   }
 
   function toggleDebug(btn) {
     const list = btn.nextElementSibling;
     list.classList.toggle('open');
     btn.textContent = list.classList.contains('open') ? '▲ Debug' : '▼ Debug (' + btn.dataset.count + ' rejected)';
+  }
+
+  /* ── ROTS localStorage helpers ── */
+  const ROTS_KEY = 'jvm-daily-rots';
+  function getRots() {
+    try { return JSON.parse(localStorage.getItem(ROTS_KEY) || '{}'); }
+    catch { return {}; }
+  }
+  function saveRots(obj) {
+    // prune empty date arrays
+    const clean = {};
+    for (const [d, arr] of Object.entries(obj)) { if (arr.length) clean[d] = arr; }
+    localStorage.setItem(ROTS_KEY, JSON.stringify(clean));
+    updateRotsBadge();
+  }
+  function toggleRots(date, title) {
+    const rots = getRots();
+    const arr = rots[date] || [];
+    const idx = arr.indexOf(title);
+    if (idx >= 0) arr.splice(idx, 1); else arr.push(title);
+    rots[date] = arr;
+    saveRots(rots);
+  }
+  function isBookmarked(date, title) {
+    const rots = getRots();
+    return (rots[date] || []).includes(title);
+  }
+  function rotsCount() {
+    const rots = getRots();
+    return Object.values(rots).reduce((s, a) => s + a.length, 0);
+  }
+  function updateRotsBadge() {
+    const badge = document.getElementById('rots-badge');
+    const n = rotsCount();
+    if (n > 0) { badge.textContent = n; badge.classList.remove('hidden'); }
+    else { badge.classList.add('hidden'); }
   }
 
   function toggleDismiss(btn) {
@@ -546,11 +732,227 @@ HTML = r"""<!DOCTYPE html>
     saveDismissed(_currentDate, dismissed);
   }
 
+  /* ── ROTS bookmark toggle ── */
+  function toggleBookmark(btn) {
+    const cluster = btn.closest('.cluster');
+    const key = cluster.dataset.key;
+    toggleRots(_currentDate, key);
+    const bm = isBookmarked(_currentDate, key);
+    btn.classList.toggle('bookmarked', bm);
+    btn.textContent = bm ? '★' : '☆';
+    applyRotsSection();
+  }
+
+  /* ── Digest cache for ROTS rendering ── */
+  const _digestCache = {};
+  async function fetchDigest(date) {
+    if (_digestCache[date]) return _digestCache[date];
+    const res = await fetch('/api/daily/' + date);
+    if (!res.ok) return null;
+    const data = await res.json();
+    _digestCache[date] = data;
+    return data;
+  }
+
+  /* ── ROTS view rendering ── */
+  async function renderRots() {
+    const el = document.getElementById('rots-content');
+    const rots = getRots();
+    const dates = Object.keys(rots).sort().reverse();
+    if (dates.length === 0) {
+      el.innerHTML = `<div class="rots-empty">
+        <div>No bookmarked clusters yet.</div>
+        <div class="hint">Click ☆ on any cluster in the Digest to add it here.</div>
+      </div>`;
+      return;
+    }
+    el.innerHTML = '<span style="color:#999">Loading bookmarked clusters...</span>';
+    const digests = await Promise.all(dates.map(d => fetchDigest(d)));
+    let html = `<div class="rots-toolbar">
+      <button onclick="copyRotsMarkdown(this)">Copy as Markdown</button>
+      <button onclick="shareRotsUrl(this)">Share URL</button>
+      <button onclick="clearAllRots()">Clear all</button>
+    </div>`;
+
+    const savedDate = _currentDate;
+    for (let i = 0; i < dates.length; i++) {
+      const date = dates[i];
+      const data = digests[i];
+      if (!data) continue;
+      const titles = new Set(rots[date]);
+      _currentDate = date;
+      html += `<div class="rots-date-header">${fmtDigestDate(date)}</div>`;
+      const allClusters = data.clusters || [];
+      for (const cluster of allClusters) {
+        if (!titles.has(cluster.title)) continue;
+        const arts = [...cluster.articles].sort((a, b) => b.engagementScore - a.engagementScore);
+        if (cluster.type === 'release') {
+          const bulletsHtml = (cluster.bullets && cluster.bullets.length > 0)
+            ? '<ul class="release-bullets">' + cluster.bullets.map(b => `<li>${esc(b)}</li>`).join('') + '</ul>'
+            : `<div class="cluster-synthesis">${marked.parse(cluster.summary)}</div>`;
+          const bm = isBookmarked(date, cluster.title);
+          html += `<div class="release-card cluster" data-key="${esc(cluster.title)}">
+            <div class="cluster-head">
+              <div class="cluster-head-text">
+                <div class="cluster-title-release">${esc(cluster.title)}<span class="cluster-count">${arts.length} sources</span></div>
+                ${bulletsHtml}
+              </div>
+              <button class="bookmark-btn${bm ? ' bookmarked' : ''}" title="Bookmark for ROTS" onclick="_currentDate='${date}';toggleBookmark(this)">${bm ? '★' : '☆'}</button>
+            </div>
+            ${releaseBadgesHtml(arts)}
+          </div>`;
+        } else {
+          // reuse clusterHtml but we need _currentDate set per date
+          html += clusterHtml(
+            cluster.title,
+            `<div class="cluster-title">${esc(cluster.title)}<span class="cluster-count">${arts.length} articles</span></div>`,
+            `<div class="cluster-synthesis">${marked.parse(cluster.summary)}</div>`,
+            arts.map(a => articleHtml(a, arts.length)).join(''),
+            ''
+          ).replace(
+            'onclick="toggleBookmark(this)"',
+            `onclick="_currentDate='${date}';toggleBookmark(this)"`
+          );
+        }
+      }
+    }
+    _currentDate = savedDate;
+    el.innerHTML = html;
+  }
+
+  /* ── Copy as Markdown ── */
+  async function copyRotsMarkdown(btn) {
+    const rots = getRots();
+    const dates = Object.keys(rots).sort().reverse();
+    const digests = await Promise.all(dates.map(d => fetchDigest(d)));
+    let md = '';
+    for (let i = 0; i < dates.length; i++) {
+      const date = dates[i];
+      const data = digests[i];
+      if (!data) continue;
+      const titles = new Set(rots[date]);
+      md += `## ${fmtDigestDate(date)}\n\n`;
+      for (const cluster of (data.clusters || [])) {
+        if (!titles.has(cluster.title)) continue;
+        const arts = cluster.articles || [];
+        md += `### ${cluster.title} (${arts.length} articles)\n`;
+        if (cluster.summary) md += `${cluster.summary}\n`;
+        for (const a of arts) {
+          md += `- [${a.title}](${a.url || '#'})\n`;
+        }
+        md += '\n';
+      }
+    }
+    await navigator.clipboard.writeText(md.trim());
+    btn.classList.add('flash');
+    const orig = btn.textContent;
+    btn.textContent = 'Copied!';
+    setTimeout(() => { btn.classList.remove('flash'); btn.textContent = orig; }, 1500);
+  }
+
+  /* ── Share URL ── */
+  async function shareRotsUrl(btn) {
+    const rots = getRots();
+    const dates = Object.keys(rots).sort().reverse();
+    const digests = await Promise.all(dates.map(d => fetchDigest(d)));
+    const parts = [];
+    for (let i = 0; i < dates.length; i++) {
+      const date = dates[i];
+      const data = digests[i];
+      if (!data) continue;
+      const titles = new Set(rots[date]);
+      const indices = [];
+      (data.clusters || []).forEach((c, idx) => { if (titles.has(c.title)) indices.push(idx); });
+      if (indices.length) parts.push(date + ':' + indices.join(','));
+    }
+    const url = location.origin + '/?view=rots&c=' + encodeURIComponent(parts.join('|'));
+    await navigator.clipboard.writeText(url);
+    btn.classList.add('flash');
+    const orig = btn.textContent;
+    btn.textContent = 'URL copied!';
+    setTimeout(() => { btn.classList.remove('flash'); btn.textContent = orig; }, 1500);
+  }
+
+  /* ── Render shared ROTS from URL params ── */
+  async function renderSharedRots(encoded) {
+    // Switch to ROTS tab
+    const tabs = document.querySelectorAll('.tab');
+    tabs.forEach(t => t.classList.remove('active'));
+    tabs[2].classList.add('active');
+    document.getElementById('article-view').classList.add('hidden');
+    document.getElementById('pipeline-view').classList.add('hidden');
+    document.getElementById('rots-view').classList.remove('hidden');
+
+    const el = document.getElementById('rots-content');
+    el.innerHTML = '<span style="color:#999">Loading shared clusters...</span>';
+
+    // Parse c= param: "2026-03-21:0,3|2026-03-20:1"
+    const segments = encoded.split('|');
+    const requests = segments.map(seg => {
+      const [date, idxStr] = seg.split(':');
+      return { date, indices: idxStr.split(',').map(Number) };
+    });
+
+    const digests = await Promise.all(requests.map(r => fetchDigest(r.date)));
+    let html = `<div style="margin-bottom:20px;font-size:0.8rem;color:#999;">Shared ROTS selection</div>`;
+    const savedDate = _currentDate;
+    for (let i = 0; i < requests.length; i++) {
+      const { date, indices } = requests[i];
+      const data = digests[i];
+      if (!data) continue;
+      _currentDate = date;
+      html += `<div class="rots-date-header">${fmtDigestDate(date)}</div>`;
+      const allClusters = data.clusters || [];
+      for (const idx of indices) {
+        const cluster = allClusters[idx];
+        if (!cluster) continue;
+        const arts = [...cluster.articles].sort((a, b) => b.engagementScore - a.engagementScore);
+        if (cluster.type === 'release') {
+          const bulletsHtml = (cluster.bullets && cluster.bullets.length > 0)
+            ? '<ul class="release-bullets">' + cluster.bullets.map(b => `<li>${esc(b)}</li>`).join('') + '</ul>'
+            : `<div class="cluster-synthesis">${marked.parse(cluster.summary)}</div>`;
+          html += `<div class="release-card cluster" data-key="${esc(cluster.title)}">
+            <div class="cluster-head">
+              <div class="cluster-head-text">
+                <div class="cluster-title-release">${esc(cluster.title)}<span class="cluster-count">${arts.length} sources</span></div>
+                ${bulletsHtml}
+              </div>
+            </div>
+            ${releaseBadgesHtml(arts)}
+          </div>`;
+        } else {
+          html += `<div class="cluster" data-key="${esc(cluster.title)}">
+            <div class="cluster-head">
+              <div class="cluster-head-text">
+                <div class="cluster-title">${esc(cluster.title)}<span class="cluster-count">${arts.length} articles</span></div>
+                <div class="cluster-synthesis">${marked.parse(cluster.summary)}</div>
+              </div>
+            </div>
+            <div class="article-list">${arts.map(a => articleHtml(a, arts.length)).join('')}</div>
+          </div>`;
+        }
+      }
+    }
+    _currentDate = savedDate;
+    el.innerHTML = html;
+  }
+
+  /* ── Clear all ROTS ── */
+  function clearAllRots() {
+    if (!confirm('Clear all bookmarked clusters?')) return;
+    localStorage.removeItem(ROTS_KEY);
+    updateRotsBadge();
+    renderRots();
+  }
+
   async function initArticles() {
+    const params = new URLSearchParams(location.search);
+    const sharedRots = params.get('view') === 'rots' ? params.get('c') : null;
+
     const files = await fetch('/api/files').then(r => r.json());
     const sidebar = document.getElementById('date-sidebar');
-    if (!files.length) { document.getElementById('no-files').classList.remove('hidden'); return; }
-    const requestedDate = new URLSearchParams(location.search).get('date');
+    if (!files.length && !sharedRots) { document.getElementById('no-files').classList.remove('hidden'); return; }
+    const requestedDate = params.get('date');
     const btnMap = {};
     files.forEach((f, i) => {
       const date = f.replace('jvm-daily-', '').replace('.md', '');
@@ -569,6 +971,9 @@ HTML = r"""<!DOCTYPE html>
       const d = e.state?.date || files[0].replace('jvm-daily-', '').replace('.md', '');
       if (btnMap[d]) loadDate(d, btnMap[d], false);
     });
+
+    if (sharedRots) renderSharedRots(sharedRots);
+    updateRotsBadge();
   }
 
   function stateChip(state) {
