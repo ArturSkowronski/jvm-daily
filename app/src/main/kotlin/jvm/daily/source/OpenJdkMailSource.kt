@@ -76,8 +76,9 @@ class OpenJdkMailSource(
                     return@mapNotNull null
                 }
                 val lastActiveDay = windowMsgs.mapNotNull { it.parsedDate }
-                    .maxOrNull()!!
-                    .toLocalDateTime(TimeZone.UTC).date.toString()
+                    .maxOrNull()
+                    ?.toLocalDateTime(TimeZone.UTC)?.date?.toString()
+                    ?: clock.now().toLocalDateTime(TimeZone.UTC).date.toString()
                 threadToArticle(listName, subject, msgs, windowMsgs, lastActiveDay)
             }
 
