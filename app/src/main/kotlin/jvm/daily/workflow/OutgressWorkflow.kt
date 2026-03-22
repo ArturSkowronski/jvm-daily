@@ -105,16 +105,17 @@ class OutgressWorkflow(
             DigestCluster(
                 id = cluster.id, title = cluster.title, summary = cluster.summary,
                 engagementScore = cluster.totalEngagement,
+                type = cluster.type,
+                bullets = cluster.bullets,
                 articles = cluster.articles
                     .mapNotNull { clusterArticlesById[it] }
                     .sortedByDescending { it.engagementScore }
                     .map { it.toDigestArticle(socialByUrl) },
             )
         }
-        // Mirror ClusteringWorkflow ordering: generic "Releases" roundup sinks to bottom
-        val releasesDigest = digestClusters.filter { it.title.equals("Releases", ignoreCase = true) }
-        val normalDigest   = digestClusters.filter { !it.title.equals("Releases", ignoreCase = true) }
-                                           .sortedByDescending { it.engagementScore }
+        // Mirror ClusteringWorkflow ordering: release clusters sink to bottom, sorted by engagement
+        val releasesDigest = digestClusters.filter { it.type == "release" }.sortedByDescending { it.engagementScore }
+        val normalDigest   = digestClusters.filter { it.type != "release" }.sortedByDescending { it.engagementScore }
         val sortedDigestClusters = normalDigest + releasesDigest
 
         val rejected = allIngested
@@ -137,7 +138,7 @@ class OutgressWorkflow(
 
         outputDir.createDirectories()
         val date = now.toLocalDateTime(TimeZone.UTC).date
-        outputDir.resolve("daily-$date.json").writeText(Json.encodeToString(digest))
+        outputDir.resolve("daily-$date.json").writeText(json.encodeToString(digest))
         println("[outgress] Wrote digest JSON to ${outputDir.resolve("daily-$date.json")}")
     }
 
@@ -184,5 +185,6 @@ class OutgressWorkflow(
 
     companion object {
         private val SOCIAL_SOURCES = setOf("bluesky", "twitter", "reddit")
+        private val json = Json { encodeDefaults = true }
     }
 }

@@ -10,13 +10,14 @@ import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
 /**
  * Tests the 3-tier cluster ordering produced by ClusteringWorkflow:
  *   1. MAJOR clusters (pinned to top, sorted by engagement)
- *   2. Normal clusters (sorted by engagement)
- *   3. "Releases" roundup cluster (always last)
+ *   2. Topic clusters (sorted by engagement)
+ *   3. Release clusters (type=release, sorted by engagement last)
  *
  * The LLM mock works as follows:
  *   - Call 0: returns the GROUP/INDICES grouping response
@@ -28,30 +29,35 @@ class ClusteringWorkflowOrderingTest {
     private val clock = object : Clock { override fun now() = fixedNow }
 
     @Test
-    fun `Releases cluster is saved last regardless of engagement score`() = runTest {
+    fun `release clusters are saved last regardless of engagement score`() = runTest {
         val articles = articles("a1" to "Hibernate 7.3.0", "a2" to "Ktor 3.1.2", "a3" to "JDK Roadmap")
 
-        // GROUP order: JDK Roadmap first, Releases second
-        // Releases has higher combined engagement (a1+a2=30) than JDK Roadmap (a3=10) — but must still be last
+        // Hibernate (score=10) + Ktor (score=20) as separate release clusters, JDK Roadmap (score=30) topic
+        // Release clusters must be last even though their combined engagement would be higher
         val saved = captureSaved(
             articles,
             groupResponse = """
                 GROUP: JDK Roadmap
                 INDICES: 2
-                GROUP: Releases
-                INDICES: 0, 1
+                GROUP: Hibernate 7.3.0
+                RELEASE: YES
+                INDICES: 0
+                GROUP: Ktor 3.1.2
+                RELEASE: YES
+                INDICES: 1
             """.trimIndent(),
-            synthesisTitles = listOf("JDK Roadmap", "Releases"),
+            synthesisTitles = listOf("JDK Roadmap", "Hibernate 7.3.0", "Ktor 3.1.2"),
         )
 
-        assertEquals(2, saved.size)
-        assertEquals("Releases", saved.last().title, "Releases must be last")
-        assertEquals("JDK Roadmap", saved.first().title, "Non-releases cluster first")
+        assertEquals(3, saved.size)
+        assertEquals("JDK Roadmap", saved.first().title, "Topic cluster first")
+        assertEquals("release", saved[1].type, "Second cluster is a release")
+        assertEquals("release", saved[2].type, "Third cluster is a release")
     }
 
     @Test
     fun `MAJOR cluster is saved first regardless of engagement score`() = runTest {
-        val articles = articles("a1" to "Low Score Article", "a2" to "Normal Article", "a3" to "JDK 26 GA")
+        val articles = articles("a1" to "Hibernate 7.3.0", "a2" to "Normal Article", "a3" to "JDK 26 GA")
         // Article scores: a1=10, a2=20, a3=30 — but JDK 26 GA is MAJOR, listed last in GROUPs
 
         val saved = captureSaved(
@@ -59,30 +65,31 @@ class ClusteringWorkflowOrderingTest {
             groupResponse = """
                 GROUP: Normal Cluster
                 INDICES: 1
-                GROUP: Releases
+                GROUP: Hibernate 7.3.0
+                RELEASE: YES
                 INDICES: 0
                 GROUP: JDK 26 GA
                 MAJOR: YES
                 INDICES: 2
             """.trimIndent(),
-            synthesisTitles = listOf("Normal Cluster", "Releases", "JDK 26 GA"),
+            synthesisTitles = listOf("Normal Cluster", "Hibernate 7.3.0", "JDK 26 GA"),
         )
 
         assertEquals(3, saved.size)
         assertEquals("JDK 26 GA", saved.first().title, "MAJOR cluster must be first")
-        assertEquals("Normal Cluster", saved[1].title, "Normal cluster in middle")
-        assertEquals("Releases", saved.last().title, "Releases must be last")
+        assertEquals("Normal Cluster", saved[1].title, "Topic cluster in middle")
+        assertEquals("Hibernate 7.3.0", saved.last().title, "Release cluster must be last")
     }
 
     @Test
-    fun `normal clusters between MAJOR and Releases are ordered by engagement`() = runTest {
+    fun `topic clusters between MAJOR and release clusters are ordered by engagement`() = runTest {
         // Scores: a1=10, a2=20, a3=30, a4=40, a5=50
         val articles = articles(
-            "a1" to "Low Topic",     // score=10
-            "a2" to "Mid Topic",     // score=20
-            "a3" to "High Topic",    // score=30
-            "a4" to "JDK 26 GA",     // score=40
-            "a5" to "Hibernate Release", // score=50
+            "a1" to "Low Topic",        // score=10
+            "a2" to "Mid Topic",        // score=20
+            "a3" to "High Topic",       // score=30
+            "a4" to "JDK 26 GA",        // score=40
+            "a5" to "Hibernate 7.3.0",  // score=50
         )
 
         val saved = captureSaved(
@@ -97,32 +104,41 @@ class ClusteringWorkflowOrderingTest {
                 INDICES: 2
                 GROUP: Mid Topic
                 INDICES: 1
-                GROUP: Releases
+                GROUP: Hibernate 7.3.0
+                RELEASE: YES
                 INDICES: 4
             """.trimIndent(),
-            synthesisTitles = listOf("JDK 26 GA", "Low Topic", "High Topic", "Mid Topic", "Releases"),
+            synthesisTitles = listOf("JDK 26 GA", "Low Topic", "High Topic", "Mid Topic", "Hibernate 7.3.0"),
         )
 
         assertEquals(5, saved.size)
         assertEquals("JDK 26 GA", saved[0].title, "MAJOR first")
-        assertEquals("High Topic", saved[1].title, "Highest normal engagement second (score=30)")
+        assertEquals("High Topic", saved[1].title, "Highest topic engagement second (score=30)")
         assertEquals("Mid Topic", saved[2].title, "Mid engagement third (score=20)")
         assertEquals("Low Topic", saved[3].title, "Lowest engagement fourth (score=10)")
-        assertEquals("Releases", saved[4].title, "Releases last")
+        assertEquals("Hibernate 7.3.0", saved[4].title, "Release cluster last")
     }
 
     @Test
-    fun `digest with only Releases cluster still works`() = runTest {
+    fun `digest with only release clusters still works`() = runTest {
         val articles = articles("a1" to "Micronaut 4.x", "a2" to "Quarkus 3.y")
 
         val saved = captureSaved(
             articles,
-            groupResponse = "GROUP: Releases\nINDICES: 0, 1",
-            synthesisTitles = listOf("Releases"),
+            groupResponse = """
+                GROUP: Micronaut 4.x
+                RELEASE: YES
+                INDICES: 0
+                GROUP: Quarkus 3.y
+                RELEASE: YES
+                INDICES: 1
+            """.trimIndent(),
+            synthesisTitles = listOf("Micronaut 4.x", "Quarkus 3.y"),
         )
 
-        assertEquals(1, saved.size)
-        assertEquals("Releases", saved.first().title)
+        assertEquals(2, saved.size)
+        assertEquals("release", saved[0].type)
+        assertEquals("release", saved[1].type)
     }
 
     @Test
@@ -210,8 +226,8 @@ class ClusteringWorkflowOrderingTest {
         val saved = captureSaved(
             articles,
             // Gemini sometimes adds leading spaces or indentation
-            groupResponse = "  GROUP: Kotlin 2.3.20\n  INDICES: 0\n  GROUP: Releases\n  INDICES: 1",
-            synthesisTitles = listOf("Kotlin 2.3.20", "Releases"),
+            groupResponse = "  GROUP: Kotlin 2.3.20\n  INDICES: 0\n  GROUP: Hibernate 7.3.0\n  RELEASE: YES\n  INDICES: 1",
+            synthesisTitles = listOf("Kotlin 2.3.20", "Hibernate 7.3.0"),
         )
 
         assertEquals(2, saved.size)
@@ -225,8 +241,8 @@ class ClusteringWorkflowOrderingTest {
         val saved = captureSaved(
             articles,
             // Gemini sometimes wraps keys in **bold**
-            groupResponse = "**GROUP:** Spring Boot 4\n**INDICES:** 0\n**GROUP:** Releases\n**INDICES:** 1",
-            synthesisTitles = listOf("Spring Boot 4", "Releases"),
+            groupResponse = "**GROUP:** Spring Boot 4\n**INDICES:** 0\n**GROUP:** Micronaut 4.x\n**RELEASE:** YES\n**INDICES:** 1",
+            synthesisTitles = listOf("Spring Boot 4", "Micronaut 4.x"),
         )
 
         assertEquals(2, saved.size)
@@ -235,12 +251,12 @@ class ClusteringWorkflowOrderingTest {
 
     @Test
     fun `MAJOR YES with trailing comment is still recognized`() = runTest {
-        val articles = articles("a1" to "JDK 26 GA", "a2" to "Micronaut")
+        val articles = articles("a1" to "JDK 26 GA", "a2" to "Micronaut 4.x")
 
         val saved = captureSaved(
             articles,
-            groupResponse = "GROUP: JDK 26 GA\nMAJOR: YES   ← important\nINDICES: 0\nGROUP: Releases\nINDICES: 1",
-            synthesisTitles = listOf("JDK 26 GA", "Releases"),
+            groupResponse = "GROUP: JDK 26 GA\nMAJOR: YES   ← important\nINDICES: 0\nGROUP: Micronaut 4.x\nRELEASE: YES\nINDICES: 1",
+            synthesisTitles = listOf("JDK 26 GA", "Micronaut 4.x"),
         )
 
         assertEquals(2, saved.size)
@@ -263,6 +279,101 @@ class ClusteringWorkflowOrderingTest {
         assertTrue("rss-1" in allArticleIds, "RSS article should be kept")
         assertTrue("reddit-1" !in allArticleIds, "Reddit repost should be removed")
         assertEquals(1, allArticleIds.size)
+    }
+
+    @Test
+    fun `RELEASE YES produces cluster with type release`() = runTest {
+        val articles = articles("a1" to "Spring Boot 4.1.0-M3 Announced", "a2" to "Kotlin 2.3.20")
+
+        val saved = captureSavedRaw(
+            articles,
+            groupResponse = """
+                GROUP: Spring Boot 4.1.0-M3
+                RELEASE: YES
+                INDICES: 0
+                GROUP: Kotlin 2.3.20
+                RELEASE: YES
+                INDICES: 1
+            """.trimIndent(),
+            synthesisResponses = listOf(
+                "TITLE: Spring Boot 4.1.0-M3\nBULLET: Virtual threads on by default\nBULLET: New @RestClientTest slice",
+                "TITLE: Kotlin 2.3.20\nBULLET: Context parameters preview\nBULLET: K2 compiler stabilized",
+            ),
+        )
+
+        assertEquals(2, saved.size)
+        val springCluster = saved.first { it.title == "Spring Boot 4.1.0-M3" }
+        assertEquals("release", springCluster.type)
+        assertEquals(listOf("Virtual threads on by default", "New @RestClientTest slice"), springCluster.bullets)
+        assertEquals("", springCluster.summary, "Release clusters have empty summary")
+    }
+
+    @Test
+    fun `RELEASE NO is treated same as omitting RELEASE line — type is topic`() = runTest {
+        val articles = articles("a1" to "Spring Security Discussion")
+
+        val saved = captureSavedRaw(
+            articles,
+            groupResponse = "GROUP: Spring Security\nRELEASE: NO\nINDICES: 0",
+            synthesisResponses = listOf("TITLE: Spring Security\nSYNTHESIS: Spring security discussion."),
+        )
+
+        assertEquals(1, saved.size)
+        assertEquals("topic", saved.first().type)
+        assertEquals(emptyList<String>(), saved.first().bullets)
+    }
+
+    @Test
+    fun `bullet synthesis caps at 5 even if LLM returns more`() = runTest {
+        val articles = articles("a1" to "Spring Boot 4.1.0-M3")
+
+        val saved = captureSavedRaw(
+            articles,
+            groupResponse = "GROUP: Spring Boot 4.1.0-M3\nRELEASE: YES\nINDICES: 0",
+            synthesisResponses = listOf(
+                "TITLE: Spring Boot 4.1.0-M3\n" +
+                "BULLET: One\nBULLET: Two\nBULLET: Three\nBULLET: Four\nBULLET: Five\nBULLET: Six\nBULLET: Seven",
+            ),
+        )
+
+        assertEquals(1, saved.size)
+        assertEquals(5, saved.first().bullets.size, "bullets must be capped at 5")
+    }
+
+    @Test
+    fun `all release clusters sink to bottom sorted by engagement among themselves`() = runTest {
+        val articles = articles(
+            "a1" to "Spring Boot 4.1.0-M3",  // score=10, release
+            "a2" to "Hibernate 7.3.0",        // score=20, release
+            "a3" to "JVM Roadmap Discussion", // score=30, topic
+        )
+
+        val saved = captureSavedRaw(
+            articles,
+            groupResponse = """
+                GROUP: Spring Boot 4.1.0-M3
+                RELEASE: YES
+                INDICES: 0
+                GROUP: JVM Roadmap Discussion
+                INDICES: 2
+                GROUP: Hibernate 7.3.0
+                RELEASE: YES
+                INDICES: 1
+            """.trimIndent(),
+            synthesisResponses = listOf(
+                "TITLE: Spring Boot 4.1.0-M3\nBULLET: Something new",
+                "TITLE: JVM Roadmap Discussion\nSYNTHESIS: Roadmap stuff.",
+                "TITLE: Hibernate 7.3.0\nBULLET: Hibernate released",
+            ),
+        )
+
+        assertEquals(3, saved.size)
+        assertEquals("JVM Roadmap Discussion", saved.first().title, "Topic cluster first")
+        // Release clusters last, sorted by engagement: Hibernate (score=20) > Spring Boot (score=10)
+        assertEquals("Hibernate 7.3.0", saved[1].title, "Higher-engagement release second")
+        assertEquals("Spring Boot 4.1.0-M3", saved[2].title, "Lower-engagement release last")
+        assertEquals("release", saved[1].type)
+        assertEquals("release", saved[2].type)
     }
 
     // Helpers
@@ -308,6 +419,60 @@ class ClusteringWorkflowOrderingTest {
                 "TITLE: $name\nSYNTHESIS: Synthesis about $name."
             }
         }
+    }
+
+    /**
+     * LLM mock with explicit raw synthesis responses.
+     * Call 0 = grouping; calls 1+ = synthesis responses in GROUP order.
+     * NOTE: assumes all articles are non-social (rss/github). Social articles (bluesky/twitter)
+     * trigger an extra isEventLogisticsPost LLM call per article before grouping, which would
+     * misalign the synthesisResponses indices.
+     */
+    private fun llmWithRaw(groupResponse: String, synthesisResponses: List<String>) = object : LLMClient {
+        private var callCount = 0
+        override suspend fun chat(prompt: String): String {
+            return if (callCount == 0) {
+                callCount++
+                groupResponse
+            } else {
+                val r = synthesisResponses.getOrElse(callCount - 1) { "TITLE: Cluster\nSYNTHESIS: ..." }
+                callCount++
+                r
+            }
+        }
+    }
+
+    private suspend fun captureSavedRaw(
+        articles: List<ProcessedArticle>,
+        groupResponse: String,
+        synthesisResponses: List<String>,
+    ): List<ArticleCluster> {
+        val saved = mutableListOf<ArticleCluster>()
+        val clusterRepo = object : ClusterRepository {
+            override fun save(c: ArticleCluster) {}
+            override fun saveAll(clusters: List<ArticleCluster>) { saved.addAll(clusters) }
+            override fun findByDateRange(start: Instant, end: Instant): List<ArticleCluster> = emptyList()
+            override fun deleteByDateRange(start: Instant, end: Instant) {}
+        }
+        val articleRepo = object : ProcessedArticleRepository {
+            override fun save(a: ProcessedArticle) {}
+            override fun saveAll(a: List<ProcessedArticle>) {}
+            override fun findAll(): List<ProcessedArticle> = articles
+            override fun findByDateRange(s: Instant, e: Instant): List<ProcessedArticle> = articles
+            override fun findFailedSince(since: Instant): List<ProcessedArticle> = emptyList()
+            override fun findFailedRawArticleIds(since: Instant, limit: Int): List<String> = emptyList()
+            override fun findFailedByIds(ids: List<String>): List<ProcessedArticle> = emptyList()
+            override fun findInspectionCandidates(since: Instant, limit: Int, minWarnings: Int): List<ProcessedArticle> = emptyList()
+            override fun findByIds(ids: List<String>): List<ProcessedArticle> = articles.filter { it.id in ids }
+            override fun findByIngestedAtRange(s: Instant, e: Instant): List<ProcessedArticle> = articles
+            override fun findUnprocessedRawArticles(since: Instant): List<String> = emptyList()
+            override fun existsById(id: String): Boolean = false
+            override fun count(): Long = articles.size.toLong()
+            override fun deleteByProcessedAtSince(since: Instant): Int = 0
+        }
+        ClusteringWorkflow(articleRepo, clusterRepo, llmWithRaw(groupResponse, synthesisResponses), clock).execute()
+        assertTrue(saved.isNotEmpty(), "ClusteringWorkflow should produce at least one cluster")
+        return saved
     }
 
     private suspend fun captureSaved(

@@ -27,6 +27,9 @@ class DuckDbClusterRepository(private val connection: Connection) : ClusterRepos
                 )
                 """.trimIndent()
             )
+            // Migration: add columns if they don't exist (idempotent)
+            stmt.execute("ALTER TABLE article_clusters ADD COLUMN IF NOT EXISTS type VARCHAR DEFAULT 'topic'")
+            stmt.execute("ALTER TABLE article_clusters ADD COLUMN IF NOT EXISTS bullets VARCHAR DEFAULT '[]'")
         }
     }
 
@@ -34,8 +37,8 @@ class DuckDbClusterRepository(private val connection: Connection) : ClusterRepos
         connection.prepareStatement(
             """
             INSERT OR REPLACE INTO article_clusters
-            (id, title, summary, article_ids, sources, total_engagement, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            (id, title, summary, article_ids, sources, total_engagement, created_at, type, bullets)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """.trimIndent()
         ).use { stmt ->
             stmt.setString(1, cluster.id)
@@ -45,6 +48,8 @@ class DuckDbClusterRepository(private val connection: Connection) : ClusterRepos
             stmt.setString(5, Json.encodeToString(cluster.sources))
             stmt.setDouble(6, cluster.totalEngagement)
             stmt.setString(7, cluster.createdAt.toString())
+            stmt.setString(8, cluster.type)
+            stmt.setString(9, Json.encodeToString(cluster.bullets))
             stmt.executeUpdate()
         }
     }
@@ -87,5 +92,7 @@ class DuckDbClusterRepository(private val connection: Connection) : ClusterRepos
         sources = Json.decodeFromString(getString("sources")),
         totalEngagement = getDouble("total_engagement"),
         createdAt = Instant.parse(getString("created_at")),
+        type = getString("type") ?: "topic",
+        bullets = Json.decodeFromString(getString("bullets") ?: "[]"),
     )
 }

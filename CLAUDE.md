@@ -8,6 +8,7 @@
 4. **Branch workflow** — always work on feature branches, never commit directly to `main`.
 5. **Findings** — save all interesting discoveries, gotchas, and learnings to `Findings.md`.
 6. **PR workflow** — push to GitHub and create a PR when work is complete.
+7. **Verify before claiming** — before saying something is deployed or visible (viewer, server, etc.), verify it actually is (e.g. `curl`, `pgrep`, check response). Never announce a change as live without confirming.
 
 ## Tech Stack
 
