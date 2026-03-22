@@ -104,6 +104,40 @@ class DuckDbClusterRepositoryTest {
         assertEquals("c-keep", remaining[0].id)
     }
 
+    @Test
+    fun `type and bullets round-trip through DB`() {
+        val releaseCluster = cluster(
+            id = "rc1",
+            type = "release",
+            bullets = listOf("Virtual threads are now default", "New @RestClientTest slice"),
+        )
+        repository.saveAll(listOf(releaseCluster))
+
+        val results = repository.findByDateRange(
+            start = Instant.parse("2026-03-15T00:00:00Z"),
+            end = Instant.parse("2026-03-15T23:59:59Z"),
+        )
+
+        assertEquals(1, results.size)
+        assertEquals("release", results[0].type)
+        assertEquals(listOf("Virtual threads are now default", "New @RestClientTest slice"), results[0].bullets)
+    }
+
+    @Test
+    fun `topic cluster has default type and empty bullets`() {
+        val topicCluster = cluster(id = "tc1")
+        repository.saveAll(listOf(topicCluster))
+
+        val results = repository.findByDateRange(
+            start = Instant.parse("2026-03-15T00:00:00Z"),
+            end = Instant.parse("2026-03-15T23:59:59Z"),
+        )
+
+        assertEquals(1, results.size)
+        assertEquals("topic", results[0].type)
+        assertEquals(emptyList<String>(), results[0].bullets)
+    }
+
     private fun cluster(
         id: String,
         title: String = "Cluster $id",
@@ -112,13 +146,10 @@ class DuckDbClusterRepositoryTest {
         sources: List<String> = listOf("rss", "twitter"),
         totalEngagement: Double = 42.0,
         createdAt: Instant = Instant.parse("2026-03-15T10:00:00Z"),
+        type: String = "topic",
+        bullets: List<String> = emptyList(),
     ) = ArticleCluster(
-        id = id,
-        title = title,
-        summary = summary,
-        articles = articles,
-        sources = sources,
-        totalEngagement = totalEngagement,
-        createdAt = createdAt,
+        id = id, title = title, summary = summary, articles = articles, sources = sources,
+        totalEngagement = totalEngagement, createdAt = createdAt, type = type, bullets = bullets,
     )
 }

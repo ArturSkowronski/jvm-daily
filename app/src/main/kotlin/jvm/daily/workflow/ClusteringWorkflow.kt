@@ -77,21 +77,21 @@ class ClusteringWorkflow(
     private suspend fun clusterArticles(articles: List<ProcessedArticle>): List<ArticleCluster> {
         val groups = groupBySemantic(articles)
         val clusters = groups
-            .map { (name, articleGroup, isMajor) -> Pair(createCluster(articleGroup, name), isMajor) }
-        // 3-tier sort: MAJOR releases first → normal by engagement → Releases last
-        val major    = clusters.filter { (c, m) -> m }.sortedByDescending { (c, _) -> c.totalEngagement }.map { it.first }
-        val releases = clusters.filter { (c, _) -> c.title.equals("Releases", ignoreCase = true) }.map { it.first }
-        val normal   = clusters.filter { (c, m) -> !m && !c.title.equals("Releases", ignoreCase = true) }
+            .map { group -> Pair(createCluster(group.articles, group.name, group.isRelease), group.isMajor) }
+        // Sort: MAJOR first → topic clusters by engagement → release clusters by engagement last
+        val major    = clusters.filter { (_, m) -> m }.sortedByDescending { (c, _) -> c.totalEngagement }.map { it.first }
+        val releases = clusters.filter { (c, m) -> !m && c.type == "release" }.sortedByDescending { (c, _) -> c.totalEngagement }.map { it.first }
+        val normal   = clusters.filter { (c, m) -> !m && c.type != "release" }
                                .sortedByDescending { (c, _) -> c.totalEngagement }.map { it.first }
         return major + normal + releases
     }
 
     /**
      * Asks the LLM to semantically group articles into thematic clusters.
-     * Returns triples of (cluster name, articles, isMajor) so synthesis and sorting can use them.
+     * Returns GroupResult list so synthesis and sorting can use them.
      * Falls back to a single group if the response cannot be parsed.
      */
-    private suspend fun groupBySemantic(articles: List<ProcessedArticle>): List<Triple<String, List<ProcessedArticle>, Boolean>> {
+    private suspend fun groupBySemantic(articles: List<ProcessedArticle>): List<GroupResult> {
         val listing = articles.mapIndexed { i, a ->
             "[$i] ${a.originalTitle} | ${a.topics.take(3).joinToString(", ")}"
         }.joinToString("\n")
@@ -111,13 +111,10 @@ Group these ${articles.size} articles into thematic clusters following these rul
 - Use precise, specific cluster names (e.g. "Kotlin 2.3.20 Release", "GraalVM Native Image Performance", "Spring Security 6.5 Hardening")
 
 **Releases rule** (important):
-- Routine library releases (e.g. "Hibernate 7.3.0", "Ktor 3.1.2", "Micronaut 4.x.y", random OSS patch) must be grouped together into a single cluster named exactly: "Releases"
-- Only give a release its own dedicated cluster if it is a significant milestone with real impact, for example:
-  - Java GA release (any version)
-  - Kotlin feature releases: Kotlin uses X.Y.Z versioning where Z=20 is a full feature release (e.g. 2.3.20 is major), Z=0 is a new minor (2.3.0), only Z=10/30/40 are incremental
-  - Spring Boot major/minor (e.g. 3.5.0, 4.0.0)
-  - A release that generated notable community discussion across multiple sources
-- When in doubt, put the release in the "Releases" cluster
+- Every distinct software release must be its own cluster, even routine patch releases
+- Name the cluster after the specific release (e.g. "Hibernate 7.3.0", "Ktor 3.1.2", "Spring Boot 4.0.4")
+- Multiple articles about the same release belong together (e.g. the GitHub Release entry + a blog post about it)
+- Do NOT group unrelated releases into a single catch-all cluster
 
 **Priority rule**:
 - Add `MAJOR: YES` for clusters covering a milestone that every JVM developer should read today:
@@ -127,9 +124,14 @@ Group these ${articles.size} articles into thematic clusters following these rul
   - Any other platform-level milestone that overshadows all other news
 - Omit the MAJOR line (or write `MAJOR: NO`) for everything else
 
+**Release type rule**:
+- Add `RELEASE: YES` for any cluster primarily about a software release (any patch, minor, or major)
+- Omit for non-release clusters (discussions, tutorials, blog series, performance analysis)
+
 Output ONLY the groups in this exact format (no extra text):
 GROUP: [cluster name]
 MAJOR: YES   ← only when applicable
+RELEASE: YES ← only when applicable
 INDICES: [comma-separated indices]
         """.trimIndent()
 
@@ -139,7 +141,7 @@ INDICES: [comma-separated indices]
         if (groups.isEmpty()) {
             println("[clustering] Warning: semantic grouping returned no groups, falling back to single cluster")
             println("[clustering] LLM response (first 500 chars): ${response.take(500)}")
-            return listOf(Triple("", articles, false))
+            return listOf(GroupResult("", articles, false, false))
         }
         return groups
     }
@@ -147,12 +149,13 @@ INDICES: [comma-separated indices]
     private fun parseGroupResponse(
         response: String,
         articles: List<ProcessedArticle>,
-    ): List<Triple<String, List<ProcessedArticle>, Boolean>> {
-        val groups = mutableListOf<Triple<String, List<ProcessedArticle>, Boolean>>()
+    ): List<GroupResult> {
+        val groups = mutableListOf<GroupResult>()
         val assignedIndices = mutableSetOf<Int>()
 
         var pendingName = ""
         var pendingMajor = false
+        var pendingRelease = false
         var pendingIndices: List<Int> = emptyList()
 
         for (rawLine in response.lines()) {
@@ -165,14 +168,21 @@ INDICES: [comma-separated indices]
                     // flush previous group
                     if (pendingIndices.isNotEmpty()) {
                         val group = pendingIndices.mapNotNull { articles.getOrNull(it) }
-                        if (group.isNotEmpty()) { groups.add(Triple(pendingName, group, pendingMajor)); assignedIndices.addAll(pendingIndices) }
+                        if (group.isNotEmpty()) {
+                            groups.add(GroupResult(pendingName, group, pendingMajor, pendingRelease))
+                            assignedIndices.addAll(pendingIndices)
+                        }
                     }
                     pendingName = line.substringAfter("GROUP:").trim()
                     pendingMajor = false
+                    pendingRelease = false
                     pendingIndices = emptyList()
                 }
                 line.startsWith("MAJOR:") -> {
                     pendingMajor = line.substringAfter("MAJOR:").trim().uppercase().startsWith("YES")
+                }
+                line.startsWith("RELEASE:") -> {
+                    pendingRelease = line.substringAfter("RELEASE:").trim().uppercase().startsWith("YES")
                 }
                 line.startsWith("INDICES:") -> {
                     pendingIndices = line.substringAfter("INDICES:")
@@ -184,19 +194,24 @@ INDICES: [comma-separated indices]
         // flush last group
         if (pendingIndices.isNotEmpty()) {
             val group = pendingIndices.mapNotNull { articles.getOrNull(it) }
-            if (group.isNotEmpty()) { groups.add(Triple(pendingName, group, pendingMajor)); assignedIndices.addAll(pendingIndices) }
+            if (group.isNotEmpty()) {
+                groups.add(GroupResult(pendingName, group, pendingMajor, pendingRelease))
+                assignedIndices.addAll(pendingIndices)
+            }
         }
 
         // Any article the LLM missed goes into a catch-all group
         val unassigned = articles.indices.filter { it !in assignedIndices }.map { articles[it] }
-        if (unassigned.isNotEmpty()) groups.add(Triple("", unassigned, false))
+        if (unassigned.isNotEmpty()) groups.add(GroupResult("", unassigned, false, false))
 
-        return groups.filter { it.second.isNotEmpty() }
+        return groups.filter { it.articles.isNotEmpty() }
     }
 
-    private suspend fun createCluster(articles: List<ProcessedArticle>, clusterName: String = ""): ArticleCluster {
-        val isReleasesCluster = clusterName.equals("Releases", ignoreCase = true)
-
+    private suspend fun createCluster(
+        articles: List<ProcessedArticle>,
+        clusterName: String = "",
+        isRelease: Boolean = false,
+    ): ArticleCluster {
         val articleSummaries = articles.take(10).joinToString("\n\n") { article ->
             """
             [${article.sourceType.uppercase()}] ${article.originalTitle}
@@ -206,22 +221,27 @@ INDICES: [comma-separated indices]
             """.trimIndent()
         }
 
-        val prompt = if (isReleasesCluster) """
-You are writing a brief roundup for a "Releases" section in a JVM ecosystem digest.
+        val prompt = if (isRelease) """
+You are writing a concise release summary for a JVM ecosystem digest.
 
-Releases in this section:
+Release: $clusterName
+Articles:
 $articleSummaries
 ${if (articles.size > 10) "\n[... and ${articles.size - 10} more releases]" else ""}
 
 Provide:
-1. TITLE: Use exactly: "Releases"
-2. SYNTHESIS: A brief roundup (60-80 words) listing the releases with one sentence each.
-   Format as a flowing paragraph, not a list.
+1. TITLE: The specific release name (e.g. "Spring Boot 4.1.0-M3", "Releases")
+2. Up to 5 BULLET lines, each 1–2 sentences, covering the key highlights:
+   - New features or APIs
+   - Breaking changes or deprecations
+   - Performance or compatibility improvements
+   - Notable community reaction
 
 Format:
-TITLE: Releases
-SYNTHESIS: [your roundup]
-        """.trimIndent() else """
+TITLE: [title]
+BULLET: [highlight 1]
+BULLET: [highlight 2]
+    """.trimIndent() else """
 $CLUSTERING_SYSTEM_PROMPT
 
 You are analyzing a cluster of ${articles.size} related JVM ecosystem articles.
@@ -245,7 +265,7 @@ Provide:
 Format:
 TITLE: [your title]
 SYNTHESIS: [your synthesis]
-        """.trimIndent()
+    """.trimIndent()
 
         val response = llmClient.chat(prompt)
         val synthesis = parseClusterResponse(response)
@@ -258,6 +278,8 @@ SYNTHESIS: [your synthesis]
             sources = articles.map { it.sourceType }.toSet().toList(),
             totalEngagement = articles.sumOf { it.engagementScore },
             createdAt = clock.now(),
+            type = if (isRelease) "release" else "topic",
+            bullets = synthesis.bullets,
         )
     }
 
@@ -269,17 +291,28 @@ SYNTHESIS: [your synthesis]
             ?.substringAfter("TITLE:")?.trim()
             ?: "Untitled Cluster"
 
+        val bullets = lines.filter { it.startsWith("BULLET:") }
+            .map { it.substringAfter("BULLET:").trim() }
+            .take(5)
+
         val synthesisStart = lines.indexOfFirst { it.startsWith("SYNTHESIS:") }
         val summary = if (synthesisStart != -1) {
             lines.drop(synthesisStart).joinToString("\n").substringAfter("SYNTHESIS:").trim()
         } else {
-            "No synthesis available"
+            ""
         }
 
-        return ClusterSynthesis(title, summary)
+        return ClusterSynthesis(title, summary, bullets)
     }
 
-    private data class ClusterSynthesis(val title: String, val summary: String)
+    private data class ClusterSynthesis(val title: String, val summary: String, val bullets: List<String> = emptyList())
+
+    private data class GroupResult(
+        val name: String,
+        val articles: List<ProcessedArticle>,
+        val isMajor: Boolean,
+        val isRelease: Boolean,
+    )
 
     /**
      * Bluesky/Twitter posts that are purely event logistics (speaker lineups, ticket sales,

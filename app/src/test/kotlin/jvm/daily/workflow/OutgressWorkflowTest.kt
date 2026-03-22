@@ -225,7 +225,7 @@ class OutgressWorkflowTest {
     }
 
     @Test
-    fun `Releases cluster always appears last in digest JSON`(@TempDir tempDir: Path) = runTest {
+    fun `release clusters always appear last in digest JSON sorted by engagement`(@TempDir tempDir: Path) = runTest {
         val fixedNow = Instant.parse("2026-03-15T12:00:00Z")
         val clock = object : Clock { override fun now() = fixedNow }
 
@@ -235,17 +235,45 @@ class OutgressWorkflowTest {
             processedArticle("a3", "IntelliJ IDEA 2025.3.4", "https://example.com/ij", listOf("tools"), 353.0, fixedNow),
         )
         val clusters = listOf(
-            ArticleCluster("c1", "JDK Roadmap", "roadmap stuff", listOf("a1"), listOf("rss"), 467.0, fixedNow),
-            ArticleCluster("c2", "Releases", "releases roundup", listOf("a2"), listOf("rss"), 452.0, fixedNow),
-            ArticleCluster("c3", "IntelliJ IDEA News", "ide stuff", listOf("a3"), listOf("rss"), 353.0, fixedNow),
+            ArticleCluster("c1", "JDK Roadmap", "roadmap stuff", listOf("a1"), listOf("rss"), 467.0, fixedNow, type = "topic"),
+            ArticleCluster("c2", "Hibernate 7.3.0", "", listOf("a2"), listOf("rss"), 452.0, fixedNow, type = "release"),
+            ArticleCluster("c3", "IntelliJ IDEA News", "ide stuff", listOf("a3"), listOf("rss"), 353.0, fixedNow, type = "topic"),
         )
 
         val repo = stubRepoWithData(articles)
         OutgressWorkflow(repo, tempDir, clock = clock, clusterRepository = stubClusterRepo(clusters)).execute()
 
         val digest = Json.decodeFromString<DigestJson>(tempDir.resolve("daily-2026-03-15.json").readText())
-        assertEquals("Releases", digest.clusters.last().title, "Releases cluster should be last")
-        assertEquals("JDK Roadmap", digest.clusters.first().title, "Highest-engagement non-Releases cluster should be first")
+        assertEquals("Hibernate 7.3.0", digest.clusters.last().title, "Release cluster should be last")
+        assertEquals("JDK Roadmap", digest.clusters.first().title, "Highest-engagement topic cluster should be first")
+    }
+
+    @Test
+    fun `release cluster type and bullets are passed through to DigestCluster`(@TempDir tempDir: Path) = runTest {
+        val fixedNow = Instant.parse("2026-03-15T12:00:00Z")
+        val clock = object : Clock { override fun now() = fixedNow }
+
+        val articles = listOf(
+            processedArticle("a1", "Spring Boot 4.1.0-M3", "https://example.com/spring", listOf("spring"), 90.0, fixedNow),
+        )
+        val cluster = ArticleCluster(
+            id = "c1", title = "Spring Boot 4.1.0-M3", summary = "",
+            articles = listOf("a1"), sources = listOf("rss"), totalEngagement = 90.0,
+            createdAt = fixedNow,
+            type = "release",
+            bullets = listOf("Virtual threads on by default", "New @RestClientTest slice"),
+        )
+
+        val repo = stubRepoWithData(articles)
+        val clusterRepo = stubClusterRepo(listOf(cluster))
+
+        OutgressWorkflow(repo, tempDir, clock = clock, clusterRepository = clusterRepo).execute()
+
+        val json = tempDir.resolve("daily-2026-03-15.json").readText()
+        val digest = Json.decodeFromString<DigestJson>(json)
+        val digestCluster = digest.clusters.first()
+        assertEquals("release", digestCluster.type)
+        assertEquals(listOf("Virtual threads on by default", "New @RestClientTest slice"), digestCluster.bullets)
     }
 
     // --- stubs ---
