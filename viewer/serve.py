@@ -140,7 +140,7 @@ HTML = r"""<!DOCTYPE html>
     .social-link-reddit:hover  { border-color: #e25822; color: #e25822; }
 
     /* ── Release section (grouped) ── */
-    .releases-section { margin-top: 48px; }
+    .releases-section { margin-top: 48px; order: 1; }
     .releases-section-title { font-size: 0.68rem; text-transform: uppercase; letter-spacing: .1em;
                               color: #aaa; margin-bottom: 12px; font-weight: 600; }
     .releases-grid { display: flex; flex-direction: column; gap: 8px; }
@@ -171,7 +171,7 @@ HTML = r"""<!DOCTYPE html>
     .social-card-text { color: #444; font-size: 0.85rem; line-height: 1.5; margin: 0; }
 
     /* ── Standalone tweets section ── */
-    .tweets-section { margin-top: 48px; }
+    .tweets-section { margin-top: 48px; order: 1; }
     .tweets-section-title { font-size: 0.68rem; text-transform: uppercase; letter-spacing: .1em;
                             color: #aaa; margin-bottom: 12px; font-weight: 600; }
     .tweets-grid { display: flex; flex-direction: column; gap: 8px; }
@@ -730,6 +730,7 @@ HTML = r"""<!DOCTYPE html>
       btn.classList.add('ticked');
     }
     saveDismissed(_currentDate, dismissed);
+    applyRotsSection();
   }
 
   /* ── ROTS bookmark toggle ── */
