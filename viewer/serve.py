@@ -672,6 +672,12 @@ HTML = r"""<!DOCTYPE html>
     buildSection('archive-inline-section',
       '<div class="archive-section-title">Archive</div>',
       archTopic, archRelease);
+
+    // --- Hide empty sections (releases, tweets) ---
+    md.querySelectorAll(':scope > .releases-section, :scope > .tweets-section').forEach(sec => {
+      const hasContent = sec.querySelector('.cluster, .tweet-card');
+      sec.classList.toggle('hidden', !hasContent);
+    });
   }
 
   function toggleDebug(btn) {
