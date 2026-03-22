@@ -23,6 +23,7 @@ class UrlShortenerResolver(
             "jb.gg",
             "t.co",
             "bit.ly",
+            "buff.ly",
             "ow.ly",
             "tinyurl.com",
         )
