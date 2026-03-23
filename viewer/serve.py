@@ -358,6 +358,34 @@ HTML = r"""<!DOCTYPE html>
     return a.sourceType === 'bluesky' && (a.url || '').includes('bsky.app');
   }
 
+  /** Merge cluster articles that share the same title (e.g. multiple Bluesky shares of same post). */
+  function mergeByTitle(articles) {
+    const groups = new Map();
+    for (const a of articles) {
+      const key = (a.title || '').trim().toLowerCase();
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(a);
+    }
+    return [...groups.values()].map(group => {
+      if (group.length === 1) return group[0];
+      // Pick the article with the longest summary as primary
+      group.sort((a, b) => (b.summary || '').length - (a.summary || '').length);
+      const primary = { ...group[0] };
+      // Merge socialLinks from all articles
+      const allLinks = group.flatMap(a => a.socialLinks || []);
+      const seen = new Set();
+      primary.socialLinks = allLinks.filter(l => {
+        const k = l.url || l.handle;
+        if (seen.has(k)) return false;
+        seen.add(k);
+        return true;
+      });
+      // Combine engagement scores
+      primary.engagementScore = group.reduce((s, a) => s + (a.engagementScore || 0), 0);
+      return primary;
+    });
+  }
+
   function extractTweetText(title) {
     const m = title.match(/^\[.*?\]\s*([\s\S]+)/);
     return m ? m[1] : title;
@@ -473,7 +501,7 @@ HTML = r"""<!DOCTYPE html>
     const releaseClusters = [];
 
     for (const cluster of clusters) {
-      const arts = [...cluster.articles].sort((a, b) => b.engagementScore - a.engagementScore);
+      const arts = mergeByTitle([...cluster.articles]).sort((a, b) => b.engagementScore - a.engagementScore);
       if (arts.length === 1 && isSocialPost(arts[0])) {
         standaloneTweets.push(arts[0]);
         continue;
