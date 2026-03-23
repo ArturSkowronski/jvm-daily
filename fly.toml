@@ -3,10 +3,13 @@ primary_region = "fra"
 
 # ── Environment (non-sensitive) ───────────────────────────────────────────────
 [env]
-  PIPELINE_CRON  = "0 7 * * *"
+  TZ             = "Europe/Warsaw"
+  PIPELINE_CRON  = "0 6 * * *"
   OUTGRESS_DAYS  = "1"
   VIEWER_PORT    = "8888"
   DASHBOARD_PORT = "8000"
+  INGEST_PORT    = "9292"
+  REDDIT_ENABLED = "false"
 
 # ── Persistent data volume ────────────────────────────────────────────────────
 # Create before first deploy:

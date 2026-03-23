@@ -1140,6 +1140,33 @@ class Handler(BaseHTTPRequestHandler):
         else:
             self.send_bytes(404, "text/plain", "Not found")
 
+    def do_POST(self):
+        p = self.path.split("?")[0]
+        if p == "/api/ingest":
+            # Proxy POST to JVM ingest API
+            ingest_port = int(os.environ.get("INGEST_PORT", "9292"))
+            length = int(self.headers.get("Content-Length", 0))
+            body = self.rfile.read(length) if length > 0 else b""
+            auth = self.headers.get("Authorization", "")
+            try:
+                import urllib.request
+                req = urllib.request.Request(
+                    f"http://localhost:{ingest_port}/api/ingest",
+                    data=body,
+                    headers={"Authorization": auth, "Content-Type": "application/json"},
+                    method="POST",
+                )
+                with urllib.request.urlopen(req, timeout=30) as resp:
+                    resp_body = resp.read()
+                    self.send_bytes(resp.status, "application/json", resp_body)
+            except urllib.error.HTTPError as e:
+                self.send_bytes(e.code, "application/json", e.read())
+            except Exception as e:
+                self.send_bytes(502, "application/json",
+                                json.dumps({"error": f"Ingest API unreachable: {e}"}))
+        else:
+            self.send_bytes(404, "text/plain", "Not found")
+
 
 if __name__ == "__main__":
     OUTPUT_DIR.mkdir(exist_ok=True)
