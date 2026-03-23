@@ -1,0 +1,379 @@
+openapi: 3.1.0
+info:
+  title: JVM Daily API
+  description: |
+    Headless REST API for JVM Daily — an automated news aggregator for the JVM ecosystem.
+    Serves daily digests of clustered articles from RSS, Reddit, GitHub, Bluesky, and OpenJDK mailing lists.
+  version: 1.0.0
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: https://jvm-daily.fly.dev
+    description: Production (Fly.io Frankfurt)
+  - url: http://localhost:8888
+    description: Local development
+
+paths:
+  /api/dates:
+    get:
+      summary: List available digest dates
+      description: Returns dates for which daily digest JSON files exist, sorted descending (most recent first).
+      operationId: getDates
+      tags: [Digest]
+      responses:
+        '200':
+          description: Array of date strings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                  format: date
+                example: ["2026-03-23", "2026-03-22", "2026-03-21"]
+
+  /api/daily/{date}:
+    get:
+      summary: Get daily digest
+      description: Returns the full digest for a specific date, including thematic clusters, unclustered articles, and debug information about rejected articles.
+      operationId: getDailyDigest
+      tags: [Digest]
+      parameters:
+        - name: date
+          in: path
+          required: true
+          schema:
+            type: string
+            format: date
+          example: "2026-03-23"
+      responses:
+        '200':
+          description: Daily digest
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DailyDigest'
+        '400':
+          description: Invalid date format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: No digest for this date
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/pipeline:
+    get:
+      summary: Pipeline status
+      description: Returns pipeline statistics and recent job history from JobRunr.
+      operationId: getPipelineStatus
+      tags: [Pipeline]
+      responses:
+        '200':
+          description: Pipeline status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PipelineStatus'
+        '503':
+          description: Pipeline scheduler offline
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/ingest:
+    post:
+      summary: Push articles from external source
+      description: |
+        Receives articles from external sources (e.g., Raspberry Pi fetching Reddit).
+        Articles are saved directly to the database for processing in the next pipeline run.
+        Requires Bearer token authentication via `INGEST_API_KEY`.
+      operationId: ingestArticles
+      tags: [Ingest]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/IngestArticle'
+      responses:
+        '200':
+          description: Articles saved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  saved:
+                    type: integer
+                    description: Number of articles saved
+                example:
+                  saved: 3
+        '401':
+          description: Missing or invalid Bearer token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/files:
+    get:
+      summary: List markdown digest files (backward compat)
+      description: Returns filenames of available markdown digests. Prefer `/api/dates` for new integrations.
+      operationId: getFiles
+      tags: [Digest]
+      deprecated: true
+      responses:
+        '200':
+          description: Array of markdown filenames
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                example: ["jvm-daily-2026-03-23.md", "jvm-daily-2026-03-22.md"]
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: INGEST_API_KEY configured as a server-side environment variable
+
+  schemas:
+    DailyDigest:
+      type: object
+      required: [date, generatedAt, totalArticles, clusters]
+      properties:
+        date:
+          type: string
+          format: date
+          description: Digest date
+          example: "2026-03-23"
+        generatedAt:
+          type: string
+          format: date-time
+          description: When this digest was generated
+        windowHours:
+          type: integer
+          default: 24
+          description: Time window for article inclusion
+        totalArticles:
+          type: integer
+          description: Total articles in clusters + unclustered
+        clusters:
+          type: array
+          items:
+            $ref: '#/components/schemas/DigestCluster'
+        unclustered:
+          type: array
+          items:
+            $ref: '#/components/schemas/DigestArticle'
+          description: Articles not assigned to any cluster
+        debug:
+          type: array
+          items:
+            $ref: '#/components/schemas/DebugRejected'
+          description: Articles rejected during enrichment
+
+    DigestCluster:
+      type: object
+      required: [id, title, summary, engagementScore, type, articles]
+      properties:
+        id:
+          type: string
+          description: Unique cluster ID (UUID)
+        title:
+          type: string
+          description: AI-generated cluster title
+          example: "Quarkus Benchmarking Shifts Focus to RSS and First Response"
+        summary:
+          type: string
+          description: Multi-paragraph AI synthesis (markdown)
+        engagementScore:
+          type: number
+          format: double
+          description: Aggregate engagement score of all articles
+        type:
+          type: string
+          enum: [topic, release]
+          description: |
+            - `topic`: General discussion cluster
+            - `release`: Software release announcement
+        articles:
+          type: array
+          items:
+            $ref: '#/components/schemas/DigestArticle'
+        bullets:
+          type: array
+          items:
+            type: string
+          description: Key highlights (primarily for release clusters)
+
+    DigestArticle:
+      type: object
+      required: [id, title, summary, topics, entities, engagementScore, publishedAt, ingestedAt, sourceType]
+      properties:
+        id:
+          type: string
+          description: Unique article identifier
+        title:
+          type: string
+          description: Article title
+          example: "Quarkus Benchmarks Explained for Java Developers"
+        url:
+          type: string
+          format: uri
+          nullable: true
+          description: Primary article URL
+        summary:
+          type: string
+          description: AI-generated article summary
+        topics:
+          type: array
+          items:
+            type: string
+          description: Topic tags (lowercase kebab-case)
+          example: ["cloud-native", "benchmarking", "native-image"]
+        entities:
+          type: array
+          items:
+            type: string
+          description: Named entities (frameworks, versions, people)
+          example: ["Quarkus 3.x", "GraalVM", "OpenJDK 21"]
+        engagementScore:
+          type: number
+          format: double
+        publishedAt:
+          type: string
+          format: date-time
+        ingestedAt:
+          type: string
+          format: date-time
+        sourceType:
+          type: string
+          enum: [rss, reddit, bluesky, github_trending, github_release, openjdk_mail, hackernews, jep, markdown_file]
+        handle:
+          type: string
+          nullable: true
+          description: Source handle (Bluesky @handle, Reddit r/subreddit)
+          example: "quarkus.io"
+        socialLinks:
+          type: array
+          items:
+            $ref: '#/components/schemas/SocialLink'
+
+    SocialLink:
+      type: object
+      required: [source, url, handle]
+      properties:
+        source:
+          type: string
+          enum: [bluesky, reddit]
+        url:
+          type: string
+          format: uri
+          description: URL to the social post
+        handle:
+          type: string
+          description: Social handle
+
+    DebugRejected:
+      type: object
+      required: [title, sourceType, reason]
+      properties:
+        title:
+          type: string
+        url:
+          type: string
+          format: uri
+          nullable: true
+        sourceType:
+          type: string
+        reason:
+          type: string
+          enum: [relevance_gate, enrichment_failed, event_logistics]
+          description: Why the article was rejected
+
+    PipelineStatus:
+      type: object
+      properties:
+        stats:
+          type: object
+          properties:
+            succeeded:
+              type: integer
+              nullable: true
+              description: Total successful pipeline runs
+            failed:
+              type: integer
+              description: Currently failed jobs
+            scheduled:
+              type: integer
+              description: Currently scheduled jobs
+        recentJobs:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              state:
+                type: string
+                enum: [SUCCEEDED, FAILED, PROCESSING, ENQUEUED, SCHEDULED]
+              createdAt:
+                type: string
+                format: date-time
+              updatedAt:
+                type: string
+                format: date-time
+
+    IngestArticle:
+      type: object
+      required: [id, title, content, sourceType, sourceId, ingestedAt]
+      properties:
+        id:
+          type: string
+          description: Canonical article ID
+        title:
+          type: string
+        content:
+          type: string
+          description: Article body text
+        sourceType:
+          type: string
+        sourceId:
+          type: string
+        url:
+          type: string
+          format: uri
+          nullable: true
+        author:
+          type: string
+          nullable: true
+        comments:
+          type: string
+          nullable: true
+          description: Formatted comment thread (Reddit)
+        ingestedAt:
+          type: string
+          format: date-time
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message
