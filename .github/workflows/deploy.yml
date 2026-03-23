@@ -102,43 +102,22 @@ jobs:
           oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
           tags: tag:ci
 
-      - name: Deploy to Pi via Tailscale SSH
+      - name: Deploy to Pi via SSH
         run: |
-          sleep 5
-          sudo tailscale status
+          # Set up SSH key
+          mkdir -p ~/.ssh
+          echo "${{ secrets.PI_SSH_KEY }}" > ~/.ssh/pi_deploy
+          chmod 600 ~/.ssh/pi_deploy
+          SSH="ssh -i ~/.ssh/pi_deploy -o StrictHostKeyChecking=no"
+          SCP="scp -i ~/.ssh/pi_deploy -o StrictHostKeyChecking=no"
 
-          PI_IP="100.112.239.76"
-          PI_USER="arturskowronski"
+          PI="arturskowronski@100.112.239.76"
           PI_DIR="/home/arturskowronski/jvm-daily"
 
-          # Use tailscale ssh instead of regular ssh (uses Tailscale SSH ACL, no keys needed)
-          # First, create a tar of the dist to transfer in one go
-          tar czf /tmp/app-dist.tar.gz -C app-dist .
-          tar czf /tmp/app-config.tar.gz -C app-config .
+          # Sync app dist + config via rsync
+          rsync -az --delete -e "$SSH" app-dist/ "$PI:$PI_DIR/app/"
+          rsync -az -e "$SSH" app-config/ "$PI:$PI_DIR/config/"
 
-          # Upload and extract on Pi
-          sudo tailscale file cp /tmp/app-dist.tar.gz "${PI_IP}:" || {
-            # Fallback: use regular SSH through Tailscale network
-            scp -o StrictHostKeyChecking=no /tmp/app-dist.tar.gz "${PI_USER}@${PI_IP}:/tmp/"
-            scp -o StrictHostKeyChecking=no /tmp/app-config.tar.gz "${PI_USER}@${PI_IP}:/tmp/"
-            ssh -o StrictHostKeyChecking=no "${PI_USER}@${PI_IP}" "
-              mkdir -p ${PI_DIR}/app ${PI_DIR}/config
-              tar xzf /tmp/app-dist.tar.gz -C ${PI_DIR}/app/
-              tar xzf /tmp/app-config.tar.gz -C ${PI_DIR}/config/
-              rm -f /tmp/app-dist.tar.gz /tmp/app-config.tar.gz
-              JAVA_HOME=/usr/lib/jvm/temurin-21-jre-arm64 ${PI_DIR}/app/bin/app --version 2>&1 || echo 'ok'
-            "
-            echo "✓ Pi deployment complete (via SSH fallback)"
-            exit 0
-          }
-
-          # If tailscale file cp worked, extract on Pi via tailscale ssh
-          sudo tailscale file cp /tmp/app-config.tar.gz "${PI_IP}:"
-          sudo tailscale ssh "${PI_USER}@${PI_IP}" "
-            mkdir -p ${PI_DIR}/app ${PI_DIR}/config
-            tar xzf ~/taildrop/app-dist.tar.gz -C ${PI_DIR}/app/
-            tar xzf ~/taildrop/app-config.tar.gz -C ${PI_DIR}/config/
-            rm -f ~/taildrop/app-dist.tar.gz ~/taildrop/app-config.tar.gz
-            JAVA_HOME=/usr/lib/jvm/temurin-21-jre-arm64 ${PI_DIR}/app/bin/app --version 2>&1 || echo 'ok'
-          "
+          # Verify
+          $SSH "$PI" "JAVA_HOME=/usr/lib/jvm/temurin-21-jre-arm64 $PI_DIR/app/bin/app --version 2>&1 || echo 'ok'"
           echo "✓ Pi deployment complete"
