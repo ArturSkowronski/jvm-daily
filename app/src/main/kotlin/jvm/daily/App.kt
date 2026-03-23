@@ -34,8 +34,6 @@ import org.jobrunr.jobs.lambdas.IocJobLambda
 import org.jobrunr.scheduling.JobScheduler
 import org.jobrunr.server.JobActivator
 import org.jobrunr.storage.sql.h2.H2StorageProvider
-import com.sun.net.httpserver.HttpServer
-import java.net.InetSocketAddress
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
@@ -119,8 +117,17 @@ private fun startDaemon(dbPath: String) {
 
     catchUpIfMissed(jobRunr.jobScheduler, cron)
 
-    val ingestPort = System.getenv("INGEST_PORT")?.toIntOrNull() ?: 9292
-    startIngestApi(dbPath, ingestPort)
+    val viewerPort = System.getenv("VIEWER_PORT")?.toIntOrNull() ?: 8888
+    val outputDirPath = System.getenv("OUTPUT_DIR") ?: "output"
+    val ingestApiKey = System.getenv("INGEST_API_KEY")
+    val jobRunrUrl = "http://localhost:$dashboardPort"
+    jvm.daily.api.startRestApi(
+        port = viewerPort,
+        outputDir = Path.of(outputDirPath),
+        dbPath = dbPath,
+        ingestApiKey = ingestApiKey,
+        jobRunrUrl = jobRunrUrl,
+    )
 
     println("════════════════════════════════════════")
     println(" JVM Daily daemon started")
@@ -652,45 +659,7 @@ private fun catchUpIfMissed(scheduler: JobScheduler, cron: String) {
     scheduler.enqueue(IocJobLambda<PipelineService> { it.run(JobContext.Null) })
 }
 
-// ── Ingest API (receives articles from external sources like Raspberry Pi) ───
-
-internal fun startIngestApi(dbPath: String, port: Int = 9090) {
-    val apiKey = System.getenv("INGEST_API_KEY") ?: return  // no key = no API
-    val server = HttpServer.create(InetSocketAddress(port), 0)
-    server.createContext("/api/ingest") { exchange ->
-        try {
-            if (exchange.requestMethod != "POST") {
-                exchange.sendResponseHeaders(405, -1)
-                return@createContext
-            }
-            val auth = exchange.requestHeaders.getFirst("Authorization") ?: ""
-            if (auth != "Bearer $apiKey") {
-                val body = """{"error":"unauthorized"}""".toByteArray()
-                exchange.sendResponseHeaders(401, body.size.toLong())
-                exchange.responseBody.use { it.write(body) }
-                return@createContext
-            }
-            val json = exchange.requestBody.bufferedReader().readText()
-            val articles = parseIngestPayload(json)
-            DuckDbConnectionFactory.persistent(dbPath).use { connection ->
-                val repo = DuckDbArticleRepository(connection)
-                repo.saveAll(articles)
-            }
-            val resp = """{"saved":${articles.size}}""".toByteArray()
-            exchange.responseHeaders.add("Content-Type", "application/json")
-            exchange.sendResponseHeaders(200, resp.size.toLong())
-            exchange.responseBody.use { it.write(resp) }
-            println("[ingest-api] Received ${articles.size} article(s)")
-        } catch (e: Exception) {
-            val body = """{"error":"${e.message?.replace("\"", "'")}"}""".toByteArray()
-            exchange.sendResponseHeaders(500, body.size.toLong())
-            exchange.responseBody.use { it.write(body) }
-        }
-    }
-    server.executor = null
-    server.start()
-    println("Ingest API listening on :$port/api/ingest")
-}
+// ── Ingest payload parsing (used by RestApi and ingress-push) ────────────────
 
 internal fun parseIngestPayload(json: String): List<jvm.daily.model.Article> {
     val array = kotlinx.serialization.json.Json.parseToJsonElement(json).jsonArray
