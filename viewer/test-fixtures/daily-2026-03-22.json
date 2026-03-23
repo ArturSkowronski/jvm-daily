@@ -1,0 +1,105 @@
+{
+  "date": "2026-03-22",
+  "generatedAt": "2026-03-22T06:15:00.000000Z",
+  "windowHours": 24,
+  "totalArticles": 8,
+  "clusters": [
+    {
+      "id": "c5-virtual-threads",
+      "title": "Virtual Threads Hit Production: Real-World Lessons from Java 21 Deployments",
+      "summary": "Multiple teams report their experiences migrating to virtual threads in production Java 21 applications. Key findings: throughput improvements of 3-5x for I/O-bound workloads, but subtle pinning issues with synchronized blocks remain a common pitfall.",
+      "engagementScore": 120.0,
+      "type": "topic",
+      "articles": [
+        {
+          "id": "reddit:java/1rzt8abc",
+          "title": "[java] Our experience migrating to Virtual Threads in production",
+          "url": "https://www.reddit.com/r/java/comments/1rzt8abc/our_experience_migrating_to_virtual_threads/",
+          "summary": "A detailed post-mortem of migrating a high-throughput microservice from thread pools to virtual threads. Throughput increased 4x but synchronized JDBC connections caused carrier thread pinning.",
+          "topics": ["virtual-threads", "java-21", "production", "migration"],
+          "entities": ["Virtual Threads", "Java 21", "JDBC", "Project Loom"],
+          "engagementScore": 92.0,
+          "publishedAt": "2026-03-21T16:00:00.000000Z",
+          "ingestedAt": "2026-03-21T16:00:00.000000Z",
+          "sourceType": "reddit",
+          "handle": "r/java",
+          "socialLinks": []
+        },
+        {
+          "id": "https://inside.java/2026/03/21/virtual-threads-pinning-guide",
+          "title": "Understanding Virtual Thread Pinning in Java 21",
+          "url": "https://inside.java/2026/03/21/virtual-threads-pinning-guide",
+          "summary": "Official guide from the Java team explaining when and why virtual threads get pinned to carrier threads, with practical solutions for common frameworks.",
+          "topics": ["virtual-threads", "java-internals", "performance"],
+          "entities": ["Virtual Threads", "Java 21", "Structured Concurrency"],
+          "engagementScore": 88.0,
+          "publishedAt": "2026-03-21T10:00:00.000000Z",
+          "ingestedAt": "2026-03-21T10:00:00.000000Z",
+          "sourceType": "rss",
+          "handle": null,
+          "socialLinks": [
+            {"source": "bluesky", "url": "https://bsky.app/profile/briangoetz.bsky.social/post/xyz", "handle": "briangoetz.bsky.social"}
+          ]
+        }
+      ],
+      "bullets": []
+    },
+    {
+      "id": "c6-graalvm",
+      "title": "GraalVM 24 Native Image: Zero-Configuration Metadata Repository",
+      "summary": "GraalVM 24 introduces automatic metadata detection, eliminating the need for manual reflection configuration files in most Spring and Quarkus applications.",
+      "engagementScore": 78.0,
+      "type": "topic",
+      "articles": [
+        {
+          "id": "https://medium.com/graalvm/graalvm-24-native-image-metadata",
+          "title": "GraalVM 24: Native Image Gets Smarter",
+          "url": "https://medium.com/graalvm/graalvm-24-native-image-metadata",
+          "summary": "GraalVM 24 ships with a built-in metadata repository that automatically handles reflection, JNI, and resource registration for 200+ popular libraries.",
+          "topics": ["graalvm", "native-image", "aot"],
+          "entities": ["GraalVM 24", "Native Image", "Spring", "Quarkus"],
+          "engagementScore": 78.0,
+          "publishedAt": "2026-03-21T12:00:00.000000Z",
+          "ingestedAt": "2026-03-21T12:00:00.000000Z",
+          "sourceType": "rss",
+          "handle": null,
+          "socialLinks": []
+        }
+      ],
+      "bullets": []
+    },
+    {
+      "id": "c7-hibernate-release",
+      "title": "Hibernate ORM 7.0.0.Final",
+      "summary": "Hibernate 7 reaches GA with Jakarta Data support, improved HQL parser, and native SoftDelete annotations.",
+      "engagementScore": 65.0,
+      "type": "release",
+      "articles": [
+        {
+          "id": "github:hibernate/hibernate-orm/7.0.0.Final",
+          "title": "Hibernate ORM 7.0.0.Final",
+          "url": "https://github.com/hibernate/hibernate-orm/releases/tag/7.0.0.Final",
+          "summary": "Major release bringing Jakarta Data 1.0 integration, rewritten HQL parser with better error messages, and native @SoftDelete support without Envers.",
+          "topics": ["hibernate", "orm", "jakarta-data", "release"],
+          "entities": ["Hibernate 7.0", "Jakarta Data", "JPA 3.2"],
+          "engagementScore": 65.0,
+          "publishedAt": "2026-03-21T14:00:00.000000Z",
+          "ingestedAt": "2026-03-21T14:00:00.000000Z",
+          "sourceType": "github_release",
+          "handle": null,
+          "socialLinks": []
+        }
+      ],
+      "bullets": [
+        "Jakarta Data 1.0 support for repository-style data access.",
+        "Rewritten HQL parser with context-aware error messages.",
+        "Native @SoftDelete annotation without requiring Envers.",
+        "Improved batch fetching for collections and lazy associations."
+      ]
+    }
+  ],
+  "unclustered": [],
+  "debug": [
+    {"title": "Off-topic political post", "url": "https://www.reddit.com/r/java/comments/offtopic", "sourceType": "reddit", "reason": "relevance_gate"}
+  ]
+}
