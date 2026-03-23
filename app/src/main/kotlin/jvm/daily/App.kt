@@ -119,7 +119,7 @@ private fun startDaemon(dbPath: String) {
 
     catchUpIfMissed(jobRunr.jobScheduler, cron)
 
-    val ingestPort = System.getenv("INGEST_PORT")?.toIntOrNull() ?: 9090
+    val ingestPort = System.getenv("INGEST_PORT")?.toIntOrNull() ?: 9292
     startIngestApi(dbPath, ingestPort)
 
     println("════════════════════════════════════════")
@@ -767,7 +767,10 @@ internal fun runIngressPush(dbPath: String) {
     val url = "${targetUrl.trimEnd('/')}/api/ingest"
     println("[ingress-push] Pushing ${articles.size} article(s) to $url")
 
-    val client = HttpClient.newHttpClient()
+    val client = HttpClient.newBuilder()
+        .version(HttpClient.Version.HTTP_1_1)
+        .followRedirects(HttpClient.Redirect.NEVER)
+        .build()
     val request = HttpRequest.newBuilder()
         .uri(URI.create(url))
         .header("Authorization", "Bearer $apiKey")
