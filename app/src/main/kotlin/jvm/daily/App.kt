@@ -24,6 +24,7 @@ import jvm.daily.workflow.IngressWorkflow
 import jvm.daily.workflow.OutgressWorkflow
 import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.Clock
+import kotlinx.serialization.json.*
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import org.h2.jdbcx.JdbcDataSource
@@ -33,6 +34,12 @@ import org.jobrunr.jobs.lambdas.IocJobLambda
 import org.jobrunr.scheduling.JobScheduler
 import org.jobrunr.server.JobActivator
 import org.jobrunr.storage.sql.h2.H2StorageProvider
+import com.sun.net.httpserver.HttpServer
+import java.net.InetSocketAddress
+import java.net.URI
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
 import java.nio.file.Path
 import kotlin.io.path.createDirectories
 import kotlin.io.path.exists
@@ -68,9 +75,10 @@ fun main(args: Array<String>) {
         "outgress"    -> { println("JVM Daily — outgress");     runOutgress(dbPath) }
         "reprocess"   -> { println("JVM Daily — reprocess");    runReprocess(dbPath, args.drop(1)) }
         "validate-raw-ids" -> { println("JVM Daily — validate-raw-ids"); runValidateRawIds(dbPath, args.drop(1)) }
+        "ingress-push" -> { println("JVM Daily — ingress-push (Reddit → remote)"); runIngressPush(dbPath) }
         else -> {
             System.err.println("Unknown command: $cmd")
-            System.err.println("Valid: pipeline | ingress | enrichment | enrichment-replay | reprocess | quality-report | inspect-quality | clustering | outgress | validate-raw-ids [--apply]")
+            System.err.println("Valid: pipeline | ingress | enrichment | enrichment-replay | reprocess | quality-report | inspect-quality | clustering | outgress | validate-raw-ids | ingress-push")
             exitProcess(1)
         }
     }
@@ -111,6 +119,9 @@ private fun startDaemon(dbPath: String) {
 
     catchUpIfMissed(jobRunr.jobScheduler, cron)
 
+    val ingestPort = System.getenv("INGEST_PORT")?.toIntOrNull() ?: 9090
+    startIngestApi(dbPath, ingestPort)
+
     println("════════════════════════════════════════")
     println(" JVM Daily daemon started")
     println(" Schedule  : $cron")
@@ -146,7 +157,8 @@ internal fun runIngress(dbPath: String) {
         val sourceRegistry = SourceRegistry().apply {
             register(MarkdownFileSource(Path.of(sourcesDir)))
             if (config.rss.isNotEmpty()) register(RssSource(config.rss))
-            if (config.reddit.isNotEmpty()) register(RedditSource(config.reddit))
+            val redditEnabled = System.getenv("REDDIT_ENABLED")?.lowercase() != "false"
+            if (redditEnabled && config.reddit.isNotEmpty()) register(RedditSource(config.reddit))
             config.githubTrending?.let { register(GitHubTrendingSource(it, excludeRepos = seenTrendingRepos)) }
             config.githubReleases?.let { register(GitHubReleasesSource(it)) }
             if (config.openjdkMail.isNotEmpty()) register(OpenJdkMailSource(config.openjdkMail))
@@ -638,6 +650,138 @@ private fun catchUpIfMissed(scheduler: JobScheduler, cron: String) {
 
     println("Catch-up: today's pipeline hasn't run yet — enqueueing now")
     scheduler.enqueue(IocJobLambda<PipelineService> { it.run(JobContext.Null) })
+}
+
+// ── Ingest API (receives articles from external sources like Raspberry Pi) ───
+
+internal fun startIngestApi(dbPath: String, port: Int = 9090) {
+    val apiKey = System.getenv("INGEST_API_KEY") ?: return  // no key = no API
+    val server = HttpServer.create(InetSocketAddress(port), 0)
+    server.createContext("/api/ingest") { exchange ->
+        try {
+            if (exchange.requestMethod != "POST") {
+                exchange.sendResponseHeaders(405, -1)
+                return@createContext
+            }
+            val auth = exchange.requestHeaders.getFirst("Authorization") ?: ""
+            if (auth != "Bearer $apiKey") {
+                val body = """{"error":"unauthorized"}""".toByteArray()
+                exchange.sendResponseHeaders(401, body.size.toLong())
+                exchange.responseBody.use { it.write(body) }
+                return@createContext
+            }
+            val json = exchange.requestBody.bufferedReader().readText()
+            val articles = parseIngestPayload(json)
+            DuckDbConnectionFactory.persistent(dbPath).use { connection ->
+                val repo = DuckDbArticleRepository(connection)
+                repo.saveAll(articles)
+            }
+            val resp = """{"saved":${articles.size}}""".toByteArray()
+            exchange.responseHeaders.add("Content-Type", "application/json")
+            exchange.sendResponseHeaders(200, resp.size.toLong())
+            exchange.responseBody.use { it.write(resp) }
+            println("[ingest-api] Received ${articles.size} article(s)")
+        } catch (e: Exception) {
+            val body = """{"error":"${e.message?.replace("\"", "'")}"}""".toByteArray()
+            exchange.sendResponseHeaders(500, body.size.toLong())
+            exchange.responseBody.use { it.write(body) }
+        }
+    }
+    server.executor = null
+    server.start()
+    println("Ingest API listening on :$port/api/ingest")
+}
+
+internal fun parseIngestPayload(json: String): List<jvm.daily.model.Article> {
+    val array = kotlinx.serialization.json.Json.parseToJsonElement(json).jsonArray
+    return array.map { elem ->
+        val obj = elem.jsonObject
+        jvm.daily.model.Article(
+            id = obj["id"]!!.jsonPrimitive.content,
+            title = obj["title"]!!.jsonPrimitive.content,
+            content = obj["content"]?.jsonPrimitive?.content ?: "",
+            sourceType = obj["sourceType"]!!.jsonPrimitive.content,
+            sourceId = obj["sourceId"]!!.jsonPrimitive.content,
+            url = obj["url"]?.jsonPrimitive?.contentOrNull,
+            author = obj["author"]?.jsonPrimitive?.contentOrNull,
+            comments = obj["comments"]?.jsonPrimitive?.contentOrNull,
+            ingestedAt = kotlinx.datetime.Instant.parse(obj["ingestedAt"]!!.jsonPrimitive.content),
+        )
+    }
+}
+
+internal fun serializeArticles(articles: List<jvm.daily.model.Article>): String {
+    val elements = articles.map { a ->
+        buildJsonObject {
+            put("id", a.id)
+            put("title", a.title)
+            put("content", a.content)
+            put("sourceType", a.sourceType)
+            put("sourceId", a.sourceId)
+            a.url?.let { put("url", it) }
+            a.author?.let { put("author", it) }
+            a.comments?.let { put("comments", it) }
+            put("ingestedAt", a.ingestedAt.toString())
+        }
+    }
+    return JsonArray(elements).toString()
+}
+
+// ── ingress-push: fetch Reddit locally, POST articles to remote ingest API ──
+
+internal fun runIngressPush(dbPath: String) {
+    val targetUrl = System.getenv("INGEST_TARGET_URL")
+        ?: error("INGEST_TARGET_URL required (e.g. https://jvm-daily.fly.dev)")
+    val apiKey = System.getenv("INGEST_API_KEY")
+        ?: error("INGEST_API_KEY required")
+    val configPath = System.getenv("CONFIG_PATH") ?: "config/sources.yml"
+    val config = SourcesConfig.load(Path.of(configPath))
+
+    if (config.reddit.isEmpty()) {
+        println("[ingress-push] No Reddit sources configured. Nothing to do.")
+        return
+    }
+
+    // Fetch Reddit articles (uses local residential IP)
+    println("[ingress-push] Fetching Reddit: ${config.reddit.map { it.subreddit }}")
+    val redditSource = RedditSource(config.reddit)
+    val outcomes = runBlocking { redditSource.fetchOutcomes() }
+
+    val articles = outcomes.flatMap { it.articles }
+    outcomes.forEach { o ->
+        println("[ingress-push] ${o.feed.sourceId}: ${o.feed.status} | ${o.feed.fetchedCount} fetched | ${o.feed.errors.joinToString("; ")}")
+    }
+
+    if (articles.isEmpty()) {
+        println("[ingress-push] No new Reddit articles. Done.")
+        return
+    }
+
+    // Also save locally for dedup on next run
+    DuckDbConnectionFactory.persistent(dbPath).use { connection ->
+        DuckDbArticleRepository(connection).saveAll(articles)
+    }
+
+    // Push to remote
+    val json = serializeArticles(articles)
+    val url = "${targetUrl.trimEnd('/')}/api/ingest"
+    println("[ingress-push] Pushing ${articles.size} article(s) to $url")
+
+    val client = HttpClient.newHttpClient()
+    val request = HttpRequest.newBuilder()
+        .uri(URI.create(url))
+        .header("Authorization", "Bearer $apiKey")
+        .header("Content-Type", "application/json")
+        .POST(HttpRequest.BodyPublishers.ofString(json))
+        .build()
+    val response = client.send(request, HttpResponse.BodyHandlers.ofString())
+
+    if (response.statusCode() in 200..299) {
+        println("[ingress-push] Success: ${response.body()}")
+    } else {
+        System.err.println("[ingress-push] Failed (HTTP ${response.statusCode()}): ${response.body()}")
+        exitProcess(1)
+    }
 }
 
 internal fun createLLMClient(provider: String, apiKey: String?, model: String): LLMClient =
