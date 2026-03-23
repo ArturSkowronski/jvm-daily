@@ -163,6 +163,29 @@ $body
     }
 
     @Test
+    fun `announce list with minReplies 0 and stale messages does not crash`() = runTest {
+        // Reproduces NPE: announce has minReplies=0, so threads with 0 messages
+        // in the window are NOT skipped (0 < 0 is false). Then maxOrNull()!! on
+        // empty windowMsgs caused NPE. Fix: fallback to today's date.
+        val mbox = buildMbox(
+            mboxMessage("JDK 25 GA Released", "Iris <iris@oracle.com>",
+                "25 Feb 2026 15:00:00 +0000", "Announcing JDK 25 GA"),
+        )
+
+        val source = OpenJdkMailSource(
+            configs = listOf(OpenJdkMailConfig("announce", minReplies = 0, sinceDays = 2)),
+            clock = clock,
+            mboxFetcher = { _, _ -> mbox },
+        )
+
+        // Should not throw NPE — all messages outside window, but minReplies=0
+        val outcomes = source.fetchOutcomes()
+        assertEquals(FeedIngestStatus.SUCCESS, outcomes[0].feed.status)
+        assertEquals(1, outcomes[0].articles.size)
+        assertTrue(outcomes[0].articles[0].title.contains("JDK 25 GA"))
+    }
+
+    @Test
     fun `empty mbox results in success with 0 articles and error note`() = runTest {
         val source = OpenJdkMailSource(
             configs = listOf(OpenJdkMailConfig("loom-dev", minReplies = 2, sinceDays = 2)),
