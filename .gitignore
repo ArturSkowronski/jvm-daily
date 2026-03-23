@@ -27,3 +27,6 @@ logs/
 
 # Generated outputs
 output/
+
+# Demo recordings
+demo-output/
