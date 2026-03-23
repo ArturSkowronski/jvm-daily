@@ -63,7 +63,7 @@ jobs:
         run: node --test viewer/rots.test.js
 
       - name: Install Playwright
-        run: npm install -D playwright-narrator @playwright/test && npx playwright install --with-deps chromium
+        run: npm install -D @playwright/test && npx playwright install --with-deps chromium
 
       - name: Run Playwright integration tests
         run: npx playwright test --config viewer/playwright.config.ts
