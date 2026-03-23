@@ -17,18 +17,14 @@ RUN ./gradlew :app:installDist --no-daemon -q
 FROM eclipse-temurin:21-jre-jammy
 LABEL org.opencontainers.image.source="https://github.com/askowronski/jvm-daily"
 
-RUN apt-get update \
- && apt-get install -y --no-install-recommends python3 \
- && rm -rf /var/lib/apt/lists/*
-
 WORKDIR /app
 
 # Gradle distribution (bin/ + lib/)
 COPY --from=builder /build/app/build/install/app/ /app/
 
-# Config and viewer
-COPY config/         /app/config/
-COPY viewer/serve.py /app/viewer/serve.py
+# Config and viewer SPA
+COPY config/           /app/config/
+COPY viewer/index.html /app/viewer/index.html
 
 COPY entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh /app/bin/app
