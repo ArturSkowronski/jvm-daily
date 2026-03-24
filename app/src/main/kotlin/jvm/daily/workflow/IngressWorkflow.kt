@@ -42,10 +42,20 @@ class IngressWorkflow(
 
                 for (article in outcome.articles) {
                     // Split roundup articles into individual sub-articles
+                    val wasSplit: Boolean
                     val expanded = if (roundupSplitter != null && RoundupSplitter.looksLikeRoundup(article)) {
-                        roundupSplitter.splitIfRoundup(article)
+                        val result = roundupSplitter.splitIfRoundup(article)
+                        wasSplit = result.size > 1
+                        result
                     } else {
+                        wasSplit = false
                         listOf(article)
+                    }
+
+                    // If roundup was split, save original ID as marker to prevent re-splitting on next run
+                    if (wasSplit && !articleRepository.existsById(article.id)) {
+                        articleRepository.save(article.copy(content = "[roundup-split: ${expanded.size} sub-articles]"))
+                        skippedCount++ // count original as "skipped" (not displayed)
                     }
 
                     for (sub in expanded) {
