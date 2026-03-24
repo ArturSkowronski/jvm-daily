@@ -44,16 +44,63 @@
 		loadDate(date);
 	}
 
-	// Split clusters into topics, releases, standalone tweets
-	const topicClusters = $derived(
-		(digest?.clusters || []).filter((c) => c.type !== 'release' && !(c.articles.length === 1 && isSocialPost(c.articles[0])))
+	// Helper to render a cluster (topic or release)
+	function clusterKey(c: DigestCluster): string { return c.title; }
+	function isRelease(c: DigestCluster): boolean { return c.type === 'release'; }
+	function isStandaloneTweet(c: DigestCluster): boolean {
+		return c.articles.length === 1 && isSocialPost(c.articles[0]);
+	}
+
+	// ── Reactive cluster classification based on bookmark/dismiss state ──
+	// All non-tweet, non-release clusters
+	const allTopicClusters = $derived(
+		(digest?.clusters || []).filter((c) => !isRelease(c) && !isStandaloneTweet(c))
 	);
-	const releaseClusters = $derived(
-		(digest?.clusters || []).filter((c) => c.type === 'release')
+	const allReleaseClusters = $derived(
+		(digest?.clusters || []).filter((c) => isRelease(c))
 	);
 	const standaloneTweets = $derived(
-		(digest?.clusters || []).filter((c) => c.articles.length === 1 && isSocialPost(c.articles[0])).map((c) => c.articles[0])
+		(digest?.clusters || []).filter((c) => isStandaloneTweet(c)).map((c) => c.articles[0])
 	);
+
+	// Bookmarked clusters (ROTS section — shown at top)
+	const rotsClusters = $derived(
+		allTopicClusters.filter((c) => isBookmarked($bookmarks, currentDate, c.title))
+	);
+	const rotsReleases = $derived(
+		allReleaseClusters.filter((c) => isBookmarked($bookmarks, currentDate, c.title))
+	);
+
+	// Normal clusters (not bookmarked, not dismissed)
+	const normalClusters = $derived(
+		allTopicClusters.filter((c) =>
+			!isBookmarked($bookmarks, currentDate, c.title) &&
+			!isDismissed($dismissed, currentDate, c.title)
+		)
+	);
+	const normalReleases = $derived(
+		allReleaseClusters.filter((c) =>
+			!isBookmarked($bookmarks, currentDate, c.title) &&
+			!isDismissed($dismissed, currentDate, c.title)
+		)
+	);
+
+	// Dismissed clusters (Archive section — shown at bottom, dimmed)
+	const archivedClusters = $derived(
+		allTopicClusters.filter((c) =>
+			isDismissed($dismissed, currentDate, c.title) &&
+			!isBookmarked($bookmarks, currentDate, c.title)
+		)
+	);
+	const archivedReleases = $derived(
+		allReleaseClusters.filter((c) =>
+			isDismissed($dismissed, currentDate, c.title) &&
+			!isBookmarked($bookmarks, currentDate, c.title)
+		)
+	);
+
+	const hasRots = $derived(rotsClusters.length > 0 || rotsReleases.length > 0);
+	const hasArchive = $derived(archivedClusters.length > 0 || archivedReleases.length > 0);
 </script>
 
 {#if loading}
@@ -72,24 +119,26 @@
 				</div>
 			</div>
 
-			{#each topicClusters as cluster (cluster.id)}
+			<!-- Normal topic clusters -->
+			{#each normalClusters as cluster (cluster.id)}
 				<Cluster
 					{cluster}
-					bookmarked={isBookmarked($bookmarks, currentDate, cluster.title)}
-					dismissedState={isDismissed($dismissed, currentDate, cluster.title)}
+					bookmarked={false}
+					dismissedState={false}
 					onBookmark={() => toggleBookmark(currentDate, cluster.title)}
 					onDismiss={() => toggleDismiss(currentDate, cluster.title)}
 				/>
 			{/each}
 
-			{#if releaseClusters.length > 0}
+			<!-- Normal releases -->
+			{#if normalReleases.length > 0}
 				<div class="releases-section">
 					<div class="section-label">Releases</div>
-					{#each releaseClusters as cluster (cluster.id)}
+					{#each normalReleases as cluster (cluster.id)}
 						<ReleaseCard
 							{cluster}
-							bookmarked={isBookmarked($bookmarks, currentDate, cluster.title)}
-							dismissedState={isDismissed($dismissed, currentDate, cluster.title)}
+							bookmarked={false}
+							dismissedState={false}
 							onBookmark={() => toggleBookmark(currentDate, cluster.title)}
 							onDismiss={() => toggleDismiss(currentDate, cluster.title)}
 						/>
@@ -97,6 +146,32 @@
 				</div>
 			{/if}
 
+			<!-- ★ ROTS section (bookmarked clusters, between normal and archive) -->
+			{#if hasRots}
+				<div class="rots-inline-section">
+					<div class="section-label">★ Rest of the Story</div>
+					{#each rotsClusters as cluster (cluster.id)}
+						<Cluster
+							{cluster}
+							bookmarked={true}
+							dismissedState={false}
+							onBookmark={() => toggleBookmark(currentDate, cluster.title)}
+							onDismiss={() => toggleDismiss(currentDate, cluster.title)}
+						/>
+					{/each}
+					{#each rotsReleases as cluster (cluster.id)}
+						<ReleaseCard
+							{cluster}
+							bookmarked={true}
+							dismissedState={false}
+							onBookmark={() => toggleBookmark(currentDate, cluster.title)}
+							onDismiss={() => toggleDismiss(currentDate, cluster.title)}
+						/>
+					{/each}
+				</div>
+			{/if}
+
+			<!-- Standalone tweets -->
 			{#if standaloneTweets.length > 0}
 				<div class="tweets-section">
 					<div class="section-label">Tweets</div>
@@ -108,6 +183,31 @@
 							</div>
 							<p class="tweet-text">{tweet.title}</p>
 						</div>
+					{/each}
+				</div>
+			{/if}
+
+			<!-- Archive section (dismissed clusters, dimmed) -->
+			{#if hasArchive}
+				<div class="archive-section">
+					<div class="section-label">Archive</div>
+					{#each archivedClusters as cluster (cluster.id)}
+						<Cluster
+							{cluster}
+							bookmarked={false}
+							dismissedState={true}
+							onBookmark={() => toggleBookmark(currentDate, cluster.title)}
+							onDismiss={() => toggleDismiss(currentDate, cluster.title)}
+						/>
+					{/each}
+					{#each archivedReleases as cluster (cluster.id)}
+						<ReleaseCard
+							{cluster}
+							bookmarked={false}
+							dismissedState={true}
+							onBookmark={() => toggleBookmark(currentDate, cluster.title)}
+							onDismiss={() => toggleDismiss(currentDate, cluster.title)}
+						/>
 					{/each}
 				</div>
 			{/if}
@@ -128,6 +228,14 @@
 		font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.1em;
 		color: #999; margin-bottom: 12px; font-weight: 600;
 	}
+	.rots-inline-section {
+		margin-bottom: 24px; padding-bottom: 16px; border-bottom: 2px solid #f59e0b;
+	}
+	.rots-inline-section .section-label { color: #f59e0b; }
+	.archive-section {
+		margin-top: 32px; padding-top: 16px; border-top: 1px solid #e0e0e0;
+	}
+	.archive-section .section-label { color: #bbb; }
 	.tweet-card { background: #fff; border: 1px solid #e8e8e8; border-radius: 8px; padding: 10px 14px; margin-bottom: 8px; }
 	.tweet-header { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; }
 	.tweet-header a { font-size: 0.72rem; color: #0085ff; text-decoration: none; }
