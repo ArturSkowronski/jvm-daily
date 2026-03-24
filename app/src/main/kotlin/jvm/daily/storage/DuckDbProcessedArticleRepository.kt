@@ -56,6 +56,10 @@ class DuckDbProcessedArticleRepository(private val connection: Connection) : Pro
         ensureColumn("processed_articles", "last_attempt_at", "VARCHAR")
         ensureColumn("processed_articles", "attempt_count", "INTEGER DEFAULT 1")
         ensureColumn("processed_articles", "warnings", "VARCHAR DEFAULT '[]'")
+        ensureColumn("processed_articles", "taxonomy_area", "VARCHAR")
+        ensureColumn("processed_articles", "taxonomy_sub_area", "VARCHAR")
+        ensureColumn("processed_articles", "taxonomy_impact", "VARCHAR DEFAULT '[]'")
+        ensureColumn("processed_articles", "taxonomy_confidence", "DOUBLE")
     }
 
     override fun save(article: ProcessedArticle) {
@@ -65,8 +69,9 @@ class DuckDbProcessedArticleRepository(private val connection: Connection) : Pro
             (id, original_title, normalized_title, summary, original_content,
              source_type, source_id, url, author, published_at, ingested_at,
              processed_at, entities, topics, engagement_score, outcome_status,
-             failure_reason, last_attempt_at, attempt_count, warnings)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             failure_reason, last_attempt_at, attempt_count, warnings,
+             taxonomy_area, taxonomy_sub_area, taxonomy_impact, taxonomy_confidence)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """.trimIndent()
         ).use { stmt ->
             stmt.setString(1, article.id)
@@ -89,6 +94,10 @@ class DuckDbProcessedArticleRepository(private val connection: Connection) : Pro
             stmt.setString(18, article.lastAttemptAt?.toString())
             stmt.setInt(19, article.attemptCount)
             stmt.setString(20, Json.encodeToString(article.warnings))
+            stmt.setString(21, article.taxonomyArea)
+            stmt.setString(22, article.taxonomySubArea)
+            stmt.setString(23, Json.encodeToString(article.taxonomyImpact))
+            stmt.setDouble(24, article.taxonomyConfidence ?: 0.0)
             stmt.executeUpdate()
         }
     }
@@ -328,6 +337,10 @@ class DuckDbProcessedArticleRepository(private val connection: Connection) : Pro
         lastAttemptAt = getString("last_attempt_at")?.takeIf { it.isNotBlank() }?.let { Instant.parse(it) },
         attemptCount = getInt("attempt_count"),
         warnings = runCatching { Json.decodeFromString<List<String>>(getString("warnings")) }.getOrDefault(emptyList()),
+        taxonomyArea = getString("taxonomy_area"),
+        taxonomySubArea = getString("taxonomy_sub_area"),
+        taxonomyImpact = runCatching { Json.decodeFromString<List<String>>(getString("taxonomy_impact")) }.getOrDefault(emptyList()),
+        taxonomyConfidence = getDouble("taxonomy_confidence").takeIf { it > 0.0 },
     )
 
     override fun deleteByProcessedAtSince(since: Instant): Int =

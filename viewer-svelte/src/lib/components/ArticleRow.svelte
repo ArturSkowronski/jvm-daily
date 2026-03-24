@@ -49,6 +49,9 @@
 			<p class="article-summary">{article.summary}</p>
 			<div class="article-meta">
 				<SourceBadge sourceType={article.sourceType} />
+				{#if article.taxonomyArea}
+					<span class="taxonomy-badge">{article.taxonomyArea}{#if article.taxonomySubArea}/{article.taxonomySubArea}{/if}</span>
+				{/if}
 				{#each article.topics as topic}<TopicTag {topic} />{/each}
 			</div>
 			<SocialLinks links={article.socialLinks || []} />
@@ -67,6 +70,10 @@
 	.article-source { font-size: 0.75rem; color: #999; white-space: nowrap; }
 	.article-summary { color: #444; font-size: 0.85rem; line-height: 1.6; margin: 6px 0 8px; }
 	.article-meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+	.taxonomy-badge {
+		font-size: 0.65rem; font-weight: 600; padding: 2px 7px; border-radius: 3px;
+		background: #ede9fe; color: #7c3aed; white-space: nowrap;
+	}
 	.social-card-header { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; }
 	.social-card-icon { font-size: 0.75rem; flex-shrink: 0; }
 	.social-card-author { font-size: 0.72rem; color: #0085ff; text-decoration: none; white-space: nowrap; }

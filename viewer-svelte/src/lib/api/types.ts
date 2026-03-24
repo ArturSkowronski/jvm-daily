@@ -31,6 +31,9 @@ export interface DigestArticle {
 	sourceType: string;
 	handle?: string | null;
 	socialLinks?: SocialLink[];
+	taxonomyArea?: string | null;
+	taxonomySubArea?: string | null;
+	taxonomyImpact?: string[];
 }
 
 export interface SocialLink {
