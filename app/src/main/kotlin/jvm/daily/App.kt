@@ -209,10 +209,19 @@ internal fun runEnrichment(dbPath: String) {
     DuckDbConnectionFactory.persistent(dbPath).use { connection ->
         val rawRepo       = DuckDbArticleRepository(connection)
         val processedRepo = DuckDbProcessedArticleRepository(connection)
+        val llmClient = createLLMClient(llmProvider, llmApiKey, llmModel)
+
+        // Create taxonomy classifier if LLM is real (not mock)
+        val taxonomyClassifier = if (llmProvider != "mock") {
+            val taxonomy = jvm.daily.workflow.TaxonomyLoader.loadFromClasspath()
+            jvm.daily.workflow.TaxonomyClassifier(taxonomy, llmClient)
+        } else null
+
         runBlocking {
             EnrichmentWorkflow(
-                rawRepo, processedRepo, createLLMClient(llmProvider, llmApiKey, llmModel),
+                rawRepo, processedRepo, llmClient,
                 sinceDays = sinceDays,
+                taxonomyClassifier = taxonomyClassifier,
             ).execute()
         }
         println("Total processed articles: ${processedRepo.count()}")

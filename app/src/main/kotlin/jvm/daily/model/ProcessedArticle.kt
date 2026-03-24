@@ -29,6 +29,10 @@ data class ProcessedArticle(
     val lastAttemptAt: Instant? = null,
     val attemptCount: Int = 1,
     val warnings: List<String> = emptyList(),
+    val taxonomyArea: String? = null,
+    val taxonomySubArea: String? = null,
+    val taxonomyImpact: List<String> = emptyList(),
+    val taxonomyConfidence: Double? = null,
 )
 
 @Serializable
