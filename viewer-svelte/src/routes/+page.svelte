@@ -47,7 +47,11 @@
 
 	// Helper to render a cluster (topic or release)
 	function clusterKey(c: DigestCluster): string { return c.title; }
-	function isRelease(c: DigestCluster): boolean { return c.type === 'release'; }
+	function isRelease(c: DigestCluster): boolean {
+		// Only "release" type gets the compact release card layout
+		// "announcement" and "topic" render as full article clusters
+		return c.type === 'release';
+	}
 	function isStandaloneTweet(c: DigestCluster): boolean {
 		return c.articles.length === 1 && isSocialPost(c.articles[0]);
 	}

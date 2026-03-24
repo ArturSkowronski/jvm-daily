@@ -27,6 +27,7 @@ data class SourcesConfig(
 data class RssFeedConfig(
     val url: String,
     val sinceDays: Int = 1,
+    val splitRoundups: Boolean = false,
 )
 
 @Serializable

@@ -13,7 +13,7 @@ export interface DigestCluster {
 	title: string;
 	summary: string;
 	engagementScore: number;
-	type: 'topic' | 'release';
+	type: 'topic' | 'release' | 'announcement';
 	articles: DigestArticle[];
 	bullets?: string[];
 }
