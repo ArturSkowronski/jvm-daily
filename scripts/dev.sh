@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Dev mode: auto-restart viewer on serve.py changes, auto-rebuild+restart JVM on .kt changes.
+# Dev mode: auto-rebuild JVM on .kt changes, auto-rebuild SvelteKit on viewer changes.
 # Usage: ./scripts/dev.sh
 # Ctrl-C to stop everything.
 set -euo pipefail
@@ -22,7 +22,6 @@ if launchctl list com.local.jvm-daily &>/dev/null; then
 fi
 
 # Stop any leftover processes
-pkill -f "serve\.py"       2>/dev/null && echo "[dev] stopped existing viewer" || true
 pkill -f "jvm.daily.AppKt" 2>/dev/null && echo "[dev] stopped existing JVM" || true
 sleep 1
 
@@ -34,74 +33,46 @@ echo "  Viewer : http://localhost:$VIEWER_PORT"
 echo "  Press Ctrl-C to stop"
 echo ""
 
-# Build once upfront to make sure binary is current
+# Build SvelteKit viewer
+echo "[dev] Building SvelteKit viewer..."
+(cd "$ROOT_DIR/viewer-svelte" && npm run build --silent)
+echo "[dev] Viewer build OK"
+
+# Build JVM
 "$ROOT_DIR/gradlew" -p "$ROOT_DIR" installDist -q
-echo "[dev] Initial build OK"
+echo "[dev] JVM build OK"
 
-exec python3 - "$ROOT_DIR" "$VIEWER_PORT" <<'EOF'
-import os, sys, time, subprocess, glob, signal
+# Start JVM daemon (serves REST API + SvelteKit static files)
+"$ROOT_DIR/app/build/install/app/bin/app" &
+JVM_PID=$!
+echo "[dev] JVM started (PID $JVM_PID)"
 
-root, viewer_port = sys.argv[1], sys.argv[2]
+cleanup() {
+    echo -e "\n[dev] shutting down"
+    kill $JVM_PID 2>/dev/null
+    wait $JVM_PID 2>/dev/null
+}
+trap 'cleanup; echo "[dev] restoring launchd service..."; launchctl load "$PLIST" 2>/dev/null; echo "[dev] done"' EXIT
 
-VIEWER_SCRIPT = os.path.join(root, 'viewer', 'serve.py')
-APP_BIN       = os.path.join(root, 'app', 'build', 'install', 'app', 'bin', 'app')
-GRADLEW       = os.path.join(root, 'gradlew')
-KT_PATTERN    = os.path.join(root, 'app', 'src', 'main', 'kotlin', '**', '*.kt')
+# Watch for changes
+while true; do
+    sleep 2
 
-def mtime_map(paths):
-    return {p: os.stat(p).st_mtime for p in paths if os.path.exists(p)}
+    # Check Kotlin sources
+    NEWEST_KT=$(find "$ROOT_DIR/app/src" -name '*.kt' -newer "$ROOT_DIR/app/build/install/app/lib/app.jar" 2>/dev/null | head -1)
+    if [ -n "$NEWEST_KT" ]; then
+        echo "[dev] Kotlin changed — rebuilding..."
+        kill $JVM_PID 2>/dev/null; wait $JVM_PID 2>/dev/null
+        "$ROOT_DIR/gradlew" -p "$ROOT_DIR" installDist -q && echo "[dev] Build OK" || echo "[dev] Build FAILED"
+        "$ROOT_DIR/app/build/install/app/bin/app" &
+        JVM_PID=$!
+        echo "[dev] JVM restarted (PID $JVM_PID)"
+    fi
 
-def kt_files():
-    return glob.glob(KT_PATTERN, recursive=True)
-
-def start_viewer():
-    p = subprocess.Popen(['python3', VIEWER_SCRIPT, viewer_port])
-    print(f'[dev] viewer started (PID {p.pid})')
-    return p
-
-def start_jvm():
-    p = subprocess.Popen([APP_BIN], env=os.environ)
-    print(f'[dev] JVM started (PID {p.pid})')
-    return p
-
-viewer = start_viewer()
-jvm    = start_jvm()
-
-viewer_mtimes = mtime_map([VIEWER_SCRIPT])
-kt_mtimes     = mtime_map(kt_files())
-
-def shutdown(sig, frame):
-    print('\n[dev] shutting down')
-    viewer.terminate()
-    jvm.terminate()
-    sys.exit(0)
-
-signal.signal(signal.SIGINT,  shutdown)
-signal.signal(signal.SIGTERM, shutdown)
-
-while True:
-    time.sleep(1)
-
-    # ── Viewer ───────────────────────────────────────────────────────────────
-    new = mtime_map([VIEWER_SCRIPT])
-    if new != viewer_mtimes:
-        viewer_mtimes = new
-        print('[dev] serve.py changed — restarting viewer')
-        viewer.terminate(); viewer.wait()
-        viewer = start_viewer()
-
-    # ── JVM sources ──────────────────────────────────────────────────────────
-    new = mtime_map(kt_files())
-    if new != kt_mtimes:
-        # Debounce: wait for burst of saves to settle
-        time.sleep(2)
-        kt_mtimes = mtime_map(kt_files())
-        print('[dev] Kotlin sources changed — rebuilding...')
-        jvm.terminate(); jvm.wait()
-        result = subprocess.run([GRADLEW, 'installDist', '-q'], cwd=root)
-        if result.returncode == 0:
-            print('[dev] Build OK — restarting JVM')
-        else:
-            print('[dev] Build FAILED — fix errors and save again to retry')
-        jvm = start_jvm()
-EOF
+    # Check SvelteKit sources
+    NEWEST_SVELTE=$(find "$ROOT_DIR/viewer-svelte/src" \( -name '*.svelte' -o -name '*.ts' \) -newer "$ROOT_DIR/viewer-svelte/build/index.html" 2>/dev/null | head -1)
+    if [ -n "$NEWEST_SVELTE" ]; then
+        echo "[dev] Svelte changed — rebuilding viewer..."
+        (cd "$ROOT_DIR/viewer-svelte" && npm run build --silent) && echo "[dev] Viewer rebuild OK" || echo "[dev] Viewer build FAILED"
+    fi
+done
