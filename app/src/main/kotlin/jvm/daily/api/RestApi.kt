@@ -134,14 +134,40 @@ fun startRestApi(
                 }
             }
 
-            // ── Serve viewer SPA ────────────────────────────────────────────
-            get("/") {
-                val indexFile = viewerDir?.resolve("index.html")
-                    ?: findViewerIndex()
-                if (indexFile != null && indexFile.exists()) {
+            // ── Serve viewer SPA (static files from SvelteKit build) ────────
+            get("/{path...}") {
+                val requestPath = call.request.uri.removePrefix("/").split("?")[0]
+                val baseDir = viewerDir ?: findViewerDir()
+
+                if (baseDir == null) {
+                    call.respondText("JVM Daily API — viewer not found", ContentType.Text.Plain)
+                    return@get
+                }
+
+                // Try to serve the exact file
+                val file = baseDir.resolve(requestPath)
+                if (requestPath.isNotBlank() && file.exists() && !file.toFile().isDirectory) {
+                    val contentType = when {
+                        requestPath.endsWith(".js") -> ContentType.Application.JavaScript
+                        requestPath.endsWith(".css") -> ContentType.Text.CSS
+                        requestPath.endsWith(".html") -> ContentType.Text.Html
+                        requestPath.endsWith(".json") -> ContentType.Application.Json
+                        requestPath.endsWith(".svg") -> ContentType("image", "svg+xml")
+                        requestPath.endsWith(".png") -> ContentType.Image.PNG
+                        requestPath.endsWith(".ico") -> ContentType("image", "x-icon")
+                        requestPath.endsWith(".woff2") -> ContentType("font", "woff2")
+                        else -> ContentType.Application.OctetStream
+                    }
+                    call.respondBytes(file.readBytes(), contentType)
+                    return@get
+                }
+
+                // SPA fallback: serve index.html for all non-file routes
+                val indexFile = baseDir.resolve("index.html")
+                if (indexFile.exists()) {
                     call.respondText(indexFile.readText(), ContentType.Text.Html)
                 } else {
-                    call.respondText("JVM Daily API — viewer not found", ContentType.Text.Plain)
+                    call.respondText("Not found", ContentType.Text.Plain, HttpStatusCode.NotFound)
                 }
             }
         }
@@ -151,12 +177,13 @@ fun startRestApi(
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
-private fun findViewerIndex(): Path? {
+private fun findViewerDir(): Path? {
     val candidates = listOf(
-        Path.of("viewer/index.html"),              // repo root (local dev)
-        Path.of("/app/viewer/index.html"),          // Docker container
+        Path.of("viewer-svelte/build"),             // SvelteKit build (local dev)
+        Path.of("viewer/build"),                    // alternative local
+        Path.of("/app/viewer"),                     // Docker container
     )
-    return candidates.firstOrNull { it.exists() }
+    return candidates.firstOrNull { it.exists() && it.resolve("index.html").exists() }
 }
 
 private fun jobRunrGet(url: String): String? {
