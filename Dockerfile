@@ -1,5 +1,5 @@
-# ── Build stage ───────────────────────────────────────────────────────────────
-FROM eclipse-temurin:21-jdk-jammy AS builder
+# ── JVM Build stage ──────────────────────────────────────────────────────────
+FROM eclipse-temurin:21-jdk-jammy AS jvm-builder
 WORKDIR /build
 
 # Cache Gradle wrapper and dependencies before copying source
@@ -13,6 +13,14 @@ RUN ./gradlew :app:dependencies --no-daemon -q 2>&1 | tail -1
 COPY app/src app/src
 RUN ./gradlew :app:installDist --no-daemon -q
 
+# ── SvelteKit Build stage ───────────────────────────────────────────────────
+FROM node:22-slim AS svelte-builder
+WORKDIR /build
+COPY viewer-svelte/package.json viewer-svelte/package-lock.json ./
+RUN npm ci
+COPY viewer-svelte/ ./
+RUN npm run build
+
 # ── Runtime stage ─────────────────────────────────────────────────────────────
 FROM eclipse-temurin:21-jre-jammy
 LABEL org.opencontainers.image.source="https://github.com/askowronski/jvm-daily"
@@ -20,11 +28,13 @@ LABEL org.opencontainers.image.source="https://github.com/askowronski/jvm-daily"
 WORKDIR /app
 
 # Gradle distribution (bin/ + lib/)
-COPY --from=builder /build/app/build/install/app/ /app/
+COPY --from=jvm-builder /build/app/build/install/app/ /app/
 
-# Config and viewer SPA
-COPY config/           /app/config/
-COPY viewer/index.html /app/viewer/index.html
+# Config
+COPY config/ /app/config/
+
+# SvelteKit build output (static files served by Ktor)
+COPY --from=svelte-builder /build/build/ /app/viewer/
 
 COPY entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh /app/bin/app
