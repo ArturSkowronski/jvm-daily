@@ -164,6 +164,10 @@ class OutgressWorkflow(
             publishedAt = publishedAt, ingestedAt = ingestedAt, sourceType = sourceType,
             handle = handle,
             socialLinks = listOfNotNull(selfLink) + companionLinks,
+            taxonomyArea = taxonomyArea,
+            taxonomySubArea = taxonomySubArea,
+            taxonomyImpact = taxonomyImpact,
+            taxonomyConfidence = taxonomyConfidence,
         )
     }
 

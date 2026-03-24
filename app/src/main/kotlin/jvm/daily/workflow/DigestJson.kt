@@ -47,6 +47,10 @@ data class DigestArticle(
     val sourceType: String,
     val handle: String? = null,           // bluesky: account handle, reddit: subreddit
     val socialLinks: List<DigestSocialLink> = emptyList(),
+    val taxonomyArea: String? = null,
+    val taxonomySubArea: String? = null,
+    val taxonomyImpact: List<String> = emptyList(),
+    val taxonomyConfidence: Double? = null,
 )
 
 @Serializable

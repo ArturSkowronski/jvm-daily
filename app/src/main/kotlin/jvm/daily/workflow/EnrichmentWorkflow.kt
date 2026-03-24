@@ -30,6 +30,7 @@ class EnrichmentWorkflow(
     private val clock: Clock = Clock.System,
     private val retryBackoffMs: Long = RETRY_BACKOFF_MS,
     private val sinceDays: Int = 1,
+    private val taxonomyClassifier: TaxonomyClassifier? = null,
 ) : Workflow {
 
     override val name: String = "enrichment"
@@ -126,6 +127,18 @@ class EnrichmentWorkflow(
                         println("[enrichment] ${article.id}: ${warnings.joinToString(" | ")}")
                     }
 
+                    val classification = try {
+                        taxonomyClassifier?.classify(
+                            title = article.title,
+                            summary = result.summary,
+                            entities = result.entities,
+                            sourceType = article.sourceType,
+                        )
+                    } catch (e: Exception) {
+                        println("[enrichment] ${article.id}: taxonomy classification failed: ${e.message}")
+                        null
+                    }
+
                     return ProcessedArticle(
                         id = article.id,
                         originalTitle = article.title,
@@ -146,6 +159,10 @@ class EnrichmentWorkflow(
                         outcomeStatus = EnrichmentOutcomeStatus.SUCCESS,
                         attemptCount = attempt,
                         warnings = warnings,
+                        taxonomyArea = classification?.area,
+                        taxonomySubArea = classification?.subArea,
+                        taxonomyImpact = classification?.impact ?: emptyList(),
+                        taxonomyConfidence = classification?.confidence,
                     )
                 }
                 is EnrichmentContract.ParseResult.Failure -> {
