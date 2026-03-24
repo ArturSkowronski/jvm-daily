@@ -79,10 +79,11 @@ class ClusteringWorkflow(
         val clusters = groups
             .map { group ->
                 // Force release type for clusters with only GitHub trending/release sources
-                val forceRelease = group.isRelease || group.articles.all {
+                val effectiveType = if (group.type == "topic" && group.articles.all {
                     it.sourceType in setOf("github_trending", "github_release")
-                }
-                Pair(createCluster(group.articles, group.name, forceRelease), group.isMajor)
+                }) "release" else group.type
+
+                Pair(createCluster(group.articles, group.name, clusterType = effectiveType), group.isMajor)
             }
         // Sort: MAJOR first → topic clusters by engagement → release clusters by engagement last
         val major    = clusters.filter { (_, m) -> m }.sortedByDescending { (c, _) -> c.totalEngagement }.map { it.first }
@@ -130,14 +131,20 @@ Group these ${articles.size} articles into thematic clusters following these rul
   - Any other platform-level milestone that overshadows all other news
 - Omit the MAJOR line (or write `MAJOR: NO`) for everything else
 
-**Release type rule**:
-- Add `RELEASE: YES` for any cluster primarily about a software release (any patch, minor, or major)
-- Omit for non-release clusters (discussions, tutorials, blog series, performance analysis)
+**Cluster type rule** (pick exactly one per cluster):
+- `TYPE: release` — routine version release (patch, minor maintenance). Shown as compact card with bullets.
+  Examples: "Hibernate 7.3.0", "Spring Boot 4.0.4", "Ktor 3.1.2", "Gradle Actions v6"
+- `TYPE: announcement` — significant new project, product launch, or major milestone worth reading in full.
+  Examples: "JetBrains Central Platform Launch", "JDK 26 GA Release", "GraalVM Goes Fully Open Source"
+- `TYPE: topic` — discussion, tutorial, analysis, opinion, or anything else. This is the default.
+  Examples: "Virtual Threads in Production", "Quarkus Testing Strategies", "Kotlin Multiplatform Debate"
+
+Rule of thumb: if it has a version number and is routine → `release`. If it's a big deal people should read about → `announcement`. If neither → `topic`.
 
 Output ONLY the groups in this exact format (no extra text):
 GROUP: [cluster name]
 MAJOR: YES   ← only when applicable
-RELEASE: YES ← only when applicable
+TYPE: release | announcement | topic
 INDICES: [comma-separated indices]
         """.trimIndent()
 
@@ -147,7 +154,7 @@ INDICES: [comma-separated indices]
         if (groups.isEmpty()) {
             println("[clustering] Warning: semantic grouping returned no groups, falling back to single cluster")
             println("[clustering] LLM response (first 500 chars): ${response.take(500)}")
-            return listOf(GroupResult("", articles, false, false))
+            return listOf(GroupResult("", articles, false, "topic"))
         }
         return groups
     }
@@ -161,7 +168,7 @@ INDICES: [comma-separated indices]
 
         var pendingName = ""
         var pendingMajor = false
-        var pendingRelease = false
+        var pendingType = "topic"
         var pendingIndices: List<Int> = emptyList()
 
         for (rawLine in response.lines()) {
@@ -175,20 +182,31 @@ INDICES: [comma-separated indices]
                     if (pendingIndices.isNotEmpty()) {
                         val group = pendingIndices.mapNotNull { articles.getOrNull(it) }
                         if (group.isNotEmpty()) {
-                            groups.add(GroupResult(pendingName, group, pendingMajor, pendingRelease))
+                            groups.add(GroupResult(pendingName, group, pendingMajor, pendingType))
                             assignedIndices.addAll(pendingIndices)
                         }
                     }
                     pendingName = line.substringAfter("GROUP:").trim()
                     pendingMajor = false
-                    pendingRelease = false
+                    pendingType = "topic"
                     pendingIndices = emptyList()
                 }
                 line.startsWith("MAJOR:") -> {
                     pendingMajor = line.substringAfter("MAJOR:").trim().uppercase().startsWith("YES")
                 }
+                line.startsWith("TYPE:") -> {
+                    val raw = line.substringAfter("TYPE:").trim().lowercase()
+                    pendingType = when {
+                        raw.startsWith("release") -> "release"
+                        raw.startsWith("announcement") -> "announcement"
+                        else -> "topic"
+                    }
+                }
+                // Backward compat: old RELEASE: YES format
                 line.startsWith("RELEASE:") -> {
-                    pendingRelease = line.substringAfter("RELEASE:").trim().uppercase().startsWith("YES")
+                    if (line.substringAfter("RELEASE:").trim().uppercase().startsWith("YES")) {
+                        pendingType = "release"
+                    }
                 }
                 line.startsWith("INDICES:") -> {
                     pendingIndices = line.substringAfter("INDICES:")
@@ -201,14 +219,14 @@ INDICES: [comma-separated indices]
         if (pendingIndices.isNotEmpty()) {
             val group = pendingIndices.mapNotNull { articles.getOrNull(it) }
             if (group.isNotEmpty()) {
-                groups.add(GroupResult(pendingName, group, pendingMajor, pendingRelease))
+                groups.add(GroupResult(pendingName, group, pendingMajor, pendingType))
                 assignedIndices.addAll(pendingIndices)
             }
         }
 
         // Any article the LLM missed goes into a catch-all group
         val unassigned = articles.indices.filter { it !in assignedIndices }.map { articles[it] }
-        if (unassigned.isNotEmpty()) groups.add(GroupResult("", unassigned, false, false))
+        if (unassigned.isNotEmpty()) groups.add(GroupResult("", unassigned, false, "topic"))
 
         return groups.filter { it.articles.isNotEmpty() }
     }
@@ -216,7 +234,7 @@ INDICES: [comma-separated indices]
     private suspend fun createCluster(
         articles: List<ProcessedArticle>,
         clusterName: String = "",
-        isRelease: Boolean = false,
+        clusterType: String = "topic",
     ): ArticleCluster {
         val articleSummaries = articles.take(10).joinToString("\n\n") { article ->
             """
@@ -227,7 +245,7 @@ INDICES: [comma-separated indices]
             """.trimIndent()
         }
 
-        val prompt = if (isRelease) """
+        val prompt = if (clusterType == "release") """
 You are writing a concise release summary for a JVM ecosystem digest.
 
 Release: $clusterName
@@ -284,7 +302,7 @@ SYNTHESIS: [your synthesis]
             sources = articles.map { it.sourceType }.toSet().toList(),
             totalEngagement = articles.sumOf { it.engagementScore },
             createdAt = clock.now(),
-            type = if (isRelease) "release" else "topic",
+            type = clusterType,
             bullets = synthesis.bullets,
         )
     }
@@ -317,7 +335,7 @@ SYNTHESIS: [your synthesis]
         val name: String,
         val articles: List<ProcessedArticle>,
         val isMajor: Boolean,
-        val isRelease: Boolean,
+        val type: String, // "topic" | "release" | "announcement"
     )
 
     /**
