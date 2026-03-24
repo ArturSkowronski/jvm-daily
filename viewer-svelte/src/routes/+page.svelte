@@ -220,7 +220,7 @@
 
 <style>
 	.loading, .empty { padding: 48px; text-align: center; color: #999; width: 100%; }
-	.digest-content { flex: 1; overflow-y: auto; padding: 32px; max-width: 900px; }
+	.digest-content { flex: 1; overflow-y: auto; padding: 32px; max-width: 900px; margin: 0 auto; }
 	.digest-header { margin-bottom: 24px; }
 	.digest-date { font-family: 'Newsreader', serif; font-size: 1.5rem; font-weight: 600; }
 	.digest-stats { display: flex; gap: 16px; font-size: 0.78rem; color: #888; margin-top: 4px; }
