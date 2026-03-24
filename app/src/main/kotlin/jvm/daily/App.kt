@@ -319,14 +319,21 @@ internal fun runReprocess(dbPath: String, args: List<String>) {
         val rawRepo       = DuckDbArticleRepository(connection)
         val processedRepo = DuckDbProcessedArticleRepository(connection)
         val clusterRepo   = DuckDbClusterRepository(connection)
+        val llmClient = createLLMClient(llmProvider, llmApiKey, llmModel)
+
+        val taxonomyClassifier = if (llmProvider != "mock") {
+            val taxonomy = jvm.daily.workflow.TaxonomyLoader.loadFromClasspath()
+            jvm.daily.workflow.TaxonomyClassifier(taxonomy, llmClient)
+        } else null
 
         val deleted = processedRepo.deleteByProcessedAtSince(since)
         println("Cleared $deleted processed article(s) — re-enriching...")
 
         runBlocking {
             EnrichmentWorkflow(
-                rawRepo, processedRepo, createLLMClient(llmProvider, llmApiKey, llmModel),
+                rawRepo, processedRepo, llmClient,
                 sinceDays = 1,
+                taxonomyClassifier = taxonomyClassifier,
             ).execute()
         }
         println("Re-enrichment done. Running clustering...")
