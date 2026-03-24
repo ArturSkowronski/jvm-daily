@@ -1,5 +1,6 @@
 package jvm.daily.workflow
 
+import jvm.daily.config.DomainProfile
 import jvm.daily.model.EnrichmentOutcomeStatus
 import jvm.daily.model.ProcessedArticle
 import jvm.daily.storage.ClusterRepository
@@ -27,7 +28,10 @@ class OutgressWorkflow(
     private val outgressDays: Int = 1,
     private val clock: Clock = Clock.System,
     private val clusterRepository: ClusterRepository? = null,
+    private val domainProfile: DomainProfile? = null,
 ) : Workflow {
+
+    private val domain: DomainProfile get() = domainProfile ?: DomainProfile.default()
 
     override val name: String = "outgress"
 
@@ -49,10 +53,10 @@ class OutgressWorkflow(
         for ((date, articles) in byDate.entries.sortedByDescending { it.key }) {
             val sorted = articles.sortedByDescending { it.engagementScore }
             val dateStr = date.toString()
-            val outputFile = outputDir.resolve("jvm-daily-$dateStr.md")
+            val outputFile = outputDir.resolve("${domain.slug}-$dateStr.md")
 
             val content = buildString {
-                appendLine("# JVM Daily — $dateStr")
+                appendLine("# ${domain.name} — $dateStr")
                 appendLine("Generated: $now | Articles: ${sorted.size}")
                 appendLine()
                 for (article in sorted) {
