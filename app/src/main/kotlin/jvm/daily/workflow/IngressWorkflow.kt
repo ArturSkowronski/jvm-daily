@@ -4,6 +4,7 @@ import jvm.daily.model.FeedIngestResult
 import jvm.daily.model.FeedIngestStatus
 import jvm.daily.model.FeedRunSnapshot
 import jvm.daily.model.IngestRunStatus
+import jvm.daily.source.RoundupSplitter
 import jvm.daily.source.SourceRegistry
 import jvm.daily.storage.ArticleRepository
 import jvm.daily.storage.ProcessedArticleRepository
@@ -15,6 +16,7 @@ class IngressWorkflow(
     private val articleRepository: ArticleRepository,
     private val clock: Clock = Clock.System,
     private val processedArticleRepository: ProcessedArticleRepository? = null,
+    private val roundupSplitter: RoundupSplitter? = null,
 ) : Workflow {
 
     override val name: String = "ingress"
@@ -39,18 +41,27 @@ class IngressWorkflow(
                 var skippedCount = 0
 
                 for (article in outcome.articles) {
-                    // Dedup quality gate: cardinality must remain stable for repeated canonical IDs.
-                    if (articleRepository.existsById(article.id)) {
-                        // For Bluesky: if a real external URL exists, sync title+url to both raw and processed records
-                        if (article.sourceType == "bluesky" && article.url?.startsWith("https://bsky.app") == false) {
-                            articleRepository.save(article)
-                            processedArticleRepository?.updateUrl(article.id, article.url!!)
-                            processedArticleRepository?.updateTitle(article.id, article.title, article.title.lowercase())
-                        }
-                        skippedCount++
+                    // Split roundup articles into individual sub-articles
+                    val expanded = if (roundupSplitter != null && RoundupSplitter.looksLikeRoundup(article)) {
+                        roundupSplitter.splitIfRoundup(article)
                     } else {
-                        articleRepository.save(article)
-                        newCount++
+                        listOf(article)
+                    }
+
+                    for (sub in expanded) {
+                        // Dedup quality gate: cardinality must remain stable for repeated canonical IDs.
+                        if (articleRepository.existsById(sub.id)) {
+                            // For Bluesky: if a real external URL exists, sync title+url to both raw and processed records
+                            if (sub.sourceType == "bluesky" && sub.url?.startsWith("https://bsky.app") == false) {
+                                articleRepository.save(sub)
+                                processedArticleRepository?.updateUrl(sub.id, sub.url!!)
+                                processedArticleRepository?.updateTitle(sub.id, sub.title, sub.title.lowercase())
+                            }
+                            skippedCount++
+                        } else {
+                            articleRepository.save(sub)
+                            newCount++
+                        }
                     }
                 }
 

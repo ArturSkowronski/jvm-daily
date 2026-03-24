@@ -4,6 +4,7 @@ rss:
   - url: "https://blog.jetbrains.com/kotlin/feed/"
   - url: "https://feeds.feedblitz.com/baeldung"
   - url: "https://feed.infoq.com/java"
+    splitRoundups: true
   - url: "https://quarkus.io/feed.xml"
   - url: "https://micronaut.io/feed/"
   - url: "https://foojay.io/feed/"

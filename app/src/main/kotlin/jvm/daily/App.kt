@@ -176,7 +176,18 @@ internal fun runIngress(dbPath: String) {
             }
         }
         val processedRepo = DuckDbProcessedArticleRepository(connection)
-        val workflow = IngressWorkflow(sourceRegistry, repository, processedArticleRepository = processedRepo)
+
+        // Set up roundup splitter if any RSS feed has splitRoundups enabled
+        val splitter = if (config.rss.any { it.splitRoundups }) {
+            val llmProvider = System.getenv("LLM_PROVIDER") ?: "mock"
+            val llmApiKey = System.getenv("LLM_API_KEY")
+            val llmModel = System.getenv("LLM_MODEL") ?: "gpt-4"
+            if (llmProvider != "mock") {
+                jvm.daily.source.RoundupSplitter(createLLMClient(llmProvider, llmApiKey, llmModel))
+            } else null
+        } else null
+
+        val workflow = IngressWorkflow(sourceRegistry, repository, processedArticleRepository = processedRepo, roundupSplitter = splitter)
         runBlocking { workflow.execute() }
         println("Ingest status: ${workflow.lastRunStatus}")
         println("Total articles in DB: ${repository.count()}")
