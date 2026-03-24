@@ -8,7 +8,7 @@ import { join, resolve } from 'path';
 
 const PORT = 18889;
 const BUILD_DIR = resolve(import.meta.dirname, '..', 'build');
-const FIXTURE_DIR = resolve(import.meta.dirname, '..', '..', 'viewer', 'test-fixtures');
+const FIXTURE_DIR = resolve(import.meta.dirname, 'fixtures');
 
 function contentType(path) {
 	if (path.endsWith('.js')) return 'application/javascript';

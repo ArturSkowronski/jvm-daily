@@ -59,19 +59,13 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Run ROTS unit tests
-        run: node --test viewer/rots.test.js
-
       - name: Install Playwright
         run: npm install -D @playwright/test && npx playwright install --with-deps chromium
-
-      - name: Run legacy viewer Playwright tests
-        run: npx playwright test --config viewer/playwright.config.ts
 
       - name: Build SvelteKit viewer
         run: cd viewer-svelte && npm ci && npm run build
 
-      - name: Run SvelteKit viewer Playwright tests
+      - name: Run Playwright tests
         run: npx playwright test --config viewer-svelte/tests/playwright.config.ts
 
       - name: Upload Playwright report
