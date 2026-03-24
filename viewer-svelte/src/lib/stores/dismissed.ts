@@ -19,16 +19,17 @@ function saveDismissed(date: string, keys: Set<string>) {
 	localStorage.setItem(storageKey(date), JSON.stringify([...keys]));
 }
 
-// Store keyed by date
+// Store keyed by date — lazily loads from localStorage on first access
 const dismissed = writable<Record<string, Set<string>>>({});
 
-export function getDismissed(date: string): Set<string> {
-	const current = get(dismissed);
-	if (!current[date]) {
-		current[date] = loadDismissed(date);
-		dismissed.set(current);
-	}
-	return current[date];
+/** Ensure dismissed data for a date is loaded from localStorage into the store. */
+export function ensureDismissedLoaded(date: string) {
+	dismissed.update((state) => {
+		if (!state[date]) {
+			state[date] = loadDismissed(date);
+		}
+		return { ...state };
+	});
 }
 
 export function toggleDismiss(date: string, clusterKey: string) {

@@ -7,7 +7,7 @@
 	import ReleaseCard from '$lib/components/ReleaseCard.svelte';
 	import DebugPanel from '$lib/components/DebugPanel.svelte';
 	import { bookmarks, toggleBookmark, isBookmarked } from '$lib/stores/bookmarks';
-	import { dismissed, toggleDismiss, isDismissed } from '$lib/stores/dismissed';
+	import { dismissed, toggleDismiss, isDismissed, ensureDismissedLoaded } from '$lib/stores/dismissed';
 	import { fmtDigestDate } from '$lib/utils/format';
 	import { isSocialPost } from '$lib/utils/merge';
 
@@ -34,6 +34,7 @@
 
 	async function loadDate(date: string, pushState = true) {
 		currentDate = date;
+		ensureDismissedLoaded(date); // Load dismissed state from localStorage for this date
 		digest = await fetchDigest(date);
 		if (pushState) {
 			history.pushState({ date }, '', `?date=${date}`);
