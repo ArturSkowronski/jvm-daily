@@ -77,7 +77,13 @@ class ClusteringWorkflow(
     private suspend fun clusterArticles(articles: List<ProcessedArticle>): List<ArticleCluster> {
         val groups = groupBySemantic(articles)
         val clusters = groups
-            .map { group -> Pair(createCluster(group.articles, group.name, group.isRelease), group.isMajor) }
+            .map { group ->
+                // Force release type for clusters with only GitHub trending/release sources
+                val forceRelease = group.isRelease || group.articles.all {
+                    it.sourceType in setOf("github_trending", "github_release")
+                }
+                Pair(createCluster(group.articles, group.name, forceRelease), group.isMajor)
+            }
         // Sort: MAJOR first → topic clusters by engagement → release clusters by engagement last
         val major    = clusters.filter { (_, m) -> m }.sortedByDescending { (c, _) -> c.totalEngagement }.map { it.first }
         val releases = clusters.filter { (c, m) -> !m && c.type == "release" }.sortedByDescending { (c, _) -> c.totalEngagement }.map { it.first }
