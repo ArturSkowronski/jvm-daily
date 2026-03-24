@@ -1,0 +1,30 @@
+# Sources configuration for [YOUR DOMAIN]
+# Copy this file and fill in your domain's feeds, subreddits, accounts, and repos.
+
+rss:
+  # Add RSS/Atom feed URLs for blogs, news sites, and official channels
+  # - url: "https://example.com/feed.xml"
+  #   splitRoundups: true  # Enable for digest/roundup feeds (e.g., "Weekly Roundup")
+
+reddit:
+  # Add subreddits relevant to your domain
+  # - subreddit: "MachineLearning"
+  #   timeWindow: "day"   # hour | day | week
+
+githubTrending:
+  # Languages to track on GitHub Trending
+  # languages: ["python", "rust"]
+  # minStars: 10
+  # sinceDays: 1
+
+githubReleases:
+  # GitHub repos to track for new releases
+  # sinceDays: 7
+  # repos:
+  #   - "pytorch/pytorch"
+
+bluesky:
+  # Bluesky accounts to follow
+  # sinceDays: 1
+  # accounts:
+  #   - "example.bsky.social"

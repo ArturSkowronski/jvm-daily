@@ -1,0 +1,178 @@
+rss:
+  - url: "https://inside.java/feed.xml"
+  - url: "https://spring.io/blog.atom"
+  - url: "https://blog.jetbrains.com/kotlin/feed/"
+  - url: "https://feeds.feedblitz.com/baeldung"
+  - url: "https://feed.infoq.com/java"
+    splitRoundups: true
+  - url: "https://quarkus.io/feed.xml"
+  - url: "https://micronaut.io/feed/"
+  - url: "https://foojay.io/feed/"
+  - url: "https://feed.gradle.org/blog.atom"
+  - url: "https://blog.jetbrains.com/feed/"
+  - url: "https://vladmihalcea.com/feed/"
+  - url: "https://thorben-janssen.com/feed/"
+  - url: "https://dev.to/feed/marcobehler"
+  - url: "https://adambien.blog/roller/abien/feed/entries/atom"
+  - url: "https://feeds.dzone.com/java"
+  - url: "https://hnrss.org/newest?q=java+OR+kotlin+OR+jvm+OR+spring+OR+graalvm"
+  - url: "https://medium.com/feed/graalvm"
+
+reddit:
+  - subreddit: "java"
+    timeWindow: "day"
+  - subreddit: "Kotlin"
+    timeWindow: "day"
+  - subreddit: "scala"
+    timeWindow: "day"
+
+githubTrending:
+  languages: ["java", "kotlin", "scala"]
+  minStars: 10
+  sinceDays: 1
+  limit: 20
+
+githubReleases:
+  sinceDays: 1
+  repos:
+    - "spring-projects/spring-boot"
+    - "spring-projects/spring-framework"
+    - "spring-projects/spring-security"
+    - "quarkusio/quarkus"
+    - "micronaut-projects/micronaut-core"
+    - "JetBrains/kotlin"
+    - "oracle/graal"
+    - "apache/kafka"
+    - "hibernate/hibernate-orm"
+    - "ktorio/ktor"
+    - "google/guava"
+    - "apache/maven"
+    - "gradle/gradle"
+    - "mockito/mockito"
+    - "junit-team/junit5"
+    - "testcontainers/testcontainers-java"
+    - "reactor/reactor-core"
+    - "netty/netty"
+    - "grpc/grpc-java"
+    - "flyway/flyway"
+
+bluesky:
+  sinceDays: 1
+  limit: 20
+  accounts:
+    # JDK / OpenJDK team
+    - "nipafx.dev"              # Nicolai Parlog — Java Developer Advocate (Oracle)
+    - "briangoetz.bsky.social"  # Brian Goetz — Java Language Architect
+    - "smarks.bsky.social"      # Stuart Marks — JDK developer (Oracle)
+    - "cl4es.bsky.social"       # Claes Redestad — JDK performance (Oracle)
+    - "gavinbierman.bsky.social" # Gavin Bierman — Java Language spec
+    - "joshbloch.bsky.social"   # Joshua Bloch — Effective Java author
+    - "mreinhold.org"           # Mark Reinhold — Chief Architect Java
+    - "gsaab.bsky.social"       # Georges Saab — SVP Java Platform Group
+    - "shipilev.bsky.social"    # Aleksey Shipilëv — JVM performance, OpenJDK
+    - "eosterlund.bsky.social"  # Erik Österlund — HotSpot developer
+    # Framework / ecosystem leaders
+    - "gunnarmorling.dev"       # Gunnar Morling — Debezium, Java Champion
+    - "headius.bsky.social"     # Charles Oliver Nutter — JRuby, JVM internals
+    - "starbuxman.joshlong.com" # Josh Long — Spring Advocate
+    - "hollycummins.com"        # Holly Cummins — Quarkus, IBM
+    - "trishagee.bsky.social"   # Trisha Gee — Developer Productivity
+    - "rotnroll666.bsky.social" # Michael Simons — Neo4j, Java Champion
+    - "emmanuelbernard.com"     # Emmanuel Bernard — Hibernate, Quarkus
+    - "vladmihalcea.bsky.social" # Vlad Mihalcea — High-Performance JPA
+    - "speakjava.bsky.social"   # Simon Ritter — Azul, Java Champion
+    - "myfear.com"              # Markus Eisele — IBM, O'Reilly author
+    - "mraible.bsky.social"     # Matt Raible — Spring/Okta
+    - "maritvandijk.bsky.social" # Marit van Dijk — JetBrains Java DevRel
+    - "ogkittylyst.bsky.social" # Ben Evans — JVM performance
+    - "danielbryantuk.com"      # Daniel Bryant — Platform engineering
+    - "kousenit.com"            # Ken Kousen — Kotlin/Groovy trainer
+    # Organizations
+    - "kotlinlang.org"          # Kotlin by JetBrains
+    - "openjdk.org"             # OpenJDK official
+    - "foojay.io"               # Friends of OpenJDK
+    - "graalvm.org"             # GraalVM official
+    - "quarkus.io"              # Quarkus framework
+    - "intellijidea.com"        # IntelliJ IDEA
+    # GraalVM
+    - "thomaswue.dev"           # Thomas Wuerthinger — GraalVM founder
+    - "alina-yurenko.bsky.social" # Alina Yurenko — GraalVM DevRel
+    # Quarkus
+    - "cescoffier.bsky.social"  # Clement Escoffier — Quarkus co-lead
+    - "sannegrinovero.bsky.social" # Sanne Grinovero — Quarkus/Hibernate
+    # Kotlin
+    - "antonarhipov.bsky.social" # Anton Arhipov — JetBrains DevRel
+    - "sebi.io"                 # Sebastian Aigner — Kotlin DevRel
+    - "zsmb.co"                 # Márton Braun — Kotlin tooling
+    # Groovy
+    - "glaforge.dev"            # Guillaume Laforge — Groovy co-founder
+    # JavaFX
+    - "johanvos.bsky.social"    # Johan Vos — OpenJFX co-lead
+
+openjdkMail:
+  # Core JDK development
+  - list: "jdk-dev"
+    minReplies: 3
+  - list: "core-libs-dev"
+    minReplies: 3
+  - list: "compiler-dev"
+    minReplies: 3
+  - list: "security-dev"
+    minReplies: 2
+  # Runtime & GC
+  - list: "hotspot-dev"
+    minReplies: 3
+  - list: "hotspot-gc-dev"
+    minReplies: 2
+  - list: "hotspot-runtime-dev"
+    minReplies: 2
+  - list: "hotspot-compiler-dev"
+    minReplies: 2
+  # Language projects
+  - list: "amber-dev"
+    minReplies: 2
+  - list: "loom-dev"
+    minReplies: 2
+  - list: "valhalla-dev"
+    minReplies: 2
+  - list: "panama-dev"
+    minReplies: 2
+  - list: "leyden-dev"
+    minReplies: 2
+  - list: "babylon-dev"
+    minReplies: 2
+  # Runtime features
+  - list: "lilliput-dev"
+    minReplies: 2
+  - list: "zgc-dev"
+    minReplies: 2
+  - list: "shenandoah-dev"
+    minReplies: 2
+  - list: "crac-dev"
+    minReplies: 2
+  - list: "graal-dev"
+    minReplies: 2
+  # Tooling & ecosystem
+  - list: "serviceability-dev"
+    minReplies: 2
+  - list: "jdk-updates-dev"
+    minReplies: 3
+  - list: "net-dev"
+    minReplies: 2
+  - list: "classfile-api-dev"
+    minReplies: 2
+  # Announcements (always include)
+  - list: "announce"
+    minReplies: 0
+  - list: "vuln-announce"
+    minReplies: 0
+
+jep:
+  enabled: true
+  initialSeed: false
+  activeStatuses:
+    - Draft
+    - Candidate
+    - "Proposed to Target"
+    - Targeted
+    - Integrated
