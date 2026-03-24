@@ -69,5 +69,5 @@
 		font-size: 0.65rem; background: #f59e0b; color: #fff; border-radius: 10px;
 		padding: 1px 6px; margin-left: 4px; font-weight: 700;
 	}
-	.main { flex: 1; display: flex; overflow: hidden; }
+	.main { flex: 1; display: flex; overflow: hidden; width: 100%; }
 </style>

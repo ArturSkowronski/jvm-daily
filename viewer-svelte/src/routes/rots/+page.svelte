@@ -82,7 +82,7 @@
 </div>
 
 <style>
-	.rots { padding: 32px; flex: 1; overflow-y: auto; max-width: 900px; }
+	.rots { padding: 32px; flex: 1; overflow-y: auto; max-width: 900px; margin: 0 auto; }
 	.rots-toolbar { display: flex; gap: 8px; margin-bottom: 24px; }
 	.rots-toolbar button {
 		font-size: 0.78rem; padding: 6px 14px; border: 1px solid #ddd; border-radius: 6px;

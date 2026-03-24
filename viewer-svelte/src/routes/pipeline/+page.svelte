@@ -67,7 +67,7 @@
 </div>
 
 <style>
-	.pipeline { padding: 32px; flex: 1; overflow-y: auto; }
+	.pipeline { padding: 32px; flex: 1; overflow-y: auto; max-width: 900px; margin: 0 auto; }
 	.offline { color: #999; padding: 48px 0; text-align: center; }
 	.stats-row { display: flex; gap: 16px; margin-bottom: 32px; }
 	.stat-card {
