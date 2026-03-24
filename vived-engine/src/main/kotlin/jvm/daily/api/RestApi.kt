@@ -6,7 +6,6 @@ import io.ktor.server.engine.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import jvm.daily.parseIngestPayload
 import jvm.daily.storage.DuckDbArticleRepository
 import jvm.daily.storage.DuckDbConnectionFactory
 import kotlinx.serialization.json.Json
