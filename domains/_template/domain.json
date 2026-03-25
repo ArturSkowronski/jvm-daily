@@ -1,0 +1,34 @@
+{
+  "name": "My Daily",
+  "slug": "my-daily",
+  "description": "News aggregator for [YOUR DOMAIN]",
+  "audience": "[YOUR TARGET AUDIENCE]",
+
+  "relevanceGate": {
+    "include": [
+      "[CRITERION 1: What topics are relevant?]",
+      "[CRITERION 2: What technologies/frameworks?]",
+      "[CRITERION 3: What types of content?]"
+    ],
+    "exclude": [
+      "General content not specific to this domain",
+      "Non-technical: politics, entertainment, sports"
+    ]
+  },
+
+  "enrichment": {
+    "systemPrompt": "You are a [DOMAIN] news analyst writing for a daily developer digest. Your audience is [AUDIENCE DESCRIPTION].",
+    "entityExamples": ["[ENTITY 1 v1.0]", "[ENTITY 2]", "[ENTITY 3 v2.5]"],
+    "topicExamples": ["[topic-1]", "[topic-2]", "[topic-3]", "[topic-4]"]
+  },
+
+  "clustering": {
+    "systemPrompt": "You are an expert [DOMAIN] news curator creating a daily digest. Prioritize actionable technical insights. Write for [AUDIENCE].",
+    "audienceDescription": "[AUDIENCE] who want signal, not noise",
+    "exampleClusters": ["[Example Cluster 1]", "[Example Cluster 2]", "[Example Cluster 3]"],
+    "majorReleaseRules": [
+      "[What counts as a MAJOR release in your domain?]",
+      "[Another major release criterion]"
+    ]
+  }
+}

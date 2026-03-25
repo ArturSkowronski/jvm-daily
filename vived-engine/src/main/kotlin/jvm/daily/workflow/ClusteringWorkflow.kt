@@ -1,6 +1,7 @@
 package jvm.daily.workflow
 
 import jvm.daily.ai.LLMClient
+import jvm.daily.config.DomainProfile
 import jvm.daily.model.ArticleCluster
 import jvm.daily.model.EnrichmentOutcomeStatus
 import jvm.daily.model.ProcessedArticle
@@ -29,7 +30,10 @@ class ClusteringWorkflow(
     private val llmClient: LLMClient,
     private val clock: Clock = Clock.System,
     private val sinceHours: Int = 24,
+    private val domainProfile: DomainProfile? = null,
 ) : Workflow {
+
+    private val domain: DomainProfile get() = domainProfile ?: DomainProfile.default()
 
     override val name: String = "clustering"
 
@@ -103,8 +107,10 @@ class ClusteringWorkflow(
             "[$i] ${a.originalTitle} | ${a.topics.take(3).joinToString(", ")}"
         }.joinToString("\n")
 
+        val exampleClusters = domain.clustering.exampleClusters.joinToString("\", \"", "\"", "\"")
+        val majorReleaseRules = domain.clustering.majorReleaseRules.joinToString("\n") { "  - $it" }
         val prompt = """
-You are grouping JVM ecosystem news articles into thematic clusters for a daily digest.
+You are grouping ${domain.description} articles into thematic clusters for a daily digest.
 
 Articles (index | title | topics):
 $listing
@@ -113,22 +119,19 @@ Group these ${articles.size} articles into thematic clusters following these rul
 - Each cluster must cover exactly ONE specific topic, technology, or event (single responsibility)
 - Create as many clusters as needed — prefer more smaller clusters over fewer big ones
 - Every article must appear in exactly one cluster
-- Articles that share a specific technology or event belong together (e.g. all Kotlin 2.3.20 articles in one cluster, all Quarkus articles in another)
+- Articles that share a specific technology or event belong together
 - Only merge articles if they are genuinely about the same specific topic
-- Use precise, specific cluster names (e.g. "Kotlin 2.3.20 Release", "GraalVM Native Image Performance", "Spring Security 6.5 Hardening")
+- Use precise, specific cluster names (e.g. $exampleClusters)
 
 **Releases rule** (important):
 - Every distinct software release must be its own cluster, even routine patch releases
-- Name the cluster after the specific release (e.g. "Hibernate 7.3.0", "Ktor 3.1.2", "Spring Boot 4.0.4")
+- Name the cluster after the specific release
 - Multiple articles about the same release belong together (e.g. the GitHub Release entry + a blog post about it)
 - Do NOT group unrelated releases into a single catch-all cluster
 
 **Priority rule**:
-- Add `MAJOR: YES` for clusters covering a milestone that every JVM developer should read today:
-  - Java/JDK GA releases (any version number)
-  - Kotlin feature releases (X.Y.Z where Z=0 or Z=20)
-  - Spring Boot major or minor (e.g. 3.5.0, 4.0.0)
-  - Any other platform-level milestone that overshadows all other news
+- Add `MAJOR: YES` for clusters covering a milestone that every reader should see today:
+$majorReleaseRules
 - Omit the MAJOR line (or write `MAJOR: NO`) for everything else
 
 **Cluster type rule** (pick exactly one per cluster):
@@ -246,7 +249,7 @@ INDICES: [comma-separated indices]
         }
 
         val prompt = if (clusterType == "release") """
-You are writing a concise release summary for a JVM ecosystem digest.
+You are writing a concise release summary for a ${domain.description} digest.
 
 Release: $clusterName
 Articles:
@@ -266,9 +269,9 @@ TITLE: [title]
 BULLET: [highlight 1]
 BULLET: [highlight 2]
     """.trimIndent() else """
-$CLUSTERING_SYSTEM_PROMPT
+${domain.clustering.systemPrompt}
 
-You are analyzing a cluster of ${articles.size} related JVM ecosystem articles.
+You are analyzing a cluster of ${articles.size} related ${domain.description} articles.
 
 Articles in this cluster:
 $articleSummaries
@@ -404,19 +407,6 @@ Answer with exactly YES or NO.
             "twitter"          to 12,
         )
 
-        private const val CLUSTERING_SYSTEM_PROMPT = """
-You are an expert JVM news curator. Your job is to analyze clusters of related
-articles from multiple sources (RSS feeds, Bluesky, Reddit, blogs) and
-create compelling synthesis summaries.
-
-Your synthesis should:
-- Identify the core story or development
-- Synthesize insights across sources
-- Highlight technical details that matter to experienced JVM developers
-- Note community sentiment and reactions
-- Be concise but informative (150-200 words)
-
-Write for an audience of experienced JVM engineers who want signal, not noise.
-"""
+        // System prompt moved to DomainProfile.clustering.systemPrompt
     }
 }
