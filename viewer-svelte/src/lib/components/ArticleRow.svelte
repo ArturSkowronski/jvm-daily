@@ -60,23 +60,32 @@
 {/if}
 
 <style>
-	.article-row { display: flex; gap: 12px; padding: 16px 0; border-top: 1px solid #f0f0f0; }
-	.article-row-social { padding: 8px 0; gap: 8px; }
-	.article-favicon { width: 20px; height: 20px; border-radius: 3px; margin-top: 3px; flex-shrink: 0; }
+	.article-row { display: flex; gap: 12px; padding: 18px 0; border-top: 1px solid #f0f0f0; }
+	.article-row-social { padding: 10px 0; gap: 8px; }
+	.article-favicon { width: 20px; height: 20px; border-radius: 3px; margin-top: 4px; flex-shrink: 0; }
 	.article-body { flex: 1; min-width: 0; }
-	.article-title-row { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
-	.article-title { font-size: 0.92rem; font-weight: 600; color: #1a1a1a; text-decoration: none; line-height: 1.4; }
-	.article-title:hover { color: #0057b8; }
-	.article-source { font-size: 0.75rem; color: #999; white-space: nowrap; }
-	.article-summary { color: #444; font-size: 0.85rem; line-height: 1.6; margin: 6px 0 8px; }
+	.article-title-row { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+	.article-title {
+		font-size: 1.05rem; font-weight: 600; color: #1a1a1a;
+		text-decoration: none; line-height: 1.4;
+	}
+	.article-title:hover { color: #00a64e; }
+	.article-source { font-size: 0.8rem; color: #999; white-space: nowrap; }
+	.article-summary { color: #363737; font-size: 0.95rem; line-height: 1.7; margin: 8px 0 10px; }
 	.article-meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 	.taxonomy-badge {
-		font-size: 0.65rem; font-weight: 600; padding: 2px 7px; border-radius: 3px;
-		background: #ede9fe; color: #7c3aed; white-space: nowrap;
+		font-size: 0.75rem; font-weight: 600; padding: 2px 8px; border-radius: 3px;
+		background: #ecfdf5; color: #065f46; white-space: nowrap;
 	}
-	.social-card-header { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; }
-	.social-card-icon { font-size: 0.75rem; flex-shrink: 0; }
-	.social-card-author { font-size: 0.72rem; color: #0085ff; text-decoration: none; white-space: nowrap; }
+	.social-card-header { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+	.social-card-icon { font-size: 0.8rem; flex-shrink: 0; }
+	.social-card-author { font-size: 0.85rem; text-decoration: none; white-space: nowrap; }
 	.social-card-author:hover { text-decoration: underline; }
-	.social-card-text { color: #444; font-size: 0.85rem; line-height: 1.5; margin: 0; }
+	.social-card-text { color: #363737; font-size: 0.95rem; line-height: 1.6; margin: 0; }
+
+	@media (max-width: 768px) {
+		.article-title-row { flex-direction: column; gap: 2px; }
+		.article-title { font-size: 1rem; }
+		.article-summary { font-size: 0.9rem; }
+	}
 </style>
