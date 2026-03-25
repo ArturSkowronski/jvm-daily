@@ -37,7 +37,7 @@
 	const summaryHtml = $derived(marked.parse(cluster.summary) as string);
 </script>
 
-<div class="release-card cluster" class:dismissed={dismissedState} data-key={cluster.title}>
+<div class="release-card" class:dismissed={dismissedState} data-key={cluster.title}>
 	<div class="cluster-head">
 		<div class="cluster-head-text">
 			<div class="cluster-title">
@@ -50,10 +50,12 @@
 				<div class="cluster-synthesis">{@html summaryHtml}</div>
 			{/if}
 		</div>
-		<button class="bookmark-btn" class:bookmarked title="Bookmark" onclick={onBookmark}>
-			{bookmarked ? '★' : '☆'}
-		</button>
-		<button class="tick-btn" title="Dismiss" onclick={onDismiss}>✓</button>
+		<div class="cluster-actions">
+			<button class="action-btn bookmark-btn" class:bookmarked title="Bookmark" onclick={onBookmark}>
+				{bookmarked ? '★' : '☆'}
+			</button>
+			<button class="action-btn tick-btn" title="Dismiss" onclick={onDismiss}>✓</button>
+		</div>
 	</div>
 	<div class="release-badges">
 		{#each badges as badge}
@@ -63,25 +65,41 @@
 </div>
 
 <style>
-	.release-card { background: #fff; border: 1px solid #e8e8e8; border-radius: 12px; padding: 20px; margin-bottom: 12px; }
+	.release-card {
+		border-bottom: 1px solid #e0e0e0;
+		padding: 24px 0;
+	}
 	.release-card.dismissed { opacity: 0.35; }
-	.cluster-head { display: flex; gap: 12px; }
+	.cluster-head { display: flex; gap: 16px; }
 	.cluster-head-text { flex: 1; }
-	.cluster-title { font-family: 'Newsreader', serif; font-size: 1.1rem; font-weight: 600; margin-bottom: 8px; }
-	.cluster-count { font-family: 'Inter', sans-serif; font-size: 0.72rem; font-weight: 400; color: #999; margin-left: 8px; }
-	.cluster-synthesis, .release-bullets { font-size: 0.82rem; color: #555; line-height: 1.6; }
+	.cluster-title {
+		font-size: 1.2rem; font-weight: 600; margin-bottom: 10px; color: #1a1a1a;
+	}
+	.cluster-count { font-size: 0.8rem; font-weight: 400; color: #868787; margin-left: 10px; }
+	.cluster-synthesis, .release-bullets { font-size: 0.95rem; color: #363737; line-height: 1.7; }
 	.release-bullets :global(ul) { margin: 0; padding-left: 20px; }
-	.release-bullets :global(li) { margin-bottom: 4px; }
-	.release-badges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+	.release-bullets :global(li) { margin-bottom: 6px; }
+	.release-badges { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 	.badge-release {
-		font-size: 0.7rem; font-weight: 500; padding: 3px 10px;
-		border: 1px solid #ddd; border-radius: 12px;
+		font-size: 0.8rem; font-weight: 500; padding: 4px 12px;
+		border: 1px solid #ddd; border-radius: 14px;
 		color: #555; text-decoration: none; white-space: nowrap;
+		transition: border-color 0.15s, color 0.15s;
 	}
-	.badge-release:hover { border-color: #999; color: #333; }
-	.bookmark-btn, .tick-btn {
-		background: none; border: 1px solid #ddd; border-radius: 50%; width: 32px; height: 32px;
-		cursor: pointer; font-size: 1rem; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+	.badge-release:hover { border-color: #00a64e; color: #00a64e; }
+	.cluster-actions { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
+	.action-btn {
+		background: none; border: 1px solid #ddd; border-radius: 50%;
+		width: 34px; height: 34px; cursor: pointer; font-size: 1rem;
+		display: flex; align-items: center; justify-content: center;
+		transition: border-color 0.15s, background 0.15s;
 	}
-	.bookmark-btn.bookmarked { background: #f59e0b; border-color: #f59e0b; color: #fff; }
+	.bookmark-btn:hover { border-color: #00a64e; color: #00a64e; }
+	.bookmark-btn.bookmarked { background: #00a64e; border-color: #00a64e; color: #fff; }
+	.tick-btn:hover { border-color: #00a64e; color: #00a64e; }
+
+	@media (max-width: 768px) {
+		.cluster-title { font-size: 1.05rem; }
+		.cluster-actions { flex-direction: row; }
+	}
 </style>
