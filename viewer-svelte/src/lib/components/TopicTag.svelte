@@ -6,9 +6,9 @@
 
 <style>
 	.topic-tag {
-		font-size: 0.7rem;
-		background: #f1f5f9;
-		color: #475569;
+		font-size: 0.75rem;
+		background: #ecfdf5;
+		color: #065f46;
 		padding: 2px 8px;
 		border-radius: 4px;
 		white-space: nowrap;
