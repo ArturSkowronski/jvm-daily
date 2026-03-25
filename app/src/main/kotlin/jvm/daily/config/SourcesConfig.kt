@@ -5,18 +5,24 @@ import kotlinx.serialization.Serializable
 import java.nio.file.Path
 import kotlin.io.path.readText
 
+/**
+ * JVM-specific sources config — extends the generic engine SourcesConfig
+ * with OpenJDK mailing list and JEP source support.
+ */
 @Serializable
-data class SourcesConfig(
+data class JvmSourcesConfig(
     val rss: List<RssFeedConfig> = emptyList(),
     val reddit: List<RedditSourceConfig> = emptyList(),
     val githubTrending: GitHubTrendingConfig? = null,
     val githubReleases: GitHubReleasesConfig? = null,
-    val openjdkMail: List<OpenJdkMailConfig> = emptyList(),
     val bluesky: BlueskyConfig? = null,
+    val openjdkMail: List<OpenJdkMailConfig> = emptyList(),
     val jep: JepConfig? = null,
 ) {
+    fun toEngineConfig() = SourcesConfig(rss, reddit, githubTrending, githubReleases, bluesky)
+
     companion object {
-        fun load(path: Path): SourcesConfig {
+        fun load(path: Path): JvmSourcesConfig {
             val content = path.readText()
             return Yaml.default.decodeFromString(serializer(), content)
         }
@@ -24,38 +30,10 @@ data class SourcesConfig(
 }
 
 @Serializable
-data class RssFeedConfig(
-    val url: String,
-    val sinceDays: Int = 1,
-    val splitRoundups: Boolean = false,
-)
-
-@Serializable
-data class GitHubTrendingConfig(
-    val languages: List<String> = listOf("java", "kotlin", "scala"),
-    val minStars: Int = 10,
-    val sinceDays: Int = 7,
-    val limit: Int = 30,
-)
-
-@Serializable
-data class GitHubReleasesConfig(
-    val repos: List<String> = emptyList(),
-    val sinceDays: Int = 7,
-)
-
-@Serializable
 data class OpenJdkMailConfig(
-    val list: String,          // e.g. "jdk-dev", "amber-dev"
-    val minReplies: Int = 2,   // min messages in time window (noise filter)
-    val sinceDays: Int = 2,    // only count messages from last N days
-)
-
-@Serializable
-data class BlueskyConfig(
-    val accounts: List<String>,
-    val limit: Int = 20,
-    val sinceDays: Int = 7,
+    val list: String,
+    val minReplies: Int = 2,
+    val sinceDays: Int = 2,
 )
 
 @Serializable
@@ -65,12 +43,4 @@ data class JepConfig(
     val activeStatuses: List<String> = listOf(
         "Draft", "Candidate", "Proposed to Target", "Targeted", "Integrated"
     ),
-)
-
-@Serializable
-data class RedditSourceConfig(
-    val subreddit: String,
-    val limit: Int = 50,
-    val minComments: Int = 5,
-    val timeWindow: String = "week",  // hour, day, week, month, year, all
 )

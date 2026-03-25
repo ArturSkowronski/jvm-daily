@@ -26,12 +26,12 @@ internal object ArchitectureInvariantsSupport {
     private fun resolveMainKotlinRoot(): Path {
         val cwd = Path.of("").toAbsolutePath().normalize()
         val candidates = listOf(
-            cwd.resolve("app/src/main/kotlin"),
+            cwd.resolve("vived-engine/src/main/kotlin"),
             cwd.resolve("src/main/kotlin"),
-            cwd.parent?.resolve("app/src/main/kotlin"),
+            cwd.parent?.resolve("vived-engine/src/main/kotlin"),
         ).filterNotNull()
 
         return candidates.firstOrNull { it.exists() }
-            ?: error("Cannot locate app/src/main/kotlin from working dir: $cwd")
+            ?: error("Cannot locate vived-engine/src/main/kotlin from working dir: $cwd")
     }
 }

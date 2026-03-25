@@ -2,8 +2,10 @@ package jvm.daily
 
 import jvm.daily.ai.LLMClient
 import jvm.daily.ai.OpenAiCompatibleLLMClient
+import jvm.daily.api.parseIngestPayload
+import jvm.daily.api.serializeArticles
 import jvm.daily.config.DomainProfile
-import jvm.daily.config.SourcesConfig
+import jvm.daily.config.JvmSourcesConfig
 import jvm.daily.source.BlueskySource
 import jvm.daily.source.JepSource
 import jvm.daily.source.GitHubReleasesSource
@@ -25,7 +27,6 @@ import jvm.daily.workflow.IngressWorkflow
 import jvm.daily.workflow.OutgressWorkflow
 import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.Clock
-import kotlinx.serialization.json.*
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import org.h2.jdbcx.JdbcDataSource
@@ -153,7 +154,7 @@ internal fun runIngress(dbPath: String) {
     val configPath = System.getenv("CONFIG_PATH") ?: "config/sources.yml"
 
     println("Config: $configPath")
-    val config = SourcesConfig.load(Path.of(configPath))
+    val config = JvmSourcesConfig.load(Path.of(configPath))
 
     DuckDbConnectionFactory.persistent(dbPath).use { connection ->
         val repository = DuckDbArticleRepository(connection)
@@ -703,42 +704,7 @@ private fun catchUpIfMissed(scheduler: JobScheduler, cron: String) {
     scheduler.enqueue(IocJobLambda<PipelineService> { it.run(JobContext.Null) })
 }
 
-// ── Ingest payload parsing (used by RestApi and ingress-push) ────────────────
-
-internal fun parseIngestPayload(json: String): List<jvm.daily.model.Article> {
-    val array = kotlinx.serialization.json.Json.parseToJsonElement(json).jsonArray
-    return array.map { elem ->
-        val obj = elem.jsonObject
-        jvm.daily.model.Article(
-            id = obj["id"]!!.jsonPrimitive.content,
-            title = obj["title"]!!.jsonPrimitive.content,
-            content = obj["content"]?.jsonPrimitive?.content ?: "",
-            sourceType = obj["sourceType"]!!.jsonPrimitive.content,
-            sourceId = obj["sourceId"]!!.jsonPrimitive.content,
-            url = obj["url"]?.jsonPrimitive?.contentOrNull,
-            author = obj["author"]?.jsonPrimitive?.contentOrNull,
-            comments = obj["comments"]?.jsonPrimitive?.contentOrNull,
-            ingestedAt = kotlinx.datetime.Instant.parse(obj["ingestedAt"]!!.jsonPrimitive.content),
-        )
-    }
-}
-
-internal fun serializeArticles(articles: List<jvm.daily.model.Article>): String {
-    val elements = articles.map { a ->
-        buildJsonObject {
-            put("id", a.id)
-            put("title", a.title)
-            put("content", a.content)
-            put("sourceType", a.sourceType)
-            put("sourceId", a.sourceId)
-            a.url?.let { put("url", it) }
-            a.author?.let { put("author", it) }
-            a.comments?.let { put("comments", it) }
-            put("ingestedAt", a.ingestedAt.toString())
-        }
-    }
-    return JsonArray(elements).toString()
-}
+// parseIngestPayload and serializeArticles moved to engine (jvm.daily.api.ArticleSerialization)
 
 // ── ingress-push: fetch Reddit locally, POST articles to remote ingest API ──
 
@@ -748,7 +714,7 @@ internal fun runIngressPush(dbPath: String) {
     val apiKey = System.getenv("INGEST_API_KEY")
         ?: error("INGEST_API_KEY required")
     val configPath = System.getenv("CONFIG_PATH") ?: "config/sources.yml"
-    val config = SourcesConfig.load(Path.of(configPath))
+    val config = JvmSourcesConfig.load(Path.of(configPath))
 
     if (config.reddit.isEmpty()) {
         println("[ingress-push] No Reddit sources configured. Nothing to do.")
