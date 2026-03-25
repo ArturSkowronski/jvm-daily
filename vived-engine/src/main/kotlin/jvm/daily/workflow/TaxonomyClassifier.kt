@@ -10,6 +10,7 @@ import kotlinx.serialization.json.*
 class TaxonomyClassifier(
     private val taxonomy: TaxonomyLoader,
     private val llmClient: LLMClient,
+    private val domainDescription: String? = null,
 ) {
     /**
      * Classify an article. Returns null if classification fails (LLM error, invalid response).
@@ -35,7 +36,7 @@ class TaxonomyClassifier(
         entities: List<String>,
         sourceType: String,
     ): String = buildString {
-        appendLine("Classify this JVM ecosystem article into the taxonomy.")
+        appendLine("Classify this ${domainDescription ?: "JVM ecosystem"} article into the taxonomy.")
         appendLine("Return STRICT JSON only — no markdown fences, no explanation.")
         appendLine()
         appendLine("Article: $title | $summary | Entities: ${entities.joinToString(", ")} | Source: $sourceType")

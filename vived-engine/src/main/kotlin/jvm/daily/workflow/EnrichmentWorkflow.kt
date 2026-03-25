@@ -2,6 +2,7 @@ package jvm.daily.workflow
 
 import jvm.daily.model.Article
 import jvm.daily.ai.LLMClient
+import jvm.daily.config.DomainProfile
 import jvm.daily.model.EnrichmentOutcomeStatus
 import jvm.daily.model.ProcessedArticle
 import jvm.daily.storage.ArticleRepository
@@ -31,7 +32,10 @@ class EnrichmentWorkflow(
     private val retryBackoffMs: Long = RETRY_BACKOFF_MS,
     private val sinceDays: Int = 1,
     private val taxonomyClassifier: TaxonomyClassifier? = null,
+    private val domainProfile: DomainProfile? = null,
 ) : Workflow {
+
+    private val domain: DomainProfile get() = domainProfile ?: DomainProfile.default()
 
     override val name: String = "enrichment"
 
@@ -100,7 +104,7 @@ class EnrichmentWorkflow(
             return skippedArticle(article, reason = "relevance_gate")
         }
 
-        val prompt = "$ENRICHMENT_SYSTEM_PROMPT\n\n${buildEnrichmentPrompt(article)}"
+        val prompt = "${domain.enrichment.systemPrompt}\n\n${buildEnrichmentPrompt(article)}"
         val warnings = mutableListOf<String>()
         var attempt = 0
 
@@ -202,8 +206,8 @@ class EnrichmentWorkflow(
         Return JSON:
         {
           "summary": "Dense, fact-packed summary (50-120 words). Include specific versions, APIs, numbers. If this is a discussion thread, summarize the key arguments and consensus. Never restate the title. Never use filler phrases.",
-          "entities": ["Exact tech names with versions, e.g. JDK 25, Spring Boot 4.0, GraalVM 23, JEP 511"],
-          "topics": ["2-4 lowercase topic tags, e.g. virtual-threads, spring-security, kotlin-coroutines, graalvm-native"]
+          "entities": ["Exact tech names with versions, e.g. ${domain.enrichment.entityExamples.joinToString(", ")}"],
+          "topics": ["2-4 lowercase topic tags, e.g. ${domain.enrichment.topicExamples.joinToString(", ")}"]
         }
         """.trimIndent()
     }
@@ -247,24 +251,19 @@ class EnrichmentWorkflow(
      * Defaults to true (include) on any error to avoid false negatives.
      */
     private suspend fun isRelevant(article: Article): Boolean {
+        val includeLines = domain.relevanceGate.include.joinToString("\n") { "- $it" }
+        val excludeLines = domain.relevanceGate.exclude.joinToString("\n") { "- $it" }
         val prompt = """
-Is this content worth featuring in a daily digest for experienced JVM/backend developers?
+Is this content worth featuring in a daily digest for ${domain.audience}?
 
 Title: ${article.title}
 Content preview: ${article.content.take(600)}
 
 Reply YES if the content covers:
-- JVM language features, releases, or roadmap (Java, Kotlin, Scala, Groovy)
-- JVM frameworks, libraries, or tools (Spring, Quarkus, Micronaut, Gradle, etc.)
-- JVM performance, security vulnerabilities, or architecture
-- OpenJDK development, JEPs, runtime internals
-- Developer tooling, build systems, or CI/CD relevant to JVM ecosystem
-- Technical community news with clear relevance to backend/JVM engineers
+$includeLines
 
 Reply NO if the content is:
-- Politics, social commentary, or cultural criticism unrelated to software
-- General world news, sports, entertainment
-- Personal opinions on non-technical topics
+$excludeLines
 - Minor housekeeping (CI failures, dependency bumps, copyright updates)
 - Very narrow implementation detail with no broad interest
 
@@ -326,20 +325,6 @@ Answer with exactly YES or NO.
 
         /** Source types where a cheap relevance check runs before full enrichment. */
         private val RELEVANCE_GATED_SOURCES = setOf("openjdk_mail", "bluesky", "rss")
-        private const val ENRICHMENT_SYSTEM_PROMPT = """
-You are a JVM ecosystem news analyst writing for experienced engineers.
-
-Your summaries must be DENSE and SPECIFIC — every sentence must contain facts the reader cannot guess from the title alone. Extract:
-- Exact version numbers, JEP numbers, CVE IDs
-- Concrete technical changes (what API changed, what got deprecated, what's new)
-- Performance numbers, benchmarks, migration steps if mentioned
-- Key community opinions or controversies from comments/discussion
-- Breaking changes, deprecations, compatibility notes
-
-NEVER write filler like "users are encouraged to update" or "promises new features."
-NEVER restate the title. Start with the most important technical fact.
-
-If the article is a Reddit discussion, summarize the TOP ARGUMENTS from the thread — what do people agree/disagree on, what's the consensus, what interesting insights were shared.
-"""
+        // System prompt moved to DomainProfile.enrichment.systemPrompt
     }
 }

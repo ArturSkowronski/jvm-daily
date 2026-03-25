@@ -217,6 +217,94 @@ npx playwright test --config viewer/playwright.config.ts  # 25 viewer/API integr
 
 Playwright tests use mock fixtures (`viewer/test-fixtures/`) with a lightweight Node.js test server — no running backend needed.
 
+## Using the Engine for a Different Domain
+
+The engine is domain-agnostic — JVM-specific text lives entirely in three config files. To create "AI Daily", "Rust Daily", or any other news aggregator:
+
+### 1. Create a domain profile
+
+Copy `config/domain.json` and edit for your domain:
+
+```json
+{
+  "name": "AI Daily",
+  "slug": "ai-daily",
+  "description": "AI/ML ecosystem news aggregator",
+  "audience": "ML engineers and AI researchers",
+  "relevanceGate": {
+    "include": [
+      "Machine learning frameworks (PyTorch, JAX, TensorFlow)",
+      "LLM developments (GPT, Claude, Gemini, Llama)",
+      "AI infrastructure (training, inference, deployment)",
+      "Research papers with practical engineering impact"
+    ],
+    "exclude": [
+      "General software engineering not AI-specific",
+      "AI hype without technical substance"
+    ]
+  },
+  "enrichment": {
+    "systemPrompt": "You are an AI/ML ecosystem news analyst...",
+    "entityExamples": ["PyTorch 2.5", "GPT-5", "CUDA 13", "vLLM 0.8"],
+    "topicExamples": ["fine-tuning", "inference-optimization", "rlhf", "multimodal"]
+  },
+  "clustering": {
+    "systemPrompt": "You are an expert AI news curator...",
+    "audienceDescription": "ML engineers who want signal, not hype",
+    "exampleClusters": ["PyTorch 2.5 Release", "Llama 4 Benchmarks", "vLLM Inference Optimization"],
+    "majorReleaseRules": ["PyTorch major releases", "New foundation model families", "CUDA major versions"]
+  }
+}
+```
+
+### 2. Create a taxonomy
+
+Copy `config/taxonomy.json` and define your domain's areas:
+
+```
+ai-fundamentals (transformers, attention, optimization)
+llms (fine-tuning, rlhf, inference, agents)
+computer-vision (detection, segmentation, generation)
+frameworks (pytorch, jax, tensorflow, huggingface)
+infrastructure (training-clusters, serving, mlops)
+```
+
+### 3. Configure sources
+
+Copy `config/sources.yml` with your domain's feeds:
+
+```yaml
+rss:
+  - url: "https://arxiv.org/rss/cs.AI"
+  - url: "https://huggingface.co/blog/feed.xml"
+reddit:
+  - subreddit: "MachineLearning"
+  - subreddit: "LocalLLaMA"
+bluesky:
+  accounts: ["karpathy.ai", "ylecun.bsky.social"]
+```
+
+### 4. Run
+
+```bash
+DOMAIN_CONFIG_PATH=config/domain-ai.json \
+CONFIG_PATH=config/sources-ai.yml \
+LLM_PROVIDER=gemini GEMINI_API_KEY=<key> \
+./app/build/install/app/bin/app pipeline
+```
+
+No code changes needed. The same binary, different configs.
+
+### What's generic vs domain-specific
+
+| Generic (no changes needed) | Domain-specific (config only) |
+|---|---|
+| All 6 source adapters (RSS, Reddit, Bluesky, GitHub, RoundupSplitter) | `config/domain.json` — prompts, audience, examples |
+| Ingress, enrichment, clustering, outgress pipeline | `config/taxonomy.json` — areas, sub-areas, tags |
+| DuckDB storage, REST API, SvelteKit viewer | `config/sources.yml` — feeds, accounts, repos |
+| Taxonomy classifier framework | |
+| Deployment (Fly.io, Pi, GitHub Actions) | |
+
 ## Other Docs
 
 - [`QUICKSTART.md`](QUICKSTART.md) — detailed local setup walkthrough

@@ -110,8 +110,8 @@ class PipelineService(
     }
 
     companion object {
-        internal fun renderQualityReport(counters: QualityCounters): String = buildString {
-            appendLine("# JVM Daily Quality Report")
+        internal fun renderQualityReport(counters: QualityCounters, domainName: String = "JVM Daily"): String = buildString {
+            appendLine("# $domainName Quality Report")
             appendLine()
             appendLine("| Counter | Value |")
             appendLine("|---------|-------|")

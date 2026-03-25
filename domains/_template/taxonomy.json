@@ -1,0 +1,90 @@
+{
+  "$schema": "../../config/taxonomy-schema.json",
+  "version": "2025-01",
+
+  "meta": {
+    "name": "My Daily",
+    "description": "Taxonomy for [YOUR DOMAIN] articles",
+    "domain": "my-domain",
+    "classification": {
+      "ordered_children_at_depth": [],
+      "coarse_threshold": 0.5,
+      "fine_threshold": 0.4,
+      "allow_multi_area": false,
+      "max_areas": 1
+    }
+  },
+
+  "nodes": [
+    {
+      "slug": "area-1",
+      "title": "Area 1",
+      "classification_hints": {
+        "summary": "Articles about [AREA 1 DESCRIPTION]",
+        "topics": [
+          "[Signal 1 that indicates this area]",
+          "[Signal 2]"
+        ],
+        "not_this_node": [
+          "[If article is about X, classify as area-2 instead]"
+        ]
+      },
+      "children": [
+        {
+          "slug": "sub-area-1a",
+          "title": "Sub-Area 1A",
+          "classification_hints": {
+            "summary": "[What belongs in this sub-area]",
+            "signals": ["[Detection signal 1]", "[Detection signal 2]"],
+            "boundary": "Use parent area if the article covers [AREA 1] broadly without focusing on [SUB-AREA 1A]."
+          }
+        }
+      ]
+    },
+    {
+      "slug": "area-2",
+      "title": "Area 2",
+      "classification_hints": {
+        "summary": "Articles about [AREA 2 DESCRIPTION]",
+        "topics": ["[Signal 1]", "[Signal 2]"]
+      }
+    }
+  ],
+
+  "tag_sets": {
+    "impact": [
+      {
+        "slug": "breaking-change",
+        "name": "Breaking Change",
+        "classification_hints": {
+          "description": "Article discusses backward-incompatible changes requiring migration.",
+          "signals": ["Breaking API change", "Migration required", "Deprecation with removal"]
+        }
+      },
+      {
+        "slug": "new-capability",
+        "name": "New Capability",
+        "classification_hints": {
+          "description": "Article announces or explains a new feature, API, or tool.",
+          "signals": ["New feature", "New API", "Preview becoming stable"]
+        }
+      },
+      {
+        "slug": "performance",
+        "name": "Performance",
+        "classification_hints": {
+          "description": "Article focuses on speed, memory, or efficiency improvements.",
+          "signals": ["Benchmarks", "Latency improvement", "Memory optimization"]
+        }
+      },
+      {
+        "slug": "security-advisory",
+        "name": "Security Advisory",
+        "classification_hints": {
+          "description": "Article reports a security vulnerability or patch.",
+          "signals": ["CVE", "Security patch", "Vulnerability disclosure"]
+        }
+      }
+    ]
+  }
+}

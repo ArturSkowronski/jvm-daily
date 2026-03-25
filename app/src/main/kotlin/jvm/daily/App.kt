@@ -2,7 +2,10 @@ package jvm.daily
 
 import jvm.daily.ai.LLMClient
 import jvm.daily.ai.OpenAiCompatibleLLMClient
-import jvm.daily.config.SourcesConfig
+import jvm.daily.api.parseIngestPayload
+import jvm.daily.api.serializeArticles
+import jvm.daily.config.DomainProfile
+import jvm.daily.config.JvmSourcesConfig
 import jvm.daily.source.BlueskySource
 import jvm.daily.source.JepSource
 import jvm.daily.source.GitHubReleasesSource
@@ -24,7 +27,6 @@ import jvm.daily.workflow.IngressWorkflow
 import jvm.daily.workflow.OutgressWorkflow
 import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.Clock
-import kotlinx.serialization.json.*
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import org.h2.jdbcx.JdbcDataSource
@@ -56,24 +58,30 @@ import kotlin.time.Duration.Companion.hours
  * inspect-quality       → report failed/low-quality processed items for manual follow-up
  */
 fun main(args: Array<String>) {
-    val dbPath = System.getenv("DUCKDB_PATH") ?: DEFAULT_DB_PATH
+    val domainConfigPath = System.getenv("DOMAIN_CONFIG_PATH") ?: "config/domain.json"
+    val domain = try {
+        DomainProfile.load(Path.of(domainConfigPath))
+    } catch (_: Exception) {
+        DomainProfile.default()
+    }
+    val dbPath = System.getenv("DUCKDB_PATH") ?: defaultDbPath(domain)
 
     when (val cmd = args.getOrNull(0)) {
-        null       -> startDaemon(dbPath)
+        null       -> startDaemon(dbPath, domain)
         "pipeline" -> {
-            println("JVM Daily — running full pipeline once")
+            println("${domain.name} — running full pipeline once")
             PipelineService().runSteps(dbPath)
         }
-        "ingress"     -> { println("JVM Daily — ingress");     runIngress(dbPath) }
-        "enrichment"  -> { println("JVM Daily — enrichment");  runEnrichment(dbPath) }
-        "enrichment-replay" -> { println("JVM Daily — enrichment-replay"); runEnrichmentReplay(dbPath, args.drop(1)) }
-        "quality-report" -> { println("JVM Daily — quality-report"); runQualityReport(dbPath, args.drop(1)) }
-        "inspect-quality" -> { println("JVM Daily — inspect-quality"); runInspectQuality(dbPath, args.drop(1)) }
-        "clustering"  -> { println("JVM Daily — clustering");  runClustering(dbPath, args.drop(1)) }
-        "outgress"    -> { println("JVM Daily — outgress");     runOutgress(dbPath) }
-        "reprocess"   -> { println("JVM Daily — reprocess");    runReprocess(dbPath, args.drop(1)) }
-        "validate-raw-ids" -> { println("JVM Daily — validate-raw-ids"); runValidateRawIds(dbPath, args.drop(1)) }
-        "ingress-push" -> { println("JVM Daily — ingress-push (Reddit → remote)"); runIngressPush(dbPath) }
+        "ingress"     -> { println("${domain.name} — ingress");     runIngress(dbPath) }
+        "enrichment"  -> { println("${domain.name} — enrichment");  runEnrichment(dbPath, domain) }
+        "enrichment-replay" -> { println("${domain.name} — enrichment-replay"); runEnrichmentReplay(dbPath, args.drop(1), domain) }
+        "quality-report" -> { println("${domain.name} — quality-report"); runQualityReport(dbPath, args.drop(1)) }
+        "inspect-quality" -> { println("${domain.name} — inspect-quality"); runInspectQuality(dbPath, args.drop(1)) }
+        "clustering"  -> { println("${domain.name} — clustering");  runClustering(dbPath, args.drop(1), domain) }
+        "outgress"    -> { println("${domain.name} — outgress");     runOutgress(dbPath, domain) }
+        "reprocess"   -> { println("${domain.name} — reprocess");    runReprocess(dbPath, args.drop(1), domain) }
+        "validate-raw-ids" -> { println("${domain.name} — validate-raw-ids"); runValidateRawIds(dbPath, args.drop(1)) }
+        "ingress-push" -> { println("${domain.name} — ingress-push (Reddit → remote)"); runIngressPush(dbPath) }
         else -> {
             System.err.println("Unknown command: $cmd")
             System.err.println("Valid: pipeline | ingress | enrichment | enrichment-replay | reprocess | quality-report | inspect-quality | clustering | outgress | validate-raw-ids | ingress-push")
@@ -82,7 +90,7 @@ fun main(args: Array<String>) {
     }
 }
 
-private fun startDaemon(dbPath: String) {
+private fun startDaemon(dbPath: String, domain: DomainProfile = DomainProfile.default()) {
     val cron          = System.getenv("PIPELINE_CRON")    ?: DEFAULT_PIPELINE_CRON
     val dashboardPort = System.getenv("DASHBOARD_PORT")?.toIntOrNull() ?: 8000
     val storePath     = System.getenv("JOBRUNR_STORE")    ?: "data/jobrunr"
@@ -130,7 +138,7 @@ private fun startDaemon(dbPath: String) {
     )
 
     println("════════════════════════════════════════")
-    println(" JVM Daily daemon started")
+    println(" ${domain.name} daemon started")
     println(" Schedule  : $cron")
     println(" Database  : $dbPath")
     println(" Dashboard : http://localhost:$dashboardPort/dashboard")
@@ -146,7 +154,7 @@ internal fun runIngress(dbPath: String) {
     val configPath = System.getenv("CONFIG_PATH") ?: "config/sources.yml"
 
     println("Config: $configPath")
-    val config = SourcesConfig.load(Path.of(configPath))
+    val config = JvmSourcesConfig.load(Path.of(configPath))
 
     DuckDbConnectionFactory.persistent(dbPath).use { connection ->
         val repository = DuckDbArticleRepository(connection)
@@ -194,7 +202,7 @@ internal fun runIngress(dbPath: String) {
     }
 }
 
-internal fun runEnrichment(dbPath: String) {
+internal fun runEnrichment(dbPath: String, domain: DomainProfile? = null) {
     val llmProvider = System.getenv("LLM_PROVIDER") ?: "mock"
     val llmApiKey   = System.getenv("LLM_API_KEY")
     val llmModel    = System.getenv("LLM_MODEL") ?: "gpt-4"
@@ -214,7 +222,10 @@ internal fun runEnrichment(dbPath: String) {
         // Create taxonomy classifier if LLM is real (not mock)
         val taxonomyClassifier = if (llmProvider != "mock") {
             val taxonomy = jvm.daily.workflow.TaxonomyLoader.loadFromClasspath()
-            jvm.daily.workflow.TaxonomyClassifier(taxonomy, llmClient)
+            jvm.daily.workflow.TaxonomyClassifier(
+                taxonomy, llmClient,
+                domainDescription = domain?.description,
+            )
         } else null
 
         runBlocking {
@@ -222,6 +233,7 @@ internal fun runEnrichment(dbPath: String) {
                 rawRepo, processedRepo, llmClient,
                 sinceDays = sinceDays,
                 taxonomyClassifier = taxonomyClassifier,
+                domainProfile = domain,
             ).execute()
         }
         println("Total processed articles: ${processedRepo.count()}")
@@ -251,7 +263,7 @@ internal data class InspectQualityOptions(
     val outputDir: String = "output",
 )
 
-internal fun runEnrichmentReplay(dbPath: String, args: List<String>) {
+internal fun runEnrichmentReplay(dbPath: String, args: List<String>, domain: DomainProfile? = null) {
     val llmProvider = System.getenv("LLM_PROVIDER") ?: "mock"
     val llmApiKey   = System.getenv("LLM_API_KEY")
     val llmModel    = System.getenv("LLM_MODEL") ?: "gpt-4"
@@ -291,6 +303,7 @@ internal fun runEnrichmentReplay(dbPath: String, args: List<String>) {
                 processedArticleRepository = processedRepo,
                 llmClient = createLLMClient(llmProvider, llmApiKey, llmModel),
                 replayRawArticleIds = replayIds.toSet(),
+                domainProfile = domain,
             ).execute()
         }
 
@@ -299,7 +312,7 @@ internal fun runEnrichmentReplay(dbPath: String, args: List<String>) {
     }
 }
 
-internal fun runReprocess(dbPath: String, args: List<String>) {
+internal fun runReprocess(dbPath: String, args: List<String>, domain: DomainProfile? = null) {
     val llmProvider = System.getenv("LLM_PROVIDER") ?: "mock"
     val llmApiKey   = System.getenv("LLM_API_KEY")
     val llmModel    = System.getenv("LLM_MODEL") ?: "gpt-4"
@@ -323,7 +336,10 @@ internal fun runReprocess(dbPath: String, args: List<String>) {
 
         val taxonomyClassifier = if (llmProvider != "mock") {
             val taxonomy = jvm.daily.workflow.TaxonomyLoader.loadFromClasspath()
-            jvm.daily.workflow.TaxonomyClassifier(taxonomy, llmClient)
+            jvm.daily.workflow.TaxonomyClassifier(
+                taxonomy, llmClient,
+                domainDescription = domain?.description,
+            )
         } else null
 
         val deleted = processedRepo.deleteByProcessedAtSince(since)
@@ -334,12 +350,13 @@ internal fun runReprocess(dbPath: String, args: List<String>) {
                 rawRepo, processedRepo, llmClient,
                 sinceDays = 1,
                 taxonomyClassifier = taxonomyClassifier,
+                domainProfile = domain,
             ).execute()
         }
         println("Re-enrichment done. Running clustering...")
 
         runBlocking {
-            ClusteringWorkflow(processedRepo, clusterRepo, createLLMClient(llmProvider, llmApiKey, llmModel)).execute()
+            ClusteringWorkflow(processedRepo, clusterRepo, createLLMClient(llmProvider, llmApiKey, llmModel), domainProfile = domain).execute()
         }
         println("Reprocess complete.")
     }
@@ -614,7 +631,7 @@ private fun buildInspectionReport(
     }.trimEnd()
 }
 
-internal fun runClustering(dbPath: String, args: List<String> = emptyList()) {
+internal fun runClustering(dbPath: String, args: List<String> = emptyList(), domain: DomainProfile? = null) {
     val llmProvider = System.getenv("LLM_PROVIDER") ?: "mock"
     val llmApiKey   = System.getenv("LLM_API_KEY")
     val llmModel    = System.getenv("LLM_MODEL") ?: "gpt-4"
@@ -629,11 +646,11 @@ internal fun runClustering(dbPath: String, args: List<String> = emptyList()) {
     DuckDbConnectionFactory.persistent(dbPath).use { connection ->
         val processedRepo = DuckDbProcessedArticleRepository(connection)
         val clusterRepo = DuckDbClusterRepository(connection)
-        runBlocking { ClusteringWorkflow(processedRepo, clusterRepo, createLLMClient(llmProvider, llmApiKey, llmModel), sinceHours = sinceHours).execute() }
+        runBlocking { ClusteringWorkflow(processedRepo, clusterRepo, createLLMClient(llmProvider, llmApiKey, llmModel), sinceHours = sinceHours, domainProfile = domain).execute() }
     }
 }
 
-internal fun runOutgress(dbPath: String) {
+internal fun runOutgress(dbPath: String, domain: DomainProfile? = null) {
     val outputDirPath = System.getenv("OUTPUT_DIR")    ?: "output"
     val outgressDays  = System.getenv("OUTGRESS_DAYS")?.toIntOrNull() ?: 30
     val outputDir     = Path.of(outputDirPath)
@@ -649,6 +666,7 @@ internal fun runOutgress(dbPath: String) {
                 processedRepo, outputDir,
                 outgressDays = outgressDays,
                 clusterRepository = clusterRepo,
+                domainProfile = domain,
             ).execute()
         }
     }
@@ -686,42 +704,7 @@ private fun catchUpIfMissed(scheduler: JobScheduler, cron: String) {
     scheduler.enqueue(IocJobLambda<PipelineService> { it.run(JobContext.Null) })
 }
 
-// ── Ingest payload parsing (used by RestApi and ingress-push) ────────────────
-
-internal fun parseIngestPayload(json: String): List<jvm.daily.model.Article> {
-    val array = kotlinx.serialization.json.Json.parseToJsonElement(json).jsonArray
-    return array.map { elem ->
-        val obj = elem.jsonObject
-        jvm.daily.model.Article(
-            id = obj["id"]!!.jsonPrimitive.content,
-            title = obj["title"]!!.jsonPrimitive.content,
-            content = obj["content"]?.jsonPrimitive?.content ?: "",
-            sourceType = obj["sourceType"]!!.jsonPrimitive.content,
-            sourceId = obj["sourceId"]!!.jsonPrimitive.content,
-            url = obj["url"]?.jsonPrimitive?.contentOrNull,
-            author = obj["author"]?.jsonPrimitive?.contentOrNull,
-            comments = obj["comments"]?.jsonPrimitive?.contentOrNull,
-            ingestedAt = kotlinx.datetime.Instant.parse(obj["ingestedAt"]!!.jsonPrimitive.content),
-        )
-    }
-}
-
-internal fun serializeArticles(articles: List<jvm.daily.model.Article>): String {
-    val elements = articles.map { a ->
-        buildJsonObject {
-            put("id", a.id)
-            put("title", a.title)
-            put("content", a.content)
-            put("sourceType", a.sourceType)
-            put("sourceId", a.sourceId)
-            a.url?.let { put("url", it) }
-            a.author?.let { put("author", it) }
-            a.comments?.let { put("comments", it) }
-            put("ingestedAt", a.ingestedAt.toString())
-        }
-    }
-    return JsonArray(elements).toString()
-}
+// parseIngestPayload and serializeArticles moved to engine (jvm.daily.api.ArticleSerialization)
 
 // ── ingress-push: fetch Reddit locally, POST articles to remote ingest API ──
 
@@ -731,7 +714,7 @@ internal fun runIngressPush(dbPath: String) {
     val apiKey = System.getenv("INGEST_API_KEY")
         ?: error("INGEST_API_KEY required")
     val configPath = System.getenv("CONFIG_PATH") ?: "config/sources.yml"
-    val config = SourcesConfig.load(Path.of(configPath))
+    val config = JvmSourcesConfig.load(Path.of(configPath))
 
     if (config.reddit.isEmpty()) {
         println("[ingress-push] No Reddit sources configured. Nothing to do.")
@@ -817,3 +800,5 @@ private class MockLLMClient : LLMClient {
 
 internal const val DEFAULT_PIPELINE_CRON = "0 7 * * *"
 internal val DEFAULT_DB_PATH: String get() = "${System.getProperty("user.home")}/.jvm-daily/jvm-daily.duckdb"
+internal fun defaultDbPath(domain: DomainProfile): String =
+    "${System.getProperty("user.home")}/.${domain.slug}/${domain.slug}.duckdb"

@@ -11,4 +11,5 @@ plugins {
 }
 
 rootProject.name = "jvm-daily"
+include("vived-engine")
 include("app")

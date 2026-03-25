@@ -1,0 +1,40 @@
+{
+  "name": "JVM Daily",
+  "slug": "jvm-daily",
+  "description": "JVM ecosystem news aggregator",
+  "audience": "experienced JVM/backend developers",
+
+  "relevanceGate": {
+    "include": [
+      "JVM language features, releases, or roadmap (Java, Kotlin, Scala, Groovy)",
+      "JVM frameworks, libraries, or tools (Spring, Quarkus, Micronaut, Gradle, Maven)",
+      "JVM performance, security vulnerabilities, or architecture",
+      "OpenJDK development, JEPs, runtime internals",
+      "Developer tooling, build systems, or CI/CD relevant to JVM ecosystem",
+      "Technical community news with clear relevance to backend/JVM engineers"
+    ],
+    "exclude": [
+      "General programming tips not specific to JVM ecosystem",
+      "Non-technical content: politics, entertainment, sports, memes",
+      "Pure frontend/mobile development unless JVM-related (e.g. Kotlin Multiplatform is relevant)"
+    ]
+  },
+
+  "enrichment": {
+    "systemPrompt": "You are a JVM ecosystem news analyst writing for experienced engineers.\n\nYour summaries must be DENSE and SPECIFIC — every sentence must contain facts the reader cannot guess from the title alone. Extract:\n- Exact version numbers, JEP numbers, CVE IDs\n- Concrete technical changes (what API changed, what got deprecated, what's new)\n- Performance numbers, benchmarks, migration steps if mentioned\n- Key community opinions or controversies from comments/discussion\n- Breaking changes, deprecations, compatibility notes\n\nNEVER write filler like \"users are encouraged to update\" or \"promises new features.\"\nNEVER restate the title. Start with the most important technical fact.\n\nIf the article is a Reddit discussion, summarize the TOP ARGUMENTS from the thread — what do people agree/disagree on, what's the consensus, what interesting insights were shared.",
+    "entityExamples": ["JDK 25", "Spring Boot 4.0", "GraalVM 23", "JEP 511"],
+    "topicExamples": ["virtual-threads", "spring-security", "kotlin-coroutines", "graalvm-native"]
+  },
+
+  "clustering": {
+    "systemPrompt": "You are an expert JVM news curator. Your job is to analyze clusters of related\narticles from multiple sources (RSS feeds, Bluesky, Reddit, blogs) and\ncreate compelling synthesis summaries.\n\nYour synthesis should:\n- Identify the core story or development\n- Synthesize insights across sources\n- Highlight technical details that matter to experienced JVM developers\n- Note community sentiment and reactions\n- Be concise but informative (150-200 words)\n\nWrite for an audience of experienced JVM engineers who want signal, not noise.",
+    "audienceDescription": "experienced JVM engineers who want signal, not noise",
+    "exampleClusters": ["Kotlin 2.3.20 Release", "GraalVM Native Image Performance", "Spring Security 6.5 Hardening"],
+    "majorReleaseRules": [
+      "Java/JDK GA releases (any version number)",
+      "Kotlin feature releases (X.Y.Z where Z=0 or Z=20)",
+      "Spring Boot major or minor (e.g. 3.5.0, 4.0.0)",
+      "Any other platform-level milestone that overshadows all other news"
+    ]
+  }
+}
