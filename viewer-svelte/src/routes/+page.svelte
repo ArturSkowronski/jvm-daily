@@ -34,7 +34,7 @@
 
 	async function loadDate(date: string, pushState = true) {
 		currentDate = date;
-		ensureDismissedLoaded(date); // Load dismissed state from localStorage for this date
+		ensureDismissedLoaded(date);
 		digest = await fetchDigest(date);
 		if (pushState) {
 			history.pushState({ date }, '', `?date=${date}`);
@@ -45,19 +45,14 @@
 		loadDate(date);
 	}
 
-	// Helper to render a cluster (topic or release)
 	function clusterKey(c: DigestCluster): string { return c.title; }
 	function isRelease(c: DigestCluster): boolean {
-		// Only "release" type gets the compact release card layout
-		// "announcement" and "topic" render as full article clusters
 		return c.type === 'release';
 	}
 	function isStandaloneTweet(c: DigestCluster): boolean {
 		return c.articles.length === 1 && isSocialPost(c.articles[0]);
 	}
 
-	// ── Reactive cluster classification based on bookmark/dismiss state ──
-	// All non-tweet, non-release clusters
 	const allTopicClusters = $derived(
 		(digest?.clusters || []).filter((c) => !isRelease(c) && !isStandaloneTweet(c))
 	);
@@ -68,7 +63,6 @@
 		(digest?.clusters || []).filter((c) => isStandaloneTweet(c)).map((c) => c.articles[0])
 	);
 
-	// Bookmarked clusters (ROTS section — shown at top)
 	const rotsClusters = $derived(
 		allTopicClusters.filter((c) => isBookmarked($bookmarks, currentDate, c.title))
 	);
@@ -76,7 +70,6 @@
 		allReleaseClusters.filter((c) => isBookmarked($bookmarks, currentDate, c.title))
 	);
 
-	// Normal clusters (not bookmarked, not dismissed)
 	const normalClusters = $derived(
 		allTopicClusters.filter((c) =>
 			!isBookmarked($bookmarks, currentDate, c.title) &&
@@ -90,7 +83,6 @@
 		)
 	);
 
-	// Dismissed clusters (Archive section — shown at bottom, dimmed)
 	const archivedClusters = $derived(
 		allTopicClusters.filter((c) =>
 			isDismissed($dismissed, currentDate, c.title) &&
@@ -124,7 +116,6 @@
 				</div>
 			</div>
 
-			<!-- Normal topic clusters -->
 			{#each normalClusters as cluster (cluster.id)}
 				<Cluster
 					{cluster}
@@ -135,7 +126,6 @@
 				/>
 			{/each}
 
-			<!-- Normal releases -->
 			{#if normalReleases.length > 0}
 				<div class="releases-section">
 					<div class="section-label">Releases</div>
@@ -151,7 +141,6 @@
 				</div>
 			{/if}
 
-			<!-- ★ ROTS section (bookmarked clusters, between normal and archive) -->
 			{#if hasRots}
 				<div class="rots-inline-section">
 					<div class="section-label">★ Rest of the Story</div>
@@ -176,7 +165,6 @@
 				</div>
 			{/if}
 
-			<!-- Standalone tweets -->
 			{#if standaloneTweets.length > 0}
 				<div class="tweets-section">
 					<div class="section-label">Tweets</div>
@@ -192,7 +180,6 @@
 				</div>
 			{/if}
 
-			<!-- Archive section (dismissed clusters, dimmed) -->
 			{#if hasArchive}
 				<div class="archive-section">
 					<div class="section-label">Archive</div>
@@ -224,26 +211,41 @@
 
 <style>
 	.loading, .empty { padding: 48px; text-align: center; color: #999; width: 100%; }
-	.digest-content { flex: 1; overflow-y: auto; padding: 32px; max-width: 900px; margin: 0 auto; }
-	.digest-header { margin-bottom: 24px; }
-	.digest-date { font-family: 'Newsreader', serif; font-size: 1.5rem; font-weight: 600; }
-	.digest-stats { display: flex; gap: 16px; font-size: 0.78rem; color: #888; margin-top: 4px; }
-	.releases-section, .tweets-section { margin-top: 32px; }
+	.digest-content {
+		flex: 1; overflow-y: auto;
+		padding: 40px 48px;
+		max-width: 780px; margin: 0 auto;
+	}
+	.digest-header { margin-bottom: 32px; padding-bottom: 20px; border-bottom: 2px solid #1a1a1a; }
+	.digest-date { font-size: 2rem; font-weight: 700; line-height: 1.2; }
+	.digest-stats { display: flex; gap: 16px; font-size: 0.85rem; color: #868787; margin-top: 8px; }
+
+	.releases-section, .tweets-section { margin-top: 40px; }
 	.section-label {
-		font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.1em;
-		color: #999; margin-bottom: 12px; font-weight: 600;
+		font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.12em;
+		color: #868787; margin-bottom: 16px; font-weight: 600;
+		padding-bottom: 8px; border-bottom: 2px solid #00a64e;
+		display: inline-block;
 	}
 	.rots-inline-section {
-		margin-bottom: 24px; padding-bottom: 16px; border-bottom: 2px solid #f59e0b;
+		margin: 40px 0 24px; padding-bottom: 16px;
 	}
-	.rots-inline-section .section-label { color: #f59e0b; }
+	.rots-inline-section .section-label { border-bottom-color: #f59e0b; color: #b45309; }
 	.archive-section {
-		margin-top: 32px; padding-top: 16px; border-top: 1px solid #e0e0e0;
+		margin-top: 40px; padding-top: 16px;
 	}
-	.archive-section .section-label { color: #bbb; }
-	.tweet-card { background: #fff; border: 1px solid #e8e8e8; border-radius: 8px; padding: 10px 14px; margin-bottom: 8px; }
-	.tweet-header { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; }
-	.tweet-header a { font-size: 0.72rem; color: #0085ff; text-decoration: none; }
+	.archive-section .section-label { border-bottom-color: #d0d0d0; color: #b0b0b0; }
+	.tweet-card {
+		border-bottom: 1px solid #e8e8e8;
+		padding: 16px 0; margin-bottom: 0;
+	}
+	.tweet-header { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+	.tweet-header a { font-size: 0.85rem; text-decoration: none; }
 	.tweet-header a:hover { text-decoration: underline; }
-	.tweet-text { color: #444; font-size: 0.82rem; line-height: 1.5; margin: 0; }
+	.tweet-text { color: #363737; font-size: 0.95rem; line-height: 1.7; margin: 0; }
+
+	@media (max-width: 768px) {
+		.digest-content { padding: 24px 16px; }
+		.digest-date { font-size: 1.5rem; }
+	}
 </style>
