@@ -7,9 +7,11 @@ COPY gradlew gradlew
 COPY gradle/ gradle/
 COPY settings.gradle.kts settings.gradle.kts
 COPY app/build.gradle.kts app/build.gradle.kts
+COPY vived-engine/build.gradle.kts vived-engine/build.gradle.kts
 RUN ./gradlew :app:dependencies --no-daemon -q 2>&1 | tail -1
 
 # Build distribution
+COPY vived-engine/src vived-engine/src
 COPY app/src app/src
 RUN ./gradlew :app:installDist --no-daemon -q
 
@@ -32,6 +34,7 @@ COPY --from=jvm-builder /build/app/build/install/app/ /app/
 
 # Config
 COPY config/ /app/config/
+COPY domains/ /app/domains/
 
 # SvelteKit build output (static files served by Ktor)
 COPY --from=svelte-builder /build/build/ /app/viewer/
