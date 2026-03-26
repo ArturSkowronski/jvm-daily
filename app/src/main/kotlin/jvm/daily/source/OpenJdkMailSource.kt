@@ -13,22 +13,20 @@ import kotlinx.datetime.toLocalDateTime
 import java.net.HttpURLConnection
 import java.net.URI
 import java.time.YearMonth
-import java.time.format.TextStyle
 import java.time.format.DateTimeFormatter
 import java.time.ZonedDateTime
 import java.util.Locale
 import kotlin.time.Duration.Companion.days
 
 /**
- * OpenJDK mailing list source — fetches monthly archives and aggregates threads.
+ * OpenJDK mailing list source — fetches from Mailman 3 (HyperKitty) archives.
  *
- * Uses Mailman plain-text mbox archives:
+ * Primary: scrapes HyperKitty monthly thread listing + individual thread pages
+ *   https://mail.openjdk.org/archives/list/{list}@openjdk.org/{year}/{month}/
+ * Fallback: legacy pipermail mbox for older pre-migration archives
  *   https://mail.openjdk.org/pipermail/{list}/YYYY-Month.txt
  *
- * Each thread (grouped by normalized Subject) becomes one Article with all messages.
- * Threads with fewer than minReplies are filtered out (noise reduction).
- *
- * Key lists: jdk-dev, amber-dev, loom-dev, valhalla-dev, panama-dev, leyden-dev
+ * Each thread becomes one Article. Threads with fewer than minReplies are filtered out.
  */
 class OpenJdkMailSource(
     private val configs: List<OpenJdkMailConfig>,
@@ -51,39 +49,65 @@ class OpenJdkMailSource(
             val currentMonth = YearMonth.of(now.year, now.monthNumber)
             val prevMonth = currentMonth.minusMonths(1)
 
-            // Fetch current + previous month (early in the month there may be no archive yet)
-            val currentMbox = fetchMbox(listName, currentMonth) ?: ""
-            val prevMbox = fetchMbox(listName, prevMonth) ?: ""
-            val mbox = (currentMbox + "\n" + prevMbox).trim()
-            if (mbox.isBlank()) {
-                return SourceFetchOutcome(
-                    feed = FeedIngestResult(sourceType = sourceType, sourceId = listName,
-                        status = FeedIngestStatus.SUCCESS, fetchedCount = 0,
-                        errors = listOf("No archives found for current/previous month")),
-                    articles = emptyList(),
-                )
+            // If mboxFetcher is injected (tests), skip HyperKitty and use legacy path directly
+            if (mboxFetcher != null) {
+                return fetchListLegacy(config)
             }
 
-            val messages = parseMbox(mbox)
-            val threads = groupIntoThreads(messages)
-            val windowStart = clock.now().minus(config.sinceDays.days)
+            // Fetch threads from current + previous month via HyperKitty
+            val currentThreads = fetchThreadsFromHyperKitty(listName, currentMonth)
+            val prevThreads = fetchThreadsFromHyperKitty(listName, prevMonth)
+            val allThreads = (currentThreads + prevThreads)
+                .distinctBy { it.subject } // deduplicate threads spanning months
 
+            if (allThreads.isEmpty()) {
+                // Fallback to legacy pipermail
+                return fetchListLegacy(config)
+            }
+
+            val windowStart = clock.now().minus(config.sinceDays.days)
             var skippedLowActivity = 0
-            val articles = threads.mapNotNull { (subject, msgs) ->
-                val windowMsgs = msgs.filter { it.parsedDate != null && it.parsedDate >= windowStart }
-                if (windowMsgs.size < config.minReplies) {
+
+            val articles = allThreads.mapNotNull { thread ->
+                // Filter by date and reply count
+                if (thread.lastActive != null && thread.lastActive < windowStart) {
                     skippedLowActivity++
                     return@mapNotNull null
                 }
-                val lastActiveDay = windowMsgs.mapNotNull { it.parsedDate }
-                    .maxOrNull()
+                if (thread.replyCount < config.minReplies) {
+                    skippedLowActivity++
+                    return@mapNotNull null
+                }
+
+                val lastActiveDay = thread.lastActive
                     ?.toLocalDateTime(TimeZone.UTC)?.date?.toString()
                     ?: clock.now().toLocalDateTime(TimeZone.UTC).date.toString()
-                threadToArticle(listName, subject, msgs, windowMsgs, lastActiveDay)
+
+                // Fetch thread content for the article body
+                val content = if (thread.threadUrl != null) {
+                    fetchThreadContent(thread.threadUrl, listName, thread.subject)
+                } else {
+                    "Thread: ${thread.subject}\nList: $listName@openjdk.org | ${thread.replyCount + 1} messages"
+                }
+
+                val canonicalId = CanonicalArticleId.from(
+                    sourceType, listName, "${thread.subject}::$lastActiveDay"
+                )
+
+                Article(
+                    id = canonicalId,
+                    title = "[$listName] ${thread.subject}",
+                    content = content,
+                    sourceType = sourceType,
+                    sourceId = "$listName/${normalizeSubject(thread.subject)}",
+                    url = thread.threadUrl ?: "https://mail.openjdk.org/archives/list/$listName@openjdk.org/",
+                    author = thread.author,
+                    ingestedAt = clock.now(),
+                )
             }
 
             val errors = buildList {
-                if (skippedLowActivity > 0) add("Skipped $skippedLowActivity threads with < ${config.minReplies} replies in last ${config.sinceDays}d")
+                if (skippedLowActivity > 0) add("Skipped $skippedLowActivity threads with < ${config.minReplies} replies or outside ${config.sinceDays}d window")
             }
 
             SourceFetchOutcome(
@@ -110,6 +134,190 @@ class OpenJdkMailSource(
         }
     }
 
+    // ── HyperKitty (Mailman 3) scraping ─────────────────────────────────────────
+
+    private data class ThreadInfo(
+        val subject: String,
+        val author: String,
+        val replyCount: Int,
+        val lastActive: Instant?,
+        val threadUrl: String?,
+    )
+
+    /**
+     * Scrapes the HyperKitty monthly thread listing page to get thread metadata.
+     * URL: /archives/list/{list}@openjdk.org/{year}/{month}/
+     *
+     * HTML structure per thread:
+     *   <div class="thread-email ...">
+     *     <a href="/archives/list/{list}@openjdk.org/thread/{hash}/"
+     *        class="thread-title"> ... subject text ... </a>
+     *     <span class="thread-date pull-right" title="Wednesday, 25 March 2026 12:11:54">
+     *     <span class="badge bg-secondary">
+     *       <i class="fa fa-comment" aria-label="replies"></i> 18
+     */
+    private fun fetchThreadsFromHyperKitty(listName: String, yearMonth: YearMonth): List<ThreadInfo> {
+        val url = "https://mail.openjdk.org/archives/list/$listName@openjdk.org/${yearMonth.year}/${yearMonth.monthValue}/"
+        val html = try { httpGet(url) } catch (_: Exception) { return emptyList() }
+
+        val threads = mutableListOf<ThreadInfo>()
+
+        // Split into thread blocks
+        val threadBlocks = html.split("""<div class="thread-email""")
+
+        for (block in threadBlocks.drop(1)) {
+            // Extract thread URL and subject
+            val linkMatch = Regex(
+                """href="(/archives/list/[^"]+/thread/[^"]+/)"\s*\n\s*class="thread-title">""",
+            ).find(block) ?: continue
+
+            val threadPath = linkMatch.groupValues[1]
+            val threadUrl = "https://mail.openjdk.org$threadPath"
+
+            // Subject is after thread-title"> ... </a>, may span multiple lines with <i> tags
+            val subjectMatch = Regex(
+                """class="thread-title">\s*(?:<[^>]*>\s*)*([^<]+?)\s*</a>""",
+                RegexOption.DOT_MATCHES_ALL
+            ).find(block)
+            val subject = (subjectMatch?.groupValues?.get(1) ?: "").trim()
+                .replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">")
+                .replace("&#x27;", "'").replace("&#39;", "'").replace("&quot;", "\"")
+
+            if (subject.isBlank()) continue
+
+            // Extract date from: <span class="thread-date pull-right" title="Wednesday, 25 March 2026 12:11:54">
+            val dateMatch = Regex("""thread-date[^"]*"[^>]*title="([^"]+)"""").find(block)
+            val lastActive = dateMatch?.let { parseHyperKittyDate(it.groupValues[1]) }
+
+            // Extract reply count from: <i ... aria-label="replies"></i>\n 18
+            val replyMatch = Regex("""aria-label="replies"></i>\s*(\d+)""").find(block)
+            val replyCount = replyMatch?.groupValues?.get(1)?.toIntOrNull() ?: 0
+
+            threads.add(ThreadInfo(
+                subject = normalizeSubject(subject),
+                author = "",
+                replyCount = replyCount,
+                lastActive = lastActive,
+                threadUrl = threadUrl,
+            ))
+        }
+
+        return threads
+    }
+
+    /** Parses "Wednesday, 25 March 2026 12:11:54" */
+    private fun parseHyperKittyDate(title: String): Instant? {
+        val formatters = listOf(
+            DateTimeFormatter.ofPattern("EEEE, d MMMM yyyy HH:mm:ss", Locale.US),
+            DateTimeFormatter.ofPattern("EEEE, dd MMMM yyyy HH:mm:ss", Locale.US),
+        )
+        for (fmt in formatters) {
+            try {
+                val ldt = java.time.LocalDateTime.parse(title.trim(), fmt)
+                val zdt = ldt.atZone(java.time.ZoneOffset.UTC)
+                return Instant.fromEpochMilliseconds(zdt.toInstant().toEpochMilli())
+            } catch (_: Exception) {}
+        }
+        return null
+    }
+
+    /**
+     * Fetches thread page and extracts message content for the article body.
+     */
+    private fun fetchThreadContent(threadUrl: String, listName: String, subject: String): String {
+        val html = try { httpGet(threadUrl) } catch (_: Exception) {
+            return "Thread: $subject\nList: $listName@openjdk.org"
+        }
+
+        // Extract message bodies from the thread page
+        // HyperKitty wraps each message in <div class="email-body">
+        val bodyPattern = Regex("""<div[^>]*class="[^"]*email-body[^"]*"[^>]*>(.*?)</div>""", setOf(RegexOption.DOT_MATCHES_ALL))
+        val fromPattern = Regex("""class="[^"]*from[^"]*"[^>]*>([^<]+)""")
+        val bodies = bodyPattern.findAll(html).take(10).toList() // limit to 10 messages
+
+        return buildString {
+            appendLine("Thread: $subject")
+            appendLine("List: $listName@openjdk.org | Messages: ${bodies.size}+")
+            appendLine()
+            for ((i, match) in bodies.withIndex()) {
+                val body = match.groupValues[1]
+                    .replace(Regex("<[^>]+>"), "") // strip HTML tags
+                    .replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">")
+                    .replace("&#39;", "'").replace("&quot;", "\"")
+                    .replace(Regex("\\s+"), " ")
+                    .trim()
+                    .take(1500)
+                val prefix = if (i == 0) "[OP]" else "[Reply $i]"
+                appendLine("$prefix $body")
+                appendLine()
+            }
+        }
+    }
+
+    private fun parseIsoDate(dateStr: String): Instant? {
+        return try {
+            Instant.parse(dateStr)
+        } catch (_: Exception) {
+            try {
+                // Try parsing as ISO datetime without timezone
+                val zdt = ZonedDateTime.parse(dateStr, DateTimeFormatter.ISO_DATE_TIME)
+                Instant.fromEpochMilliseconds(zdt.toInstant().toEpochMilli())
+            } catch (_: Exception) { null }
+        }
+    }
+
+    // ── Legacy pipermail fallback ────────────────────────────────────────────────
+
+    private fun fetchListLegacy(config: OpenJdkMailConfig): SourceFetchOutcome {
+        val listName = config.list
+        val now = clock.now().toLocalDateTime(TimeZone.UTC)
+        val currentMonth = YearMonth.of(now.year, now.monthNumber)
+        val prevMonth = currentMonth.minusMonths(1)
+
+        val currentMbox = fetchLegacyMbox(listName, currentMonth) ?: ""
+        val prevMbox = fetchLegacyMbox(listName, prevMonth) ?: ""
+        val mbox = (currentMbox + "\n" + prevMbox).trim()
+        if (mbox.isBlank()) {
+            return SourceFetchOutcome(
+                feed = FeedIngestResult(sourceType = sourceType, sourceId = listName,
+                    status = FeedIngestStatus.SUCCESS, fetchedCount = 0,
+                    errors = listOf("No archives found (HyperKitty + pipermail both empty)")),
+                articles = emptyList(),
+            )
+        }
+
+        val messages = parseMbox(mbox)
+        val threads = groupIntoThreads(messages)
+        val windowStart = clock.now().minus(config.sinceDays.days)
+
+        var skippedLowActivity = 0
+        val articles = threads.mapNotNull { (subject, msgs) ->
+            val windowMsgs = msgs.filter { it.parsedDate != null && it.parsedDate >= windowStart }
+            if (windowMsgs.size < config.minReplies) {
+                skippedLowActivity++
+                return@mapNotNull null
+            }
+            val lastActiveDay = windowMsgs.mapNotNull { it.parsedDate }
+                .maxOrNull()
+                ?.toLocalDateTime(TimeZone.UTC)?.date?.toString()
+                ?: clock.now().toLocalDateTime(TimeZone.UTC).date.toString()
+            threadToArticle(listName, subject, msgs, windowMsgs, lastActiveDay)
+        }
+
+        val errors = buildList {
+            add("Using legacy pipermail fallback")
+            if (skippedLowActivity > 0) add("Skipped $skippedLowActivity threads with < ${config.minReplies} replies in last ${config.sinceDays}d")
+        }
+
+        return SourceFetchOutcome(
+            feed = FeedIngestResult(sourceType = sourceType, sourceId = listName,
+                status = FeedIngestStatus.SUCCESS, fetchedCount = articles.size, errors = errors),
+            articles = articles,
+        )
+    }
+
+    // ── Legacy mbox parsing (unchanged) ─────────────────────────────────────────
+
     private data class MailMessage(
         val subject: String,
         val from: String,
@@ -120,7 +328,6 @@ class OpenJdkMailSource(
 
     private fun parseMbox(mbox: String): List<MailMessage> {
         val messages = mutableListOf<MailMessage>()
-        // Split on mbox "From " delimiter at start of line
         val rawMessages = mbox.split(Regex("(?m)^From (?=\\S+@\\S+|\\S+ at \\S+)"))
             .filter { it.isNotBlank() }
 
@@ -136,7 +343,6 @@ class OpenJdkMailSource(
                     when {
                         line.isBlank() -> inHeaders = false
                         line.startsWith(" ") || line.startsWith("\t") -> {
-                            // Continuation of previous header
                             if (lastHeaderKey.isNotEmpty()) {
                                 headers[lastHeaderKey] = headers[lastHeaderKey] + " " + line.trim()
                             }
@@ -176,9 +382,7 @@ class OpenJdkMailSource(
     }
 
     private fun normalizeSubject(subject: String): String {
-        // Decode MIME encoded words (=?UTF-8?Q?...?= or =?UTF-8?B?...?=)
         val decoded = decodeMimeSubject(subject)
-        // Strip Re:, Fwd:, [External], etc.
         return decoded
             .replace(Regex("^(\\s*(Re|Fwd|\\[External\\])\\s*:?\\s*)+", RegexOption.IGNORE_CASE), "")
             .trim()
@@ -202,7 +406,6 @@ class OpenJdkMailSource(
     }
 
     private fun cleanFrom(from: String): String {
-        // "John Smith <john at openjdk.org>" -> "John Smith"
         return from.substringBefore("<").substringBefore("(").trim()
             .ifBlank { from.substringBefore("@").substringBefore(" at ") }
     }
@@ -216,7 +419,7 @@ class OpenJdkMailSource(
     ): Article {
         val starter = allMessages.first()
         val participants = allMessages.map { it.from }.distinct()
-        val archiveUrl = "https://mail.openjdk.org/pipermail/$listName/"
+        val archiveUrl = "https://mail.openjdk.org/archives/list/$listName@openjdk.org/"
 
         val content = buildString {
             appendLine("Thread: $subject")
@@ -232,8 +435,6 @@ class OpenJdkMailSource(
             }
         }
 
-        // ID includes lastActiveDay so re-active threads generate a fresh article each day.
-        // archiveUrl is NOT passed — it's the same for all threads in a list and would collapse IDs.
         val canonicalId = CanonicalArticleId.from(
             sourceType, listName, "$subject::$lastActiveDay"
         )
@@ -266,9 +467,9 @@ class OpenJdkMailSource(
         return null
     }
 
-    private fun fetchMbox(listName: String, yearMonth: YearMonth): String? {
+    private fun fetchLegacyMbox(listName: String, yearMonth: YearMonth): String? {
         if (mboxFetcher != null) return mboxFetcher.invoke(listName, yearMonth)
-        val monthName = yearMonth.month.getDisplayName(TextStyle.FULL, Locale.US)
+        val monthName = yearMonth.month.getDisplayName(java.time.format.TextStyle.FULL, Locale.US)
         val url = "https://mail.openjdk.org/pipermail/$listName/${yearMonth.year}-$monthName.txt"
         return try { httpGet(url) } catch (_: Exception) { null }
     }
@@ -276,7 +477,7 @@ class OpenJdkMailSource(
     private fun httpGet(url: String): String {
         val connection = URI(url).toURL().openConnection() as HttpURLConnection
         connection.setRequestProperty("User-Agent", "JVM-Daily/1.0")
-        connection.connectTimeout = 15_000
+        connection.connectTimeout = 10_000
         connection.readTimeout = 30_000
         if (connection.responseCode !in 200..299) {
             error("HTTP ${connection.responseCode} for $url")
