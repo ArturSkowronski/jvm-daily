@@ -199,7 +199,7 @@ class JepSource(
     )
 
     companion object {
-        const val LIST_URL = "https://openjdk.org/jeps/"
+        const val LIST_URL = "https://openjdk.org/jeps/0"
         const val JEP_BASE_URL = "https://openjdk.org/jeps"
         const val SOURCE_ID = "openjdk.org/jeps"
 
