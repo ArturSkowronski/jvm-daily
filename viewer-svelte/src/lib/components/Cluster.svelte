@@ -85,8 +85,10 @@
 	.article-list { margin-top: 12px; }
 
 	@media (max-width: 768px) {
-		.cluster-title { font-size: 1.2rem; }
+		.cluster { position: relative; }
+		.cluster-head { display: block; }
+		.cluster-title { font-size: 1.2rem; padding-right: 80px; }
 		.cluster-synthesis { font-size: 0.95rem; }
-		.cluster-actions { flex-direction: row; }
+		.cluster-actions { flex-direction: row; position: absolute; right: 0; top: 0; }
 	}
 </style>
