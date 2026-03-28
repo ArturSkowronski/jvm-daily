@@ -87,8 +87,8 @@
 	@media (max-width: 768px) {
 		.cluster { position: relative; }
 		.cluster-head { display: block; }
-		.cluster-title { font-size: 1.2rem; padding-right: 80px; }
+		.cluster-title { font-size: 1.2rem; padding-right: 76px; }
 		.cluster-synthesis { font-size: 0.95rem; }
-		.cluster-actions { flex-direction: row; position: absolute; right: 0; top: 0; }
+		.cluster-actions { flex-direction: row; position: absolute; right: 0; top: 28px; }
 	}
 </style>
