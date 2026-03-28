@@ -57,7 +57,7 @@
 	.cluster:first-child { padding-top: 0; }
 	.cluster.dismissed { opacity: 0.35; }
 	.cluster-head { display: flex; gap: 16px; }
-	.cluster-head-text { flex: 1; }
+	.cluster-head-text { flex: 1; min-width: 0; }
 	.cluster-title {
 		font-size: 1.4rem; font-weight: 700; line-height: 1.3;
 		margin-bottom: 12px; color: #1a1a1a;
@@ -70,6 +70,7 @@
 	.cluster-synthesis :global(p:last-child) { margin-bottom: 0; }
 	.cluster-synthesis :global(code) {
 		background: #f0faf4; padding: 2px 6px; border-radius: 3px; font-size: 0.9rem;
+		word-break: break-all;
 	}
 	.cluster-actions { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
 	.action-btn {
