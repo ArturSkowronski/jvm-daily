@@ -99,7 +99,9 @@
 	.tick-btn:hover { border-color: #00a64e; color: #00a64e; }
 
 	@media (max-width: 768px) {
-		.cluster-title { font-size: 1.05rem; }
-		.cluster-actions { flex-direction: row; }
+		.release-card { position: relative; }
+		.cluster-head { display: block; }
+		.cluster-title { font-size: 1.05rem; padding-right: 80px; }
+		.cluster-actions { flex-direction: row; position: absolute; right: 0; top: 24px; }
 	}
 </style>
