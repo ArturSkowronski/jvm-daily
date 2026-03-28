@@ -307,7 +307,13 @@
 	.tweet-text { color: #363737; font-size: 0.95rem; line-height: 1.7; margin: 0; }
 
 	@media (max-width: 768px) {
-		.digest-content { padding: 24px 16px; }
+		.digest-content {
+			padding: 20px 16px;
+			max-width: 100%;
+			overflow-x: hidden;
+			word-wrap: break-word;
+			overflow-wrap: break-word;
+		}
 		.digest-date { font-size: 1.5rem; }
 	}
 </style>

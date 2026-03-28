@@ -84,12 +84,12 @@
 		font-size: 0.7rem; background: #00a64e; color: #fff; border-radius: 10px;
 		padding: 1px 7px; margin-left: 4px; font-weight: 700;
 	}
-	.main { flex: 1; display: flex; overflow: hidden; width: 100%; }
+	.main { flex: 1; display: flex; overflow: hidden; width: 100%; min-width: 0; }
 
 	@media (max-width: 768px) {
 		.header { padding: 10px 16px; gap: 12px; }
 		.logo { font-size: 1.1rem; }
 		.tab { padding: 6px 12px; font-size: 0.85rem; }
-		.main { flex-direction: column; }
+		.main { flex-direction: column; overflow: visible; }
 	}
 </style>
