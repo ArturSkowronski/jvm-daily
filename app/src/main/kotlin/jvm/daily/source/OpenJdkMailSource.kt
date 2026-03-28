@@ -68,7 +68,13 @@ class OpenJdkMailSource(
             val windowStart = clock.now().minus(config.sinceDays.days)
             var skippedLowActivity = 0
 
+            var skippedCodeReviews = 0
             val articles = allThreads.mapNotNull { thread ->
+                // Skip RFR (Request For Review) threads — these are routine code reviews, not discussions
+                if (isCodeReviewThread(thread.subject)) {
+                    skippedCodeReviews++
+                    return@mapNotNull null
+                }
                 // Filter by date and reply count
                 if (thread.lastActive != null && thread.lastActive < windowStart) {
                     skippedLowActivity++
@@ -107,6 +113,7 @@ class OpenJdkMailSource(
             }
 
             val errors = buildList {
+                if (skippedCodeReviews > 0) add("Skipped $skippedCodeReviews RFR code review threads")
                 if (skippedLowActivity > 0) add("Skipped $skippedLowActivity threads with < ${config.minReplies} replies or outside ${config.sinceDays}d window")
             }
 
@@ -379,6 +386,20 @@ class OpenJdkMailSource(
 
     private fun groupIntoThreads(messages: List<MailMessage>): Map<String, List<MailMessage>> {
         return messages.groupBy { normalizeSubject(it.subject) }
+    }
+
+    /**
+     * Detects routine code review threads that are not interesting for a daily digest.
+     * RFR = "Request For Review" — automated code review notifications from OpenJDK.
+     */
+    private fun isCodeReviewThread(subject: String): Boolean {
+        val normalized = subject.trim()
+        return normalized.startsWith("RFR:", ignoreCase = true) ||
+            normalized.contains("] RFR:", ignoreCase = true) ||
+            normalized.startsWith("Integrated:", ignoreCase = true) ||
+            normalized.contains("] Integrated:", ignoreCase = true) ||
+            normalized.startsWith("Withdrawn:", ignoreCase = true) ||
+            normalized.contains("] Withdrawn:", ignoreCase = true)
     }
 
     private fun normalizeSubject(subject: String): String {

@@ -52,9 +52,25 @@
 	function isStandaloneTweet(c: DigestCluster): boolean {
 		return c.articles.length === 1 && isSocialPost(c.articles[0]);
 	}
+	function isMailingListCluster(c: DigestCluster): boolean {
+		return c.articles.every((a) => a.sourceType === 'openjdk_mail' || a.sourceType === 'jep');
+	}
 
 	const allTopicClusters = $derived(
-		(digest?.clusters || []).filter((c) => !isRelease(c) && !isStandaloneTweet(c))
+		(digest?.clusters || []).filter((c) => !isRelease(c) && !isStandaloneTweet(c) && !isMailingListCluster(c))
+	);
+	// OpenJDK section: mailing list discussions + JEP changes as full clusters
+	const allOpenJdkClusters = $derived(
+		(digest?.clusters || [])
+			.filter((c) => !isRelease(c) && !isStandaloneTweet(c) && isMailingListCluster(c))
+			.sort((a, b) => b.engagementScore - a.engagementScore)
+	);
+	// Top clusters shown as full cards, rest as compact links (max 5)
+	const openjdkTopClusters = $derived(allOpenJdkClusters.filter((c) => c.articles.length > 1 || c.engagementScore > 3));
+	const openjdkCompactLinks = $derived(
+		allOpenJdkClusters
+			.filter((c) => c.articles.length <= 1 && c.engagementScore <= 3)
+			.slice(0, 5)
 	);
 	const allReleaseClusters = $derived(
 		(digest?.clusters || []).filter((c) => isRelease(c))
@@ -141,6 +157,35 @@
 				</div>
 			{/if}
 
+			{#if allOpenJdkClusters.length > 0}
+				<div class="mailing-section">
+					<div class="section-label">OpenJDK</div>
+					{#each openjdkTopClusters as cluster (cluster.id)}
+						<Cluster
+							{cluster}
+							bookmarked={isBookmarked($bookmarks, currentDate, cluster.title)}
+							dismissedState={isDismissed($dismissed, currentDate, cluster.title)}
+							onBookmark={() => toggleBookmark(currentDate, cluster.title)}
+							onDismiss={() => toggleDismiss(currentDate, cluster.title)}
+						/>
+					{/each}
+					{#if openjdkCompactLinks.length > 0}
+						<ul class="mailing-list">
+							{#each openjdkCompactLinks as cluster (cluster.id)}
+								<li class="mailing-item">
+									<a href={cluster.articles[0]?.url || '#'} target="_blank" rel="noopener">
+										{cluster.title}
+									</a>
+									<span class="mailing-meta">
+										{cluster.articles.length} source{cluster.articles.length > 1 ? 's' : ''}
+									</span>
+								</li>
+							{/each}
+						</ul>
+					{/if}
+				</div>
+			{/if}
+
 			{#if hasRots}
 				<div class="rots-inline-section">
 					<div class="section-label">★ Rest of the Story</div>
@@ -220,7 +265,24 @@
 	.digest-date { font-size: 2rem; font-weight: 700; line-height: 1.2; }
 	.digest-stats { display: flex; gap: 16px; font-size: 0.85rem; color: #868787; margin-top: 8px; }
 
-	.releases-section, .tweets-section { margin-top: 40px; }
+	.releases-section, .tweets-section, .mailing-section { margin-top: 40px; }
+	.mailing-list {
+		list-style: none; padding: 0; margin: 0;
+	}
+	.mailing-item {
+		padding: 10px 0;
+		border-bottom: 1px solid #f0f0f0;
+		display: flex; align-items: baseline; gap: 10px;
+		flex-wrap: wrap;
+	}
+	.mailing-item a {
+		font-size: 1rem; font-weight: 600; text-decoration: none;
+		line-height: 1.4;
+	}
+	.mailing-item a:hover { text-decoration: underline; }
+	.mailing-meta {
+		font-size: 0.8rem; color: #868787;
+	}
 	.section-label {
 		font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.12em;
 		color: #868787; margin-bottom: 16px; font-weight: 600;
