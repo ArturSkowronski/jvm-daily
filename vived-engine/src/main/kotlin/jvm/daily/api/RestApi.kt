@@ -8,6 +8,7 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import jvm.daily.storage.DuckDbArticleRepository
 import jvm.daily.storage.DuckDbConnectionFactory
+import jvm.daily.storage.FeedRunSummary
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import java.net.HttpURLConnection
@@ -76,6 +77,26 @@ fun startRestApi(
                     Json.encodeToString(files),
                     ContentType.Application.Json,
                 )
+            }
+
+            // ── API: feed run summaries ───────────────────────────────────────
+            get("/api/feed-runs") {
+                try {
+                    DuckDbConnectionFactory.persistent(dbPath).use { conn ->
+                        val repo = DuckDbArticleRepository(conn)
+                        val summaries = repo.queryFeedRunSummaries()
+                        call.respondText(
+                            feedRunSummariesToJson(summaries),
+                            ContentType.Application.Json,
+                        )
+                    }
+                } catch (e: Exception) {
+                    call.respondText(
+                        """{"error":"${e.message?.replace("\"", "'")}"}""",
+                        ContentType.Application.Json,
+                        HttpStatusCode.InternalServerError,
+                    )
+                }
             }
 
             // ── API: pipeline status ────────────────────────────────────────
@@ -199,6 +220,27 @@ private data class JobItem(val raw: String) {
     fun optString(key: String): String {
         val match = Regex(""""$key"\s*:\s*"([^"]+)"""").find(raw)
         return match?.groupValues?.get(1) ?: ""
+    }
+}
+
+private fun feedRunSummariesToJson(summaries: List<FeedRunSummary>): String {
+    return buildString {
+        append("[")
+        summaries.forEachIndexed { i, s ->
+            if (i > 0) append(",")
+            append("{")
+            append(""""sourceType":"${s.sourceType}",""")
+            append(""""sourceId":"${s.sourceId}",""")
+            append(""""lastRunAt":"${s.lastRunAt}",""")
+            append(""""lastRunStatus":"${s.lastRunStatus}",""")
+            append(""""lastSuccessAt":${if (s.lastSuccessAt != null) "\"${s.lastSuccessAt}\"" else "null"},""")
+            append(""""last24hRuns":${s.last24hRuns},""")
+            append(""""last24hSuccesses":${s.last24hSuccesses},""")
+            append(""""last24hFailures":${s.last24hFailures},""")
+            append(""""last24hNewCount":${s.last24hNewCount}""")
+            append("}")
+        }
+        append("]")
     }
 }
 

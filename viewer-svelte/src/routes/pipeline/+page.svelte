@@ -1,14 +1,17 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { fetchPipeline } from '$lib/api/client';
-	import type { PipelineStatus } from '$lib/api/types';
+	import { fetchPipeline, fetchFeedRuns } from '$lib/api/client';
+	import type { PipelineStatus, FeedRunSummary } from '$lib/api/types';
 	import { fmtTimestamp, fmtDuration } from '$lib/utils/format';
 
 	let data = $state<PipelineStatus | null>(null);
+	let feedRuns = $state<FeedRunSummary[]>([]);
 	let offline = $state(false);
 
 	async function load() {
-		data = await fetchPipeline();
+		const [pipeline, runs] = await Promise.all([fetchPipeline(), fetchFeedRuns()]);
+		data = pipeline;
+		feedRuns = runs;
 		offline = data === null;
 	}
 
@@ -20,6 +23,44 @@
 		PROCESSING: '#3b82f6',
 		ENQUEUED: '#f59e0b',
 		SCHEDULED: '#8b5cf6'
+	};
+
+	const statusColors: Record<string, string> = {
+		SUCCESS: '#22c55e',
+		PARTIAL_SUCCESS: '#f59e0b',
+		FAILED: '#ef4444',
+	};
+
+	function timeAgo(iso: string): string {
+		if (!iso) return '—';
+		const diff = Date.now() - new Date(iso).getTime();
+		const mins = Math.floor(diff / 60000);
+		if (mins < 60) return `${mins}m ago`;
+		const hrs = Math.floor(mins / 60);
+		if (hrs < 24) return `${hrs}h ago`;
+		const days = Math.floor(hrs / 24);
+		return `${days}d ago`;
+	}
+
+	// Group feed runs by sourceType
+	function grouped(runs: FeedRunSummary[]): Map<string, FeedRunSummary[]> {
+		const m = new Map<string, FeedRunSummary[]>();
+		for (const r of runs) {
+			const arr = m.get(r.sourceType) ?? [];
+			arr.push(r);
+			m.set(r.sourceType, arr);
+		}
+		return m;
+	}
+
+	const typeLabels: Record<string, string> = {
+		rss: 'RSS Feeds',
+		bluesky: 'Bluesky',
+		reddit: 'Reddit',
+		github_trending: 'GitHub Trending',
+		github_releases: 'GitHub Releases',
+		openjdk_mail: 'OpenJDK Mailing Lists',
+		jep: 'JEP Tracker',
 	};
 </script>
 
@@ -64,6 +105,45 @@
 			{/each}
 		{/if}
 	{/if}
+
+	{#if feedRuns.length > 0}
+		<div class="section-title feed-health-title">
+			Feed health (last 24 h)
+		</div>
+
+		{#each [...grouped(feedRuns)] as [sourceType, runs]}
+			<div class="feed-group">
+				<div class="feed-group-header">{typeLabels[sourceType] ?? sourceType}</div>
+				<table class="feed-table">
+					<thead>
+						<tr>
+							<th class="col-source">Source</th>
+							<th class="col-status">Status</th>
+							<th class="col-last">Last run</th>
+							<th class="col-last">Last success</th>
+							<th class="col-num">Runs</th>
+							<th class="col-num">New</th>
+						</tr>
+					</thead>
+					<tbody>
+						{#each runs as run}
+							<tr class:failed-row={run.last24hFailures > 0 && run.last24hSuccesses === 0}>
+								<td class="col-source">{run.sourceId}</td>
+								<td class="col-status">
+									<span class="status-dot" style:background={statusColors[run.lastRunStatus] || '#999'}></span>
+									{run.lastRunStatus}
+								</td>
+								<td class="col-last">{timeAgo(run.lastRunAt)}</td>
+								<td class="col-last">{run.lastSuccessAt ? timeAgo(run.lastSuccessAt) : '—'}</td>
+								<td class="col-num">{run.last24hRuns}</td>
+								<td class="col-num">{run.last24hNewCount}</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			</div>
+		{/each}
+	{/if}
 </div>
 
 <style>
@@ -93,4 +173,28 @@
 		border-radius: 10px; text-transform: uppercase; letter-spacing: 0.05em;
 	}
 	.job-dur { font-size: 0.78rem; color: #888; }
+
+	/* Feed health */
+	.feed-health-title { margin-top: 40px; }
+	.feed-group { margin-bottom: 24px; }
+	.feed-group-header {
+		font-size: 0.78rem; font-weight: 600; color: #555;
+		padding: 6px 0; border-bottom: 2px solid #e8e8e8; margin-bottom: 4px;
+	}
+	.feed-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
+	.feed-table th {
+		text-align: left; font-weight: 500; color: #999; padding: 6px 8px;
+		border-bottom: 1px solid #f0f0f0; font-size: 0.7rem;
+	}
+	.feed-table td { padding: 5px 8px; border-bottom: 1px solid #f8f8f8; color: #444; }
+	.col-source { min-width: 160px; }
+	.col-status { min-width: 100px; white-space: nowrap; }
+	.col-last { min-width: 80px; color: #888; }
+	.col-num { text-align: right; min-width: 40px; }
+	.status-dot {
+		display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+		margin-right: 5px; vertical-align: middle;
+	}
+	.failed-row td { color: #ef4444; }
+	.feed-table th.col-num { text-align: right; }
 </style>

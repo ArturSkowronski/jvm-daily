@@ -64,3 +64,15 @@ export interface PipelineJob {
 	createdAt: string;
 	updatedAt: string;
 }
+
+export interface FeedRunSummary {
+	sourceType: string;
+	sourceId: string;
+	lastRunAt: string;
+	lastRunStatus: string;
+	lastSuccessAt: string | null;
+	last24hRuns: number;
+	last24hSuccesses: number;
+	last24hFailures: number;
+	last24hNewCount: number;
+}

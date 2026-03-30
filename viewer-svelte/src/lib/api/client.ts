@@ -1,4 +1,4 @@
-import type { DailyDigest, PipelineStatus } from './types';
+import type { DailyDigest, PipelineStatus, FeedRunSummary } from './types';
 
 const digestCache = new Map<string, DailyDigest>();
 
@@ -20,5 +20,11 @@ export async function fetchDigest(date: string): Promise<DailyDigest | null> {
 export async function fetchPipeline(): Promise<PipelineStatus | null> {
 	const res = await fetch('/api/pipeline');
 	if (!res.ok) return null;
+	return res.json();
+}
+
+export async function fetchFeedRuns(): Promise<FeedRunSummary[]> {
+	const res = await fetch('/api/feed-runs');
+	if (!res.ok) return [];
 	return res.json();
 }
