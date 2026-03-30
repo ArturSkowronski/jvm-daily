@@ -5,6 +5,7 @@ rss:
   - url: "https://feeds.feedblitz.com/baeldung"
   - url: "https://feed.infoq.com/java"
     splitRoundups: true
+    sinceDays: 8
   - url: "https://quarkus.io/feed.xml"
   - url: "https://micronaut.io/feed/"
   - url: "https://foojay.io/feed/"

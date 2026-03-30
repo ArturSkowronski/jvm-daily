@@ -52,8 +52,8 @@ class IngressWorkflow(
                         listOf(article)
                     }
 
-                    // If roundup was split, save original ID as marker to prevent re-splitting on next run
-                    if (wasSplit && !articleRepository.existsById(article.id)) {
+                    // If roundup was split, overwrite original with marker to prevent re-splitting
+                    if (wasSplit) {
                         articleRepository.save(article.copy(content = "[roundup-split: ${expanded.size} sub-articles]"))
                         skippedCount++ // count original as "skipped" (not displayed)
                     }
