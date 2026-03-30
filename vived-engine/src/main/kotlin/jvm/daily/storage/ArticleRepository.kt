@@ -15,4 +15,17 @@ interface ArticleRepository {
     fun recordFeedRunSnapshots(snapshots: List<FeedRunSnapshot>) {}
     fun sumDuplicateCountSince(since: Instant): Long = 0
     fun countFeedFailuresSince(since: Instant): Long = 0
+    fun queryFeedRunSummaries(): List<FeedRunSummary> = emptyList()
 }
+
+data class FeedRunSummary(
+    val sourceType: String,
+    val sourceId: String,
+    val lastRunAt: String,
+    val lastRunStatus: String,
+    val lastSuccessAt: String?,
+    val last24hRuns: Int,
+    val last24hSuccesses: Int,
+    val last24hFailures: Int,
+    val last24hNewCount: Int,
+)

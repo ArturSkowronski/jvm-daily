@@ -171,6 +171,77 @@ class DuckDbArticleRepository(private val connection: Connection) : ArticleRepos
         }
     }
 
+    override fun queryFeedRunSummaries(): List<FeedRunSummary> {
+        val sql = """
+            WITH last24h AS (
+                SELECT * FROM ingest_feed_runs
+                WHERE recorded_at >= ?
+            ),
+            latest_run AS (
+                SELECT source_type, source_id,
+                       recorded_at AS last_run_at,
+                       status AS last_run_status,
+                       ROW_NUMBER() OVER (PARTITION BY source_type, source_id ORDER BY recorded_at DESC) AS rn
+                FROM ingest_feed_runs
+            ),
+            last_success AS (
+                SELECT source_type, source_id,
+                       MAX(recorded_at) AS last_success_at
+                FROM ingest_feed_runs
+                WHERE status = 'SUCCESS'
+                GROUP BY source_type, source_id
+            ),
+            agg AS (
+                SELECT source_type, source_id,
+                       COUNT(*) AS runs,
+                       COUNT(*) FILTER (WHERE status = 'SUCCESS') AS successes,
+                       COUNT(*) FILTER (WHERE status = 'FAILED') AS failures,
+                       COALESCE(SUM(new_count), 0) AS new_total
+                FROM last24h
+                GROUP BY source_type, source_id
+            )
+            SELECT
+                COALESCE(lr.source_type, a.source_type) AS source_type,
+                COALESCE(lr.source_id, a.source_id) AS source_id,
+                lr.last_run_at,
+                lr.last_run_status,
+                ls.last_success_at,
+                COALESCE(a.runs, 0) AS last_24h_runs,
+                COALESCE(a.successes, 0) AS last_24h_successes,
+                COALESCE(a.failures, 0) AS last_24h_failures,
+                COALESCE(a.new_total, 0) AS last_24h_new
+            FROM latest_run lr
+            LEFT JOIN last_success ls ON lr.source_type = ls.source_type AND lr.source_id = ls.source_id
+            LEFT JOIN agg a ON lr.source_type = a.source_type AND lr.source_id = a.source_id
+            WHERE lr.rn = 1
+            ORDER BY lr.source_type, lr.source_id
+        """.trimIndent()
+
+        val since = kotlinx.datetime.Clock.System.now().minus(kotlin.time.Duration.parse("24h"))
+        connection.prepareStatement(sql).use { stmt ->
+            stmt.setString(1, since.toString())
+            stmt.executeQuery().use { rs ->
+                val results = mutableListOf<FeedRunSummary>()
+                while (rs.next()) {
+                    results.add(
+                        FeedRunSummary(
+                            sourceType = rs.getString("source_type"),
+                            sourceId = rs.getString("source_id"),
+                            lastRunAt = rs.getString("last_run_at") ?: "",
+                            lastRunStatus = rs.getString("last_run_status") ?: "",
+                            lastSuccessAt = rs.getString("last_success_at"),
+                            last24hRuns = rs.getInt("last_24h_runs"),
+                            last24hSuccesses = rs.getInt("last_24h_successes"),
+                            last24hFailures = rs.getInt("last_24h_failures"),
+                            last24hNewCount = rs.getInt("last_24h_new"),
+                        )
+                    )
+                }
+                return results
+            }
+        }
+    }
+
     private fun java.sql.ResultSet.toArticle(): Article = Article(
         id = getString("id"),
         title = getString("title"),

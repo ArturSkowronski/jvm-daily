@@ -118,6 +118,38 @@ class DuckDbArticleRepositoryTest {
         assertEquals(1, repository.countFeedFailuresSince(Instant.parse("2026-02-27T00:00:00Z")))
     }
 
+    @Test
+    fun `queryFeedRunSummaries returns grouped summary per source`() {
+        val now = Clock.System.now()
+        val old = Instant.parse("2026-01-01T00:00:00Z")
+
+        repository.recordFeedRunSnapshots(
+            listOf(
+                FeedRunSnapshot("r1", now, "rss", "inside.java", FeedIngestStatus.SUCCESS, 5, 3, 2),
+                FeedRunSnapshot("r1", now, "rss", "spring.io", FeedIngestStatus.FAILED, 0, 0, 0),
+                FeedRunSnapshot("r2", old, "rss", "spring.io", FeedIngestStatus.SUCCESS, 10, 5, 5),
+            )
+        )
+
+        val summaries = repository.queryFeedRunSummaries()
+        assertEquals(2, summaries.size)
+
+        val insideJava = summaries.first { it.sourceId == "inside.java" }
+        assertEquals("SUCCESS", insideJava.lastRunStatus)
+        assertEquals(1, insideJava.last24hRuns)
+        assertEquals(1, insideJava.last24hSuccesses)
+        assertEquals(0, insideJava.last24hFailures)
+        assertEquals(3, insideJava.last24hNewCount)
+
+        val spring = summaries.first { it.sourceId == "spring.io" }
+        assertEquals("FAILED", spring.lastRunStatus)
+        assertEquals("rss", spring.sourceType)
+        // last success should exist (the old run)
+        assertTrue(spring.lastSuccessAt != null)
+        // old run is >24h ago, so last24h counts reflect only the recent FAILED run
+        assertEquals(1, spring.last24hFailures)
+    }
+
     private fun createArticle(
         id: String,
         title: String,
