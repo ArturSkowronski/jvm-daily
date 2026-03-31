@@ -259,7 +259,7 @@
 	.digest-content {
 		flex: 1; overflow-y: auto;
 		padding: 40px 48px;
-		max-width: 780px; margin: 0 auto;
+		max-width: 920px; margin: 0 auto;
 	}
 	.digest-header { margin-bottom: 32px; padding-bottom: 20px; border-bottom: 2px solid #1a1a1a; }
 	.digest-date { font-size: 2rem; font-weight: 700; line-height: 1.2; }
