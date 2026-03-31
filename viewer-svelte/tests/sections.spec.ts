@@ -162,6 +162,12 @@ test.describe('Section ordering: bookmark → ROTS, dismiss → Archive', () => 
 });
 
 test.describe('Dark mode toggle', () => {
+	test.beforeEach(async ({ page }) => {
+		await page.goto('/');
+		await page.evaluate(() => localStorage.clear());
+		await page.reload();
+	});
+
 	test('toggle switches data-theme attribute', async ({ page }) => {
 		await page.goto('/');
 		await page.waitForSelector('.theme-toggle');
