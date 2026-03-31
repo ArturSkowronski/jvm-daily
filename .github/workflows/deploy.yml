@@ -12,6 +12,9 @@ jobs:
   build:
     name: Build JVM dist
     runs-on: ubuntu-latest
+    env:
+      GITHUB_ACTOR: ${{ github.actor }}
+      GITHUB_TOKEN: ${{ secrets.GH_PACKAGES_TOKEN }}
     steps:
       - uses: actions/checkout@v4
 
