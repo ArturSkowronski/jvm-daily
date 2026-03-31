@@ -30,15 +30,18 @@ class UrlShortenerResolver(
 
         private fun resolveViaHead(url: String): String? {
             return try {
+                // Don't auto-follow: Java's HttpURLConnection doesn't update getURL()
+                // after following redirects with HEAD. Instead, read Location manually.
                 val connection = URI(url).toURL().openConnection() as HttpURLConnection
                 connection.requestMethod = "HEAD"
-                connection.instanceFollowRedirects = true
+                connection.instanceFollowRedirects = false
                 connection.connectTimeout = 5_000
                 connection.readTimeout = 5_000
                 connection.connect()
-                val finalUrl = connection.url.toString()
+                val code = connection.responseCode
+                val location = connection.getHeaderField("Location")
                 connection.disconnect()
-                finalUrl.takeIf { it != url }
+                if (code in 300..399 && location != null) location else null
             } catch (_: Exception) {
                 null
             }
