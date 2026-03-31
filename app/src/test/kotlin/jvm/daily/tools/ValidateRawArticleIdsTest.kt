@@ -1,8 +1,8 @@
 package jvm.daily.tools
 
-import jvm.daily.model.Article
-import jvm.daily.storage.DuckDbArticleRepository
-import jvm.daily.storage.DuckDbConnectionFactory
+import dev.vived.engine.model.Article
+import dev.vived.engine.storage.DuckDbArticleRepository
+import dev.vived.engine.storage.DuckDbConnectionFactory
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test

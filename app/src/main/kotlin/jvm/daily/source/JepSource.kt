@@ -1,12 +1,13 @@
 package jvm.daily.source
 
 import jvm.daily.config.JepConfig
-import jvm.daily.model.Article
-import jvm.daily.model.CanonicalArticleId
-import jvm.daily.model.FeedIngestResult
-import jvm.daily.model.FeedIngestStatus
+import dev.vived.engine.model.Article
+import dev.vived.engine.source.Source
+import dev.vived.engine.model.CanonicalArticleId
+import dev.vived.engine.model.FeedIngestResult
+import dev.vived.engine.model.FeedIngestStatus
 import jvm.daily.model.JepSnapshot
-import jvm.daily.model.SourceFetchOutcome
+import dev.vived.engine.model.SourceFetchOutcome
 import jvm.daily.storage.JepSnapshotRepository
 import kotlinx.datetime.Clock
 import java.net.HttpURLConnection

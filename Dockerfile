@@ -7,13 +7,16 @@ COPY gradlew gradlew
 COPY gradle/ gradle/
 COPY settings.gradle.kts settings.gradle.kts
 COPY app/build.gradle.kts app/build.gradle.kts
-COPY vived-engine/build.gradle.kts vived-engine/build.gradle.kts
-RUN ./gradlew :app:dependencies --no-daemon -q 2>&1 | tail -1
+
+ARG GITHUB_ACTOR
+ARG GITHUB_TOKEN
+RUN GITHUB_ACTOR=$GITHUB_ACTOR GITHUB_TOKEN=$GITHUB_TOKEN \
+    ./gradlew :app:dependencies --no-daemon -q 2>&1 | tail -1
 
 # Build distribution
-COPY vived-engine/src vived-engine/src
 COPY app/src app/src
-RUN ./gradlew :app:installDist --no-daemon -q
+RUN GITHUB_ACTOR=$GITHUB_ACTOR GITHUB_TOKEN=$GITHUB_TOKEN \
+    ./gradlew :app:installDist --no-daemon -q
 
 # ── SvelteKit Build stage ───────────────────────────────────────────────────
 FROM node:22-slim AS svelte-builder

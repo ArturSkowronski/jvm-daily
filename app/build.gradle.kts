@@ -6,10 +6,20 @@ plugins {
 
 repositories {
     mavenCentral()
+    maven {
+        name = "GitHubPackages"
+        url = uri("https://maven.pkg.github.com/VirtusLab/vived-engine")
+        credentials {
+            username = project.findProperty("githubUsername") as String?
+                ?: System.getenv("GITHUB_ACTOR")
+            password = project.findProperty("githubToken") as String?
+                ?: System.getenv("GITHUB_TOKEN")
+        }
+    }
 }
 
 dependencies {
-    implementation(project(":vived-engine"))
+    implementation("dev.vived:vived-engine:0.1.0-SNAPSHOT")
     implementation(libs.jobrunr)
     implementation(libs.h2)
     implementation(libs.kaml)

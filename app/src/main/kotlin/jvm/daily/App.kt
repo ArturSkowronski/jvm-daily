@@ -1,30 +1,35 @@
 package jvm.daily
 
-import jvm.daily.ai.LLMClient
-import jvm.daily.ai.OpenAiCompatibleLLMClient
-import jvm.daily.api.parseIngestPayload
-import jvm.daily.api.serializeArticles
-import jvm.daily.config.DomainProfile
+import dev.vived.engine.ai.LLMClient
+import dev.vived.engine.ai.OpenAiCompatibleLLMClient
+import dev.vived.engine.api.parseIngestPayload
+import dev.vived.engine.api.serializeArticles
+import dev.vived.engine.config.DomainProfile
 import jvm.daily.config.JvmSourcesConfig
-import jvm.daily.source.BlueskySource
+import dev.vived.engine.source.BlueskySource
 import jvm.daily.source.JepSource
-import jvm.daily.source.GitHubReleasesSource
-import jvm.daily.source.GitHubTrendingSource
-import jvm.daily.source.MarkdownFileSource
+import dev.vived.engine.source.GitHubReleasesSource
+import dev.vived.engine.source.GitHubTrendingSource
+import dev.vived.engine.source.MarkdownFileSource
 import jvm.daily.source.OpenJdkMailSource
-import jvm.daily.source.RedditSource
-import jvm.daily.source.RssSource
-import jvm.daily.source.SourceRegistry
-import jvm.daily.storage.DuckDbArticleRepository
-import jvm.daily.storage.DuckDbClusterRepository
+import dev.vived.engine.source.RedditSource
+import dev.vived.engine.source.RssSource
+import dev.vived.engine.source.SourceRegistry
+import dev.vived.engine.storage.DuckDbArticleRepository
+import dev.vived.engine.storage.DuckDbClusterRepository
 import jvm.daily.storage.DuckDbJepSnapshotRepository
-import jvm.daily.storage.DuckDbConnectionFactory
-import jvm.daily.storage.DuckDbProcessedArticleRepository
+import dev.vived.engine.storage.DuckDbConnectionFactory
+import dev.vived.engine.storage.DuckDbProcessedArticleRepository
 import jvm.daily.tools.ValidateRawArticleIds
-import jvm.daily.workflow.ClusteringWorkflow
-import jvm.daily.workflow.EnrichmentWorkflow
-import jvm.daily.workflow.IngressWorkflow
-import jvm.daily.workflow.OutgressWorkflow
+import dev.vived.engine.workflow.ClusteringWorkflow
+import dev.vived.engine.workflow.EnrichmentWorkflow
+import dev.vived.engine.workflow.IngressWorkflow
+import dev.vived.engine.workflow.OutgressWorkflow
+import dev.vived.engine.api.startRestApi
+import dev.vived.engine.source.RoundupSplitter
+import dev.vived.engine.workflow.TaxonomyLoader
+import dev.vived.engine.workflow.TaxonomyClassifier
+import dev.vived.engine.model.ProcessedArticle
 import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
@@ -129,7 +134,7 @@ private fun startDaemon(dbPath: String, domain: DomainProfile = DomainProfile.de
     val outputDirPath = System.getenv("OUTPUT_DIR") ?: "output"
     val ingestApiKey = System.getenv("INGEST_API_KEY")
     val jobRunrUrl = "http://localhost:$dashboardPort"
-    jvm.daily.api.startRestApi(
+    startRestApi(
         port = viewerPort,
         outputDir = Path.of(outputDirPath),
         dbPath = dbPath,
@@ -191,7 +196,7 @@ internal fun runIngress(dbPath: String) {
             val llmApiKey = System.getenv("LLM_API_KEY")
             val llmModel = System.getenv("LLM_MODEL") ?: "gpt-4"
             if (llmProvider != "mock") {
-                jvm.daily.source.RoundupSplitter(createLLMClient(llmProvider, llmApiKey, llmModel))
+                RoundupSplitter(createLLMClient(llmProvider, llmApiKey, llmModel))
             } else null
         } else null
 
@@ -221,8 +226,8 @@ internal fun runEnrichment(dbPath: String, domain: DomainProfile? = null) {
 
         // Create taxonomy classifier if LLM is real (not mock)
         val taxonomyClassifier = if (llmProvider != "mock") {
-            val taxonomy = jvm.daily.workflow.TaxonomyLoader.loadFromClasspath()
-            jvm.daily.workflow.TaxonomyClassifier(
+            val taxonomy = TaxonomyLoader.loadFromClasspath()
+            TaxonomyClassifier(
                 taxonomy, llmClient,
                 domainDescription = domain?.description,
             )
@@ -335,8 +340,8 @@ internal fun runReprocess(dbPath: String, args: List<String>, domain: DomainProf
         val llmClient = createLLMClient(llmProvider, llmApiKey, llmModel)
 
         val taxonomyClassifier = if (llmProvider != "mock") {
-            val taxonomy = jvm.daily.workflow.TaxonomyLoader.loadFromClasspath()
-            jvm.daily.workflow.TaxonomyClassifier(
+            val taxonomy = TaxonomyLoader.loadFromClasspath()
+            TaxonomyClassifier(
                 taxonomy, llmClient,
                 domainDescription = domain?.description,
             )
@@ -596,7 +601,7 @@ internal fun runInspectQuality(dbPath: String, args: List<String>) {
 private fun buildInspectionReport(
     options: InspectQualityOptions,
     since: kotlinx.datetime.Instant,
-    candidates: List<jvm.daily.model.ProcessedArticle>,
+    candidates: List<ProcessedArticle>,
 ): String {
     val failedCount = candidates.count { it.outcomeStatus.name == "FAILED" }
     val warningCount = candidates.size - failedCount

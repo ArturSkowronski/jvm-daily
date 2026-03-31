@@ -1,7 +1,7 @@
 package jvm.daily.source
 
 import jvm.daily.config.JepConfig
-import jvm.daily.storage.DuckDbConnectionFactory
+import dev.vived.engine.storage.DuckDbConnectionFactory
 import jvm.daily.storage.DuckDbJepSnapshotRepository
 import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.Clock
