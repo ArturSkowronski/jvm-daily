@@ -3,6 +3,7 @@ package jvm.daily.source
 import jvm.daily.config.JepConfig
 import jvm.daily.model.JepSnapshot
 import jvm.daily.storage.JepSnapshotRepository
+import dev.vived.engine.model.FeedIngestStatus
 import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
@@ -105,7 +106,7 @@ class JepSourceTest {
         val outcomes = source.fetchOutcomes()
 
         assertEquals(1, outcomes.size)
-        assertEquals(jvm.daily.model.FeedIngestStatus.FAILED, outcomes.first().feed.status)
+        assertEquals(FeedIngestStatus.FAILED, outcomes.first().feed.status)
         assertTrue(outcomes.first().articles.isEmpty())
     }
 

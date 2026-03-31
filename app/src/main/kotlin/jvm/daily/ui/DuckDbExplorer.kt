@@ -1,6 +1,6 @@
 package jvm.daily.ui
 
-import jvm.daily.storage.DuckDbConnectionFactory
+import dev.vived.engine.storage.DuckDbConnectionFactory
 import java.sql.Connection
 import kotlin.system.exitProcess
 

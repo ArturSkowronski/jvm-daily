@@ -1,7 +1,7 @@
 package jvm.daily.source
 
 import jvm.daily.config.OpenJdkMailConfig
-import jvm.daily.model.FeedIngestStatus
+import dev.vived.engine.model.FeedIngestStatus
 import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
