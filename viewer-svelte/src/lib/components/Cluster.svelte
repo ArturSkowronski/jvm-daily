@@ -38,6 +38,17 @@
 			<div class="cluster-synthesis">
 				{@html synthesisHtml}
 			</div>
+			<div class="cluster-badges">
+				<span class="badge-count">{mergedArticles.length} article{mergedArticles.length !== 1 ? 's' : ''}</span>
+				{#each cluster.articles.filter(a => a.sourceType === 'hackernews') as hn}
+					{#if hn.engagementScore > 0}
+						<span class="badge-hn">HN · {hn.engagementScore}</span>
+					{/if}
+				{/each}
+				{#if cluster.articles.some(a => a.sourceType === 'reddit')}
+					<span class="badge-reddit">reddit</span>
+				{/if}
+			</div>
 		</div>
 		<div class="cluster-actions">
 			<button class="action-btn bookmark-btn" class:bookmarked title="Bookmark for ROTS"
@@ -68,50 +79,115 @@
 
 <style>
 	.cluster {
-		border-bottom: 1px solid #e0e0e0;
-		padding: 28px 0;
+		border: 1px solid var(--border);
+		border-radius: 8px;
+		padding: 16px 18px;
+		background: var(--bg-card);
+		margin-bottom: 8px;
+		border-left: 3px solid var(--border);
+		transition: border-left-color 0.15s;
 	}
-	.cluster:first-child { padding-top: 0; }
+	.cluster:first-of-type {
+		border-left-color: var(--accent);
+	}
 	.cluster.dismissed { opacity: 0.35; }
-	.cluster-head { display: flex; gap: 16px; }
+
+	.cluster-head { display: flex; gap: 12px; align-items: flex-start; }
 	.cluster-head-text { flex: 1; min-width: 0; }
+
 	.cluster-title {
-		font-size: 1.4rem; font-weight: 700; line-height: 1.3;
-		margin-bottom: 12px; color: #1a1a1a;
+		font-size: 0.92rem;
+		font-weight: 600;
+		color: var(--text);
+		line-height: 1.4;
+		margin-bottom: 6px;
 	}
 	.cluster-count {
-		font-size: 0.8rem; font-weight: 400; color: #868787; margin-left: 10px;
+		font-size: 0.62rem;
+		font-weight: 500;
+		color: var(--text-muted);
+		margin-left: 8px;
+		background: var(--badge-count-bg);
+		padding: 1px 7px;
+		border-radius: 10px;
 	}
-	.cluster-synthesis { font-size: 1rem; color: #363737; line-height: 1.8; }
-	.cluster-synthesis :global(p) { margin: 0 0 12px; }
-	.cluster-synthesis :global(p:last-child) { margin-bottom: 0; }
-	.cluster-synthesis :global(code) {
-		background: #f0faf4; padding: 2px 6px; border-radius: 3px; font-size: 0.9rem;
-		word-break: break-all;
+	.cluster-synthesis {
+		font-size: 0.75rem;
+		color: var(--text-secondary);
+		line-height: 1.65;
+		margin-bottom: 10px;
 	}
-	.cluster-actions { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
+	.cluster-synthesis :global(p) { margin: 0; }
+
+	.cluster-actions { display: flex; flex-direction: column; gap: 4px; flex-shrink: 0; }
 	.action-btn {
-		background: none; border: 1px solid #ddd; border-radius: 50%;
-		width: 34px; height: 34px; cursor: pointer; font-size: 1rem;
-		display: flex; align-items: center; justify-content: center;
-		transition: border-color 0.15s, background 0.15s;
+		background: none;
+		border: 1px solid var(--action-btn-border);
+		border-radius: 4px;
+		width: 28px;
+		height: 28px;
+		cursor: pointer;
+		font-size: 0.72rem;
+		color: var(--action-btn-text);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		transition: border-color 0.15s, color 0.15s;
 	}
-	.bookmark-btn:hover { border-color: #00a64e; color: #00a64e; }
-	.bookmark-btn.bookmarked { background: #00a64e; border-color: #00a64e; color: #fff; }
-	.tick-btn:hover { border-color: #00a64e; color: #00a64e; }
-	.article-list { margin-top: 12px; }
+	.bookmark-btn:hover { border-color: var(--accent); color: var(--accent); }
+	.bookmark-btn.bookmarked { background: var(--accent); border-color: var(--accent); color: #fff; }
+	.tick-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+	.article-list { margin-top: 10px; }
+
 	.expand-btn {
-		margin-top: 10px; font-size: 0.78rem; color: #888; background: none;
-		border: 1px solid #e0e0e0; border-radius: 6px; padding: 4px 12px;
-		cursor: pointer; transition: border-color 0.15s, color 0.15s;
+		margin-top: 8px;
+		background: none;
+		border: none;
+		padding: 0;
+		font-size: 0.72rem;
+		color: var(--accent);
+		cursor: pointer;
+		font-family: 'Inter', system-ui, sans-serif;
+		font-weight: 500;
 	}
-	.expand-btn:hover { border-color: #00a64e; color: #00a64e; }
+	.expand-btn:hover { text-decoration: underline; }
+
+	.cluster-badges {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 5px;
+		margin-top: 8px;
+		align-items: center;
+	}
+	.badge-count {
+		font-size: 0.58rem;
+		font-weight: 500;
+		padding: 2px 8px;
+		border-radius: 10px;
+		background: var(--badge-count-bg);
+		color: var(--badge-count-text);
+	}
+	.badge-hn {
+		font-size: 0.58rem;
+		font-weight: 500;
+		padding: 2px 8px;
+		border-radius: 10px;
+		background: var(--badge-hn-bg);
+		color: var(--badge-hn-text);
+	}
+	.badge-reddit {
+		font-size: 0.58rem;
+		font-weight: 500;
+		padding: 2px 8px;
+		border-radius: 10px;
+		background: var(--badge-reddit-bg);
+		color: var(--badge-reddit-text);
+	}
 
 	@media (max-width: 768px) {
-		.cluster { position: relative; }
-		.cluster-head { display: block; }
-		.cluster-title { font-size: 1.2rem; padding-right: 76px; }
-		.cluster-synthesis { font-size: 0.95rem; }
-		.cluster-actions { flex-direction: row; position: absolute; right: 0; top: 28px; }
+		.cluster { position: relative; padding: 14px 14px; }
+		.cluster-title { font-size: 0.88rem; padding-right: 70px; }
+		.cluster-actions { flex-direction: row; position: absolute; right: 14px; top: 14px; }
 	}
 </style>
