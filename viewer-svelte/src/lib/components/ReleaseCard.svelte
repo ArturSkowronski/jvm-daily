@@ -66,42 +66,88 @@
 
 <style>
 	.release-card {
-		border-bottom: 1px solid #e0e0e0;
-		padding: 24px 0;
+		border: 1px solid var(--border);
+		border-radius: 8px;
+		padding: 16px 18px;
+		background: var(--bg-card);
+		margin-bottom: 8px;
+		border-left: 3px solid var(--accent);
 	}
 	.release-card.dismissed { opacity: 0.35; }
-	.cluster-head { display: flex; gap: 16px; }
-	.cluster-head-text { flex: 1; }
+
+	.cluster-head { display: flex; gap: 12px; align-items: flex-start; }
+	.cluster-head-text { flex: 1; min-width: 0; }
+
 	.cluster-title {
-		font-size: 1.2rem; font-weight: 600; margin-bottom: 10px; color: #1a1a1a;
+		font-size: 0.92rem;
+		font-weight: 700;
+		color: var(--text);
+		line-height: 1.4;
+		margin-bottom: 10px;
 	}
-	.cluster-count { font-size: 0.8rem; font-weight: 400; color: #868787; margin-left: 10px; }
-	.cluster-synthesis, .release-bullets { font-size: 0.95rem; color: #363737; line-height: 1.7; }
-	.release-bullets :global(ul) { margin: 0; padding-left: 20px; }
-	.release-bullets :global(li) { margin-bottom: 6px; }
-	.release-badges { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
-	.badge-release {
-		font-size: 0.8rem; font-weight: 500; padding: 4px 12px;
-		border: 1px solid #ddd; border-radius: 14px;
-		color: #555; text-decoration: none; white-space: nowrap;
+	.cluster-count {
+		font-size: 0.62rem;
+		font-weight: 500;
+		color: var(--text-muted);
+		margin-left: 8px;
+		background: var(--badge-count-bg);
+		padding: 1px 7px;
+		border-radius: 10px;
+	}
+
+	.cluster-synthesis,
+	.release-bullets {
+		font-size: 0.75rem;
+		color: var(--text-secondary);
+		line-height: 1.7;
+	}
+	.release-bullets :global(ul) { margin: 0; padding-left: 18px; }
+	.release-bullets :global(li) { margin-bottom: 5px; }
+	.release-bullets :global(code) {
+		background: var(--badge-count-bg);
+		padding: 1px 4px;
+		border-radius: 3px;
+		font-size: 0.7rem;
+		color: var(--text);
+	}
+
+	.cluster-actions { display: flex; flex-direction: column; gap: 4px; flex-shrink: 0; }
+	.action-btn {
+		background: none;
+		border: 1px solid var(--action-btn-border);
+		border-radius: 4px;
+		width: 28px;
+		height: 28px;
+		cursor: pointer;
+		font-size: 0.72rem;
+		color: var(--action-btn-text);
+		display: flex;
+		align-items: center;
+		justify-content: center;
 		transition: border-color 0.15s, color 0.15s;
 	}
-	.badge-release:hover { border-color: #00a64e; color: #00a64e; }
-	.cluster-actions { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
-	.action-btn {
-		background: none; border: 1px solid #ddd; border-radius: 50%;
-		width: 34px; height: 34px; cursor: pointer; font-size: 1rem;
-		display: flex; align-items: center; justify-content: center;
-		transition: border-color 0.15s, background 0.15s;
+	.bookmark-btn:hover { border-color: var(--accent); color: var(--accent); }
+	.bookmark-btn.bookmarked { background: var(--accent); border-color: var(--accent); color: #fff; }
+	.tick-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+	.release-badges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+	.badge-release {
+		font-size: 0.65rem;
+		font-weight: 500;
+		padding: 3px 10px;
+		border: 1px solid var(--border);
+		border-radius: 12px;
+		color: var(--text-secondary);
+		text-decoration: none;
+		white-space: nowrap;
+		transition: border-color 0.15s, color 0.15s;
 	}
-	.bookmark-btn:hover { border-color: #00a64e; color: #00a64e; }
-	.bookmark-btn.bookmarked { background: #00a64e; border-color: #00a64e; color: #fff; }
-	.tick-btn:hover { border-color: #00a64e; color: #00a64e; }
+	.badge-release:hover { border-color: var(--accent); color: var(--accent); }
 
 	@media (max-width: 768px) {
 		.release-card { position: relative; }
 		.cluster-head { display: block; }
-		.cluster-title { font-size: 1.05rem; padding-right: 80px; }
-		.cluster-actions { flex-direction: row; position: absolute; right: 0; top: 24px; }
+		.cluster-title { font-size: 0.88rem; padding-right: 70px; }
+		.cluster-actions { flex-direction: row; position: absolute; right: 14px; top: 14px; }
 	}
 </style>

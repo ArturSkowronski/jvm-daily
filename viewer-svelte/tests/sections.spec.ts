@@ -161,6 +161,39 @@ test.describe('Section ordering: bookmark → ROTS, dismiss → Archive', () => 
 	});
 });
 
+test.describe('Dark mode toggle', () => {
+	test.beforeEach(async ({ page }) => {
+		await page.goto('/');
+		await page.evaluate(() => localStorage.clear());
+		await page.reload();
+	});
+
+	test('toggle switches data-theme attribute', async ({ page }) => {
+		await page.goto('/');
+		await page.waitForSelector('.theme-toggle');
+
+		// Initially light
+		await expect(page.locator('html')).not.toHaveAttribute('data-theme', 'dark');
+
+		// Click toggle
+		await page.locator('.theme-toggle').click();
+		await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+
+		// Click again
+		await page.locator('.theme-toggle').click();
+		await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+	});
+
+	test('theme persists in localStorage', async ({ page }) => {
+		await page.goto('/');
+		await page.waitForSelector('.theme-toggle');
+		await page.locator('.theme-toggle').click();
+
+		const theme = await page.evaluate(() => localStorage.getItem('theme'));
+		expect(theme).toBe('dark');
+	});
+});
+
 test.describe('Release cluster sections', () => {
 	test('release clusters appear in Releases section', async ({ page }) => {
 		await page.goto('/?date=2026-03-23');

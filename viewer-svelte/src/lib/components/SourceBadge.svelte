@@ -17,17 +17,17 @@
 
 <style>
 	.source-badge {
-		font-size: 0.65rem;
+		font-size: 0.6rem;
 		font-weight: 600;
 		text-transform: uppercase;
 		letter-spacing: 0.05em;
-		padding: 2px 7px;
+		padding: 2px 6px;
 		border-radius: 3px;
-		background: #e8e8e8;
-		color: #555;
+		background: var(--badge-count-bg);
+		color: var(--badge-count-text);
 	}
 	.source-reddit { color: #ff4500; background: #fff0eb; }
 	.source-bluesky { color: #0085ff; background: #e8f4ff; }
-	.source-github_trending, .source-github_release { color: #333; background: #f0f0f0; }
+	.source-github_trending, .source-github_release { color: #555; background: var(--badge-count-bg); }
 	.source-openjdk_mail { color: #e76f00; background: #fff5eb; }
 </style>
