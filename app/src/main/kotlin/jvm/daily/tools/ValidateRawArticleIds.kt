@@ -1,6 +1,6 @@
 package jvm.daily.tools
 
-import jvm.daily.model.CanonicalArticleId
+import dev.vived.engine.model.CanonicalArticleId
 import java.sql.Connection
 
 class ValidateRawArticleIds(private val connection: Connection) {
