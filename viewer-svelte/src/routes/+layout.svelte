@@ -1,9 +1,24 @@
 <script lang="ts">
 	import { bookmarks, totalBookmarkCount } from '$lib/stores/bookmarks';
 	import type { Snippet } from 'svelte';
+	import { onMount } from 'svelte';
 
 	let { children }: { children: Snippet } = $props();
 	let currentTab = $state('digest');
+
+	let dark = $state(false);
+
+	onMount(() => {
+		dark = localStorage.getItem('theme') === 'dark';
+		document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+	});
+
+	function toggleTheme() {
+		dark = !dark;
+		const theme = dark ? 'dark' : 'light';
+		localStorage.setItem('theme', theme);
+		document.documentElement.dataset.theme = theme;
+	}
 
 	const badgeCount = $derived(totalBookmarkCount($bookmarks));
 </script>
@@ -25,6 +40,9 @@
 				onclick={() => currentTab = 'rots'}>
 				ROTS
 				{#if badgeCount > 0}<span class="rots-badge">{badgeCount}</span>{/if}
+			</button>
+			<button class="theme-toggle" onclick={toggleTheme} title="Toggle dark mode">
+				{dark ? '☀️' : '🌙'}
 			</button>
 		</nav>
 	</header>
@@ -128,6 +146,20 @@
 	}
 	.tab:hover { background: #f0faf4; color: #00a64e; }
 	.tab.active { background: #00a64e; color: #fff; font-weight: 600; }
+	.theme-toggle {
+		background: none;
+		border: 1px solid var(--border);
+		border-radius: 6px;
+		padding: 5px 10px;
+		cursor: pointer;
+		font-size: 0.85rem;
+		color: var(--text-muted);
+		margin-left: 8px;
+		transition: border-color 0.15s;
+	}
+	.theme-toggle:hover {
+		border-color: var(--accent);
+	}
 	.rots-badge {
 		font-size: 0.7rem; background: #00a64e; color: #fff; border-radius: 10px;
 		padding: 1px 7px; margin-left: 4px; font-weight: 700;
