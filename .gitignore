@@ -30,3 +30,4 @@ output/
 
 # Demo recordings
 demo-output/
+.claude/settings.local.json
