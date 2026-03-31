@@ -10,7 +10,7 @@
 
 <svelte:head>
 	<title>JVM Daily</title>
-	<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </svelte:head>
 
 <div class="app">
@@ -45,18 +45,66 @@
 </div>
 
 <style>
+	:global(:root) {
+		--bg: #f8f8f6;
+		--bg-card: #ffffff;
+		--bg-header: #ffffff;
+		--bg-strip: #f8f8f6;
+		--border: #e8e8e0;
+		--border-strong: #d0d0c8;
+		--text: #111111;
+		--text-secondary: #555555;
+		--text-muted: #aaaaaa;
+		--accent: #00a64e;
+		--accent-dark: #00743a;
+		--accent-pill-bg: #f0faf4;
+		--accent-pill-border: #b3e6cc;
+		--accent-pill-text: #00743a;
+		--badge-count-bg: #f5f5f2;
+		--badge-count-text: #999999;
+		--badge-hn-bg: #fff8f0;
+		--badge-hn-text: #b45309;
+		--badge-reddit-bg: #f0f4ff;
+		--badge-reddit-text: #4361c2;
+		--action-btn-border: #e8e8e0;
+		--action-btn-text: #bbbbbb;
+	}
+	:global([data-theme="dark"]) {
+		--bg: #111111;
+		--bg-card: #1a1a1a;
+		--bg-header: #1a1a1a;
+		--bg-strip: #161616;
+		--border: #252525;
+		--border-strong: #333333;
+		--text: #edede7;
+		--text-secondary: #777777;
+		--text-muted: #3a3a3a;
+		--accent: #00a64e;
+		--accent-dark: #4ade80;
+		--accent-pill-bg: #0c2318;
+		--accent-pill-border: #174d2e;
+		--accent-pill-text: #4ade80;
+		--badge-count-bg: #222222;
+		--badge-count-text: #555555;
+		--badge-hn-bg: #221a0a;
+		--badge-hn-text: #d97706;
+		--badge-reddit-bg: #141826;
+		--badge-reddit-text: #6b8cde;
+		--action-btn-border: #2e2e2e;
+		--action-btn-text: #444444;
+	}
 	:global(body) {
 		margin: 0;
-		font-family: 'Spectral', Georgia, serif;
-		background: #fff;
-		color: #1a1a1a;
-		line-height: 1.7;
-		font-size: 17px;
+		font-family: 'Inter', system-ui, sans-serif;
+		background: var(--bg);
+		color: var(--text);
+		line-height: 1.65;
+		font-size: 16px;
 	}
 	:global(*) { box-sizing: border-box; }
-	:global(h1, h2, h3) { font-family: 'Spectral', Georgia, serif; }
-	:global(a) { color: #00a64e; }
-	:global(a:hover) { color: #008a3e; }
+	:global(h1, h2, h3) { font-family: 'Inter', system-ui, sans-serif; }
+	:global(a) { color: var(--accent); }
+	:global(a:hover) { color: var(--accent-dark); }
 
 	.app { display: flex; flex-direction: column; min-height: 100vh; }
 	.header {
@@ -74,7 +122,7 @@
 	.tabs { display: flex; gap: 4px; }
 	.tab {
 		background: none; border: none; padding: 7px 18px; border-radius: 6px;
-		cursor: pointer; font-family: 'Spectral', Georgia, serif;
+		cursor: pointer; font-family: 'Inter', system-ui, sans-serif;
 		font-size: 0.9rem; font-weight: 400; color: #666;
 		transition: background 0.15s, color 0.15s;
 	}
