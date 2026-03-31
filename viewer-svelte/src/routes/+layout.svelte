@@ -173,6 +173,21 @@
 	.tab:hover { background: var(--accent-pill-bg); color: var(--accent); }
 	.tab.active { background: var(--accent); color: #fff; font-weight: 600; }
 
+	.theme-toggle {
+		background: none;
+		border: 1px solid var(--border);
+		border-radius: 6px;
+		padding: 5px 10px;
+		cursor: pointer;
+		font-size: 0.85rem;
+		color: var(--text-muted);
+		margin-left: 8px;
+		transition: border-color 0.15s;
+	}
+	.theme-toggle:hover {
+		border-color: var(--accent);
+	}
+
 	.rots-badge {
 		font-size: 0.65rem;
 		background: var(--accent);
