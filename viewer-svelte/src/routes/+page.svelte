@@ -145,14 +145,27 @@
 			{#if normalReleases.length > 0}
 				<div class="releases-section">
 					<div class="section-label">Releases</div>
+					<div class="release-pills">
+						{#each normalReleases as cluster (cluster.id)}
+							<button
+								class="release-pill"
+								onclick={() => {
+									const el = document.getElementById(`release-${cluster.id}`);
+									if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); el.style.outline = '2px solid var(--accent)'; setTimeout(() => { el.style.outline = ''; }, 1200); }
+								}}
+							>{cluster.title}</button>
+						{/each}
+					</div>
 					{#each normalReleases as cluster (cluster.id)}
-						<ReleaseCard
-							{cluster}
-							bookmarked={false}
-							dismissedState={false}
-							onBookmark={() => toggleBookmark(currentDate, cluster.title)}
-							onDismiss={() => toggleDismiss(currentDate, cluster.title)}
-						/>
+						<div id="release-{cluster.id}">
+							<ReleaseCard
+								{cluster}
+								bookmarked={false}
+								dismissedState={false}
+								onBookmark={() => toggleBookmark(currentDate, cluster.title)}
+								onDismiss={() => toggleDismiss(currentDate, cluster.title)}
+							/>
+						</div>
 					{/each}
 				</div>
 			{/if}
@@ -255,65 +268,107 @@
 {/if}
 
 <style>
-	.loading, .empty { padding: 48px; text-align: center; color: #999; width: 100%; }
-	.digest-content {
-		flex: 1; overflow-y: auto;
-		padding: 40px 48px;
-		max-width: 920px; margin: 0 auto;
-	}
-	.digest-header { margin-bottom: 32px; padding-bottom: 20px; border-bottom: 2px solid #1a1a1a; }
-	.digest-date { font-size: 2rem; font-weight: 700; line-height: 1.2; }
-	.digest-stats { display: flex; gap: 16px; font-size: 0.85rem; color: #868787; margin-top: 8px; }
+	.loading, .empty { padding: 48px; text-align: center; color: var(--text-muted); width: 100%; }
 
-	.releases-section, .tweets-section, .mailing-section { margin-top: 40px; }
-	.mailing-list {
-		list-style: none; padding: 0; margin: 0;
+	.digest-content {
+		flex: 1;
+		overflow-y: auto;
+		padding: 32px 40px;
+		max-width: 920px;
+		margin: 0 auto;
+		width: 100%;
 	}
+
+	.digest-header {
+		margin-bottom: 28px;
+		padding-bottom: 16px;
+		border-bottom: 1px solid var(--border);
+	}
+	.digest-date {
+		font-size: 1.6rem;
+		font-weight: 700;
+		letter-spacing: -0.02em;
+		color: var(--text);
+		line-height: 1.2;
+	}
+	.digest-stats {
+		display: flex;
+		gap: 12px;
+		font-size: 0.75rem;
+		color: var(--text-muted);
+		margin-top: 6px;
+		font-weight: 500;
+	}
+
+	.section-label {
+		font-size: 0.62rem;
+		text-transform: uppercase;
+		letter-spacing: 0.1em;
+		color: var(--text-muted);
+		margin-bottom: 12px;
+		font-weight: 600;
+		display: inline-block;
+	}
+
+	.releases-section,
+	.tweets-section,
+	.mailing-section { margin-top: 32px; }
+
+	.release-pills {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 6px;
+		margin-bottom: 14px;
+	}
+	.release-pill {
+		background: var(--accent-pill-bg);
+		border: 1px solid var(--accent-pill-border);
+		color: var(--accent-pill-text);
+		font-size: 0.65rem;
+		padding: 4px 11px;
+		border-radius: 12px;
+		font-weight: 600;
+		text-decoration: none;
+		cursor: pointer;
+		border-style: solid;
+		font-family: 'Inter', system-ui, sans-serif;
+		transition: opacity 0.15s;
+	}
+	.release-pill:hover { opacity: 0.8; }
+
+	.mailing-list { list-style: none; padding: 0; margin: 0; }
 	.mailing-item {
 		padding: 10px 0;
-		border-bottom: 1px solid #f0f0f0;
-		display: flex; align-items: baseline; gap: 10px;
+		border-bottom: 1px solid var(--border);
+		display: flex;
+		align-items: baseline;
+		gap: 10px;
 		flex-wrap: wrap;
 	}
 	.mailing-item a {
-		font-size: 1rem; font-weight: 600; text-decoration: none;
+		font-size: 0.92rem;
+		font-weight: 600;
+		color: var(--text);
+		text-decoration: none;
 		line-height: 1.4;
 	}
-	.mailing-item a:hover { text-decoration: underline; }
-	.mailing-meta {
-		font-size: 0.8rem; color: #868787;
-	}
-	.section-label {
-		font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.12em;
-		color: #868787; margin-bottom: 16px; font-weight: 600;
-		padding-bottom: 8px; border-bottom: 2px solid #00a64e;
-		display: inline-block;
-	}
-	.rots-inline-section {
-		margin: 40px 0 24px; padding-bottom: 16px;
-	}
-	.rots-inline-section .section-label { border-bottom-color: #f59e0b; color: #b45309; }
-	.archive-section {
-		margin-top: 40px; padding-top: 16px;
-	}
-	.archive-section .section-label { border-bottom-color: #d0d0d0; color: #b0b0b0; }
-	.tweet-card {
-		border-bottom: 1px solid #e8e8e8;
-		padding: 16px 0; margin-bottom: 0;
-	}
+	.mailing-item a:hover { color: var(--accent); }
+	.mailing-meta { font-size: 0.75rem; color: var(--text-muted); }
+
+	.rots-inline-section { margin: 32px 0 24px; padding-bottom: 16px; }
+	.rots-inline-section .section-label { color: #b45309; }
+
+	.archive-section { margin-top: 32px; }
+	.archive-section .section-label { color: var(--text-muted); }
+
+	.tweet-card { border-bottom: 1px solid var(--border); padding: 14px 0; }
 	.tweet-header { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
-	.tweet-header a { font-size: 0.85rem; text-decoration: none; }
-	.tweet-header a:hover { text-decoration: underline; }
-	.tweet-text { color: #363737; font-size: 0.95rem; line-height: 1.7; margin: 0; }
+	.tweet-header a { font-size: 0.85rem; color: var(--text-secondary); text-decoration: none; }
+	.tweet-header a:hover { color: var(--accent); }
+	.tweet-text { color: var(--text-secondary); font-size: 0.85rem; line-height: 1.65; margin: 0; }
 
 	@media (max-width: 768px) {
-		.digest-content {
-			padding: 20px 16px;
-			max-width: 100%;
-			overflow-x: hidden;
-			word-wrap: break-word;
-			overflow-wrap: break-word;
-		}
-		.digest-date { font-size: 1.5rem; }
+		.digest-content { padding: 16px; max-width: 100%; overflow-x: hidden; word-wrap: break-word; overflow-wrap: break-word; }
+		.digest-date { font-size: 1.3rem; }
 	}
 </style>
