@@ -66,7 +66,7 @@ class BlueskySource(
                             val newTitle = threadLink.title?.let { "[$displayName] $it" }
                             article = article.copy(
                                 url = threadLink.url,
-                                title = (newTitle ?: article.title).take(200),
+                                title = (newTitle ?: article.title).take(1000),
                             )
                         }
                     }
@@ -154,7 +154,7 @@ class BlueskySource(
 
         return Article(
             id = canonicalId,
-            title = titleWithAuthor.take(200),
+            title = titleWithAuthor.take(1000),
             content = content,
             sourceType = sourceType,
             sourceId = "$handle/$rkey",
