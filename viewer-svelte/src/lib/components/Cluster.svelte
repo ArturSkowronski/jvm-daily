@@ -22,9 +22,6 @@
 		mergeByTitle([...cluster.articles]).sort((a, b) => b.engagementScore - a.engagementScore)
 	);
 
-	const isSingle = $derived(mergedArticles.length === 1);
-	let expanded = $state(false);
-
 	const synthesisHtml = $derived(marked.parse(cluster.summary) as string);
 </script>
 
@@ -56,25 +53,11 @@
 			<button class="action-btn tick-btn" title="Dismiss" onclick={onDismiss}>✓</button>
 		</div>
 	</div>
-	{#if isSingle}
-		{#if expanded}
-			<div class="article-list">
-				{#each mergedArticles as article}
-					<ArticleRow {article} clusterSize={mergedArticles.length} />
-				{/each}
-			</div>
-		{:else}
-			<button class="expand-btn" onclick={() => expanded = true}>
-				Show source article
-			</button>
-		{/if}
-	{:else}
-		<div class="article-list">
-			{#each mergedArticles as article}
-				<ArticleRow {article} clusterSize={mergedArticles.length} />
-			{/each}
-		</div>
-	{/if}
+	<div class="article-list">
+		{#each mergedArticles as article}
+			<ArticleRow {article} clusterSize={mergedArticles.length} />
+		{/each}
+	</div>
 </div>
 
 <style>
@@ -139,19 +122,6 @@
 	.tick-btn:hover { border-color: var(--accent); color: var(--accent); }
 
 	.article-list { margin-top: 10px; }
-
-	.expand-btn {
-		margin-top: 8px;
-		background: none;
-		border: none;
-		padding: 0;
-		font-size: 0.72rem;
-		color: var(--accent);
-		cursor: pointer;
-		font-family: 'Inter', system-ui, sans-serif;
-		font-weight: 500;
-	}
-	.expand-btn:hover { text-decoration: underline; }
 
 	.cluster-badges {
 		display: flex;
