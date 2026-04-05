@@ -60,6 +60,33 @@ jobs:
             --build-arg GITHUB_ACTOR=${{ github.actor }} \
             --build-arg GITHUB_TOKEN=${{ secrets.GH_PACKAGES_TOKEN }}
 
+  deploy-cloudflare:
+    name: Deploy viewer to Cloudflare Pages
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: viewer-svelte/package-lock.json
+
+      - name: Build SvelteKit viewer
+        run: |
+          cd viewer-svelte
+          npm ci
+          npm run build
+        env:
+          VITE_API_BASE_URL: https://vived-engine.fly.dev
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy viewer-svelte/build --project-name jvm-daily-viewer --branch main --commit-dirty=true
+
   deploy-pi:
     name: Deploy to Raspberry Pi
     runs-on: ubuntu-latest
