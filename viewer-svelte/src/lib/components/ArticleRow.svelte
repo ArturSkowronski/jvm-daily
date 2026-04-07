@@ -7,7 +7,7 @@
 	import { isSocialPost } from '$lib/utils/merge';
 
 	let { article, clusterSize = 1 }: { article: DigestArticle; clusterSize?: number } = $props();
-	const social = clusterSize > 1 && isSocialPost(article);
+	const social = isSocialPost(article);
 	const showSummary = clusterSize > 1;
 	const domain = getDomain(article.url || '');
 	const favicon = faviconUrl(article.url || '');
