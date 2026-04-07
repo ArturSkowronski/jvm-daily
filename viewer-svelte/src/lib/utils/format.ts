@@ -30,9 +30,25 @@ export function fmtDuration(start: string, end: string): string {
 	return Math.floor(sec / 60) + 'm ' + (sec % 60) + 's';
 }
 
+/** Known feed proxy domains → regex to extract the real publisher slug from the URL path. */
+const FEED_PROXIES: Record<string, RegExp> = {
+	'feeds.feedblitz.com': /\/0\/(\w+)~/
+};
+
+/**
+ * Resolve the display domain for an article URL.
+ * For known feed proxies (e.g. feedblitz), extracts the actual publisher domain.
+ */
 export function getDomain(url: string): string {
 	try {
-		return new URL(url).hostname.replace('www.', '');
+		const u = new URL(url);
+		const host = u.hostname.replace('www.', '');
+		const proxy = FEED_PROXIES[host];
+		if (proxy) {
+			const m = u.pathname.match(proxy);
+			if (m) return `${m[1]}.com`;
+		}
+		return host;
 	} catch {
 		return '';
 	}

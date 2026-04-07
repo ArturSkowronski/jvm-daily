@@ -65,10 +65,16 @@
 			.filter((c) => !isRelease(c) && !isStandaloneTweet(c) && isMailingListCluster(c))
 			.sort((a, b) => b.engagementScore - a.engagementScore)
 	);
+	const normalOpenJdkClusters = $derived(
+		allOpenJdkClusters.filter((c) =>
+			!isBookmarked($bookmarks, currentDate, c.title) &&
+			!isDismissed($dismissed, currentDate, c.title)
+		)
+	);
 	// Top clusters shown as full cards, rest as compact links (max 5)
-	const openjdkTopClusters = $derived(allOpenJdkClusters.filter((c) => c.articles.length > 1 || c.engagementScore > 3));
+	const openjdkTopClusters = $derived(normalOpenJdkClusters.filter((c) => c.articles.length > 1 || c.engagementScore > 3));
 	const openjdkCompactLinks = $derived(
-		allOpenJdkClusters
+		normalOpenJdkClusters
 			.filter((c) => c.articles.length <= 1 && c.engagementScore <= 3)
 			.slice(0, 5)
 	);
@@ -84,6 +90,9 @@
 	);
 	const rotsReleases = $derived(
 		allReleaseClusters.filter((c) => isBookmarked($bookmarks, currentDate, c.title))
+	);
+	const rotsOpenJdk = $derived(
+		allOpenJdkClusters.filter((c) => isBookmarked($bookmarks, currentDate, c.title))
 	);
 
 	const normalClusters = $derived(
@@ -111,9 +120,15 @@
 			!isBookmarked($bookmarks, currentDate, c.title)
 		)
 	);
+	const archivedOpenJdk = $derived(
+		allOpenJdkClusters.filter((c) =>
+			isDismissed($dismissed, currentDate, c.title) &&
+			!isBookmarked($bookmarks, currentDate, c.title)
+		)
+	);
 
-	const hasRots = $derived(rotsClusters.length > 0 || rotsReleases.length > 0);
-	const hasArchive = $derived(archivedClusters.length > 0 || archivedReleases.length > 0);
+	const hasRots = $derived(rotsClusters.length > 0 || rotsReleases.length > 0 || rotsOpenJdk.length > 0);
+	const hasArchive = $derived(archivedClusters.length > 0 || archivedReleases.length > 0 || archivedOpenJdk.length > 0);
 </script>
 
 {#if loading}
@@ -170,7 +185,7 @@
 				</div>
 			{/if}
 
-			{#if allOpenJdkClusters.length > 0}
+			{#if normalOpenJdkClusters.length > 0}
 				<div class="mailing-section">
 					<div class="section-label">OpenJDK</div>
 					{#each openjdkTopClusters as cluster (cluster.id)}
@@ -220,6 +235,15 @@
 							onDismiss={() => toggleDismiss(currentDate, cluster.title)}
 						/>
 					{/each}
+					{#each rotsOpenJdk as cluster (cluster.id)}
+						<Cluster
+							{cluster}
+							bookmarked={true}
+							dismissedState={false}
+							onBookmark={() => toggleBookmark(currentDate, cluster.title)}
+							onDismiss={() => toggleDismiss(currentDate, cluster.title)}
+						/>
+					{/each}
 				</div>
 			{/if}
 
@@ -252,6 +276,15 @@
 					{/each}
 					{#each archivedReleases as cluster (cluster.id)}
 						<ReleaseCard
+							{cluster}
+							bookmarked={false}
+							dismissedState={true}
+							onBookmark={() => toggleBookmark(currentDate, cluster.title)}
+							onDismiss={() => toggleDismiss(currentDate, cluster.title)}
+						/>
+					{/each}
+					{#each archivedOpenJdk as cluster (cluster.id)}
+						<Cluster
 							{cluster}
 							bookmarked={false}
 							dismissedState={true}
