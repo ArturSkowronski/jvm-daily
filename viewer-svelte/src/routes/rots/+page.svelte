@@ -47,8 +47,16 @@
 		for (const entry of entries) {
 			lines.push(`## ${fmtDigestDate(entry.date)}\n`);
 			for (const c of entry.clusters) {
-				lines.push(`### ${c.title}\n`);
+				const primaryUrl = c.articles.find((a) => a.url)?.url;
+				const heading = primaryUrl ? `[${c.title}](${primaryUrl})` : c.title;
+				lines.push(`### ${heading}\n`);
 				lines.push(c.summary + '\n');
+				const links = c.articles.filter((a) => a.url);
+				if (links.length > 1) {
+					lines.push('Sources:');
+					for (const a of links) lines.push(`- [${a.title}](${a.url})`);
+					lines.push('');
+				}
 			}
 		}
 		await navigator.clipboard.writeText(lines.join('\n'));
