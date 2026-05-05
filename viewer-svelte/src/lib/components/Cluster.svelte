@@ -59,10 +59,10 @@
 			</div>
 		</div>
 		<div class="cluster-actions">
-			<button class="act bm" class:bookmarked title="Save for ROTS" onclick={onBookmark}>
+			<button class="act bm bookmark-btn" class:bookmarked title="Save for ROTS" onclick={onBookmark}>
 				{bookmarked ? '★' : '☆'}
 			</button>
-			<button class="act" title="Dismiss" onclick={onDismiss}>✓</button>
+			<button class="act tick-btn" title="Dismiss" onclick={onDismiss}>✓</button>
 		</div>
 	</div>
 	<div class="articles">
@@ -86,7 +86,7 @@
 	}
 	.cluster:hover { box-shadow: var(--shadow-md); }
 	.cluster.lead { border-left-color: var(--accent); }
-	.cluster.dismissed { opacity: 0.4; }
+	.cluster.dismissed { opacity: 0.35; }
 
 	.cluster-head { display: flex; gap: 12px; align-items: flex-start; }
 	.cluster-head-text { flex: 1; min-width: 0; }

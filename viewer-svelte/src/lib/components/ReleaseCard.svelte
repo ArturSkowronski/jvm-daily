@@ -37,7 +37,7 @@
 	const summaryHtml = $derived(marked.parse(cluster.summary) as string);
 </script>
 
-<article class="release" class:dismissed={dismissedState} data-key={cluster.title}>
+<article class="release release-card" class:dismissed={dismissedState} data-key={cluster.title}>
 	<div class="cluster-head">
 		<div class="cluster-head-text">
 			<h3 class="cluster-title">
@@ -58,10 +58,10 @@
 			{/if}
 		</div>
 		<div class="cluster-actions">
-			<button class="act bm" class:bookmarked title="Save for ROTS" onclick={onBookmark}>
+			<button class="act bm bookmark-btn" class:bookmarked title="Save for ROTS" onclick={onBookmark}>
 				{bookmarked ? '★' : '☆'}
 			</button>
-			<button class="act" title="Dismiss" onclick={onDismiss}>✓</button>
+			<button class="act tick-btn" title="Dismiss" onclick={onDismiss}>✓</button>
 		</div>
 	</div>
 </article>
@@ -78,7 +78,7 @@
 		transition: box-shadow .12s;
 	}
 	.release:hover { box-shadow: var(--shadow-md); }
-	.release.dismissed { opacity: 0.4; }
+	.release.dismissed { opacity: 0.35; }
 
 	.cluster-head { display: flex; gap: 12px; align-items: flex-start; }
 	.cluster-head-text { flex: 1; min-width: 0; }

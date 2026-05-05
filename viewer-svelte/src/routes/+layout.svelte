@@ -47,7 +47,7 @@
 					ROTS
 					{#if badgeCount > 0}<span class="count">{badgeCount}</span>{/if}
 				</button>
-				<button class="theme-btn" onclick={toggleTheme} title="Toggle dark mode">
+				<button class="theme-btn theme-toggle" onclick={toggleTheme} title="Toggle dark mode">
 					{dark ? '☀️' : '🌙'}
 				</button>
 			</nav>

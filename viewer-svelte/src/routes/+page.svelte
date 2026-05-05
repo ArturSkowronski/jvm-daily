@@ -227,7 +227,7 @@
 
 			{#if hasRots}
 				<div class="rots-inline-section">
-					<div class="section rots">★ Rest of the Story</div>
+					<div class="section rots section-label">★ Rest of the Story</div>
 					{#each rotsClusters as cluster (cluster.id)}
 						<Cluster
 							{cluster}
@@ -279,7 +279,7 @@
 
 			{#if hasArchive}
 				<div class="archive-section">
-					<div class="section">Archive</div>
+					<div class="section section-label">Archive</div>
 					{#each archivedClusters as cluster (cluster.id)}
 						<Cluster
 							{cluster}
