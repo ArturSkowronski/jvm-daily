@@ -139,27 +139,38 @@
 	<DateSidebar {dates} {currentDate} onSelect={selectDate} />
 	<div class="digest-content">
 		{#if digest}
-			<div class="digest-header">
-				<div class="digest-date">{fmtDigestDate(currentDate)}</div>
+			<header class="digest-header">
+				<h1 class="digest-date">{fmtDigestDate(currentDate)}</h1>
 				<div class="digest-stats">
 					<span>{digest.totalArticles} articles</span>
 					<span>{digest.clusters.length} topics</span>
 				</div>
-			</div>
+			</header>
 
-			{#each normalClusters as cluster (cluster.id)}
+			{#if normalClusters.length > 0}
+				<div class="section">News &amp; topics <span class="count">· {normalClusters.length} {normalClusters.length === 1 ? 'cluster' : 'clusters'}</span></div>
+			{/if}
+
+			{#each normalClusters as cluster, i (cluster.id)}
 				<Cluster
 					{cluster}
 					bookmarked={false}
 					dismissedState={false}
+					lead={i === 0}
 					onBookmark={() => toggleBookmark(currentDate, cluster.title)}
 					onDismiss={() => toggleDismiss(currentDate, cluster.title)}
 				/>
 			{/each}
 
+			<a class="weekly-pin" href="https://www.jvm-weekly.com/" target="_blank" rel="noopener">
+				<span class="label">JVM Weekly</span>
+				<span>The deeper read — curated weekly takes on the JVM ecosystem.</span>
+				<span class="arrow">→</span>
+			</a>
+
 			{#if normalReleases.length > 0}
 				<div class="releases-section">
-					<div class="section-label">Releases</div>
+					<div class="section">Releases <span class="count">· {normalReleases.length} today</span></div>
 					<div class="release-pills">
 						{#each normalReleases as cluster (cluster.id)}
 							<button
@@ -187,7 +198,7 @@
 
 			{#if normalOpenJdkClusters.length > 0}
 				<div class="mailing-section">
-					<div class="section-label">OpenJDK</div>
+					<div class="section">OpenJDK <span class="count">· mailing lists, JEPs, drafts</span></div>
 					{#each openjdkTopClusters as cluster (cluster.id)}
 						<Cluster
 							{cluster}
@@ -216,7 +227,7 @@
 
 			{#if hasRots}
 				<div class="rots-inline-section">
-					<div class="section-label">★ Rest of the Story</div>
+					<div class="section rots section-label">★ Rest of the Story</div>
 					{#each rotsClusters as cluster (cluster.id)}
 						<Cluster
 							{cluster}
@@ -249,22 +260,26 @@
 
 			{#if standaloneTweets.length > 0}
 				<div class="tweets-section">
-					<div class="section-label">Tweets</div>
-					{#each standaloneTweets as tweet}
-						<div class="tweet-card">
-							<div class="tweet-header">
-								<span>🦋</span>
-								<a href={tweet.url || '#'} target="_blank" rel="noopener">@{tweet.handle || 'Bluesky'}</a>
-							</div>
-							<p class="tweet-text">{tweet.title}</p>
+					<div class="section">Bluesky <span class="count">· {standaloneTweets.length} standalone {standaloneTweets.length === 1 ? 'post' : 'posts'}</span></div>
+					<article class="bsky-card">
+						<div class="bsky-rows">
+							{#each standaloneTweets as tweet}
+								<div class="row social">
+									<span class="bsky-icon">🦋</span>
+									<div class="art-body">
+										<a class="bsky-handle" href={tweet.url || '#'} target="_blank" rel="noopener">@{tweet.handle || 'Bluesky'}</a>
+										<p class="bsky-text">{tweet.title}</p>
+									</div>
+								</div>
+							{/each}
 						</div>
-					{/each}
+					</article>
 				</div>
 			{/if}
 
 			{#if hasArchive}
 				<div class="archive-section">
-					<div class="section-label">Archive</div>
+					<div class="section section-label">Archive</div>
 					{#each archivedClusters as cluster (cluster.id)}
 						<Cluster
 							{cluster}
@@ -301,107 +316,200 @@
 {/if}
 
 <style>
-	.loading, .empty { padding: 48px; text-align: center; color: var(--text-muted); width: 100%; }
+	.loading, .empty { padding: 48px; text-align: center; color: var(--text-3); width: 100%; }
 
 	.digest-content {
 		flex: 1;
 		overflow-y: auto;
-		padding: 32px 40px;
-		max-width: 920px;
+		padding: 24px 32px 80px;
+		max-width: 820px;
 		margin: 0 auto;
 		width: 100%;
 	}
 
 	.digest-header {
-		margin-bottom: 28px;
-		padding-bottom: 16px;
+		display: flex;
+		align-items: baseline;
+		gap: 14px;
+		flex-wrap: wrap;
+		padding-bottom: 14px;
 		border-bottom: 1px solid var(--border);
+		margin-bottom: 20px;
 	}
 	.digest-date {
-		font-size: 1.6rem;
+		font-family: var(--font-sans);
 		font-weight: 700;
-		letter-spacing: -0.02em;
-		color: var(--text);
+		font-size: 23px;
+		letter-spacing: -0.015em;
 		line-height: 1.2;
+		color: var(--text);
+		margin: 0;
 	}
 	.digest-stats {
 		display: flex;
 		gap: 12px;
-		font-size: 0.75rem;
-		color: var(--text-muted);
-		margin-top: 6px;
-		font-weight: 500;
+		flex-wrap: wrap;
+		font: 500 11.5px/1 var(--font-mono);
+		color: var(--text-3);
 	}
+	.digest-stats span { white-space: nowrap; }
+	.digest-stats span::before {
+		content: "·";
+		margin-right: 8px;
+		color: var(--text-faint);
+	}
+	.digest-stats span:first-child::before { content: ""; margin: 0; }
 
-	.section-label {
-		font-size: 0.62rem;
+	.section {
+		display: flex;
+		align-items: baseline;
+		gap: 10px;
+		margin: 30px 0 12px;
+		font: 600 10px/1 var(--font-mono);
+		letter-spacing: 0.14em;
 		text-transform: uppercase;
-		letter-spacing: 0.1em;
-		color: var(--text-muted);
-		margin-bottom: 12px;
-		font-weight: 600;
-		display: inline-block;
+		color: var(--text-3);
 	}
+	.section .count {
+		font-weight: 400;
+		color: var(--text-faint);
+		letter-spacing: 0.04em;
+		white-space: nowrap;
+	}
+	.section.rots { color: var(--rots); }
 
 	.releases-section,
 	.tweets-section,
-	.mailing-section { margin-top: 32px; }
+	.mailing-section { margin-top: 0; }
 
 	.release-pills {
 		display: flex;
 		flex-wrap: wrap;
-		gap: 6px;
-		margin-bottom: 14px;
+		gap: 5px;
+		margin-bottom: 10px;
 	}
 	.release-pill {
-		background: var(--accent-pill-bg);
-		border: 1px solid var(--accent-pill-border);
-		color: var(--accent-pill-text);
-		font-size: 0.65rem;
-		padding: 4px 11px;
-		border-radius: 12px;
-		font-weight: 600;
-		text-decoration: none;
+		appearance: none;
+		background: var(--accent-bg);
+		border: 1px solid var(--accent-bd);
+		color: var(--accent-dark);
+		font: 500 10.5px/1 var(--font-mono);
+		padding: 4px 10px 5px;
+		border-radius: 10px;
 		cursor: pointer;
-		border-style: solid;
-		font-family: 'Inter', system-ui, sans-serif;
-		transition: opacity 0.15s;
 	}
-	.release-pill:hover { opacity: 0.8; }
+	.release-pill:hover { background: var(--bg-card); }
 
-	.mailing-list { list-style: none; padding: 0; margin: 0; }
+	.mailing-list {
+		list-style: none;
+		padding: 0;
+		margin: 6px 0 0;
+		background: var(--bg-card);
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+	}
 	.mailing-item {
-		padding: 10px 0;
-		border-bottom: 1px solid var(--border);
+		padding: 8px 14px;
+		border-top: 1px solid var(--border-soft);
 		display: flex;
 		align-items: baseline;
 		gap: 10px;
 		flex-wrap: wrap;
+		transition: background .12s;
 	}
+	.mailing-item:first-child { border-top: 0; }
+	.mailing-item:hover { background: var(--bg-soft); }
 	.mailing-item a {
-		font-size: 0.92rem;
-		font-weight: 600;
+		font-size: 13px;
+		font-weight: 500;
 		color: var(--text);
 		text-decoration: none;
+		flex: 1;
+		min-width: 0;
 		line-height: 1.4;
 	}
-	.mailing-item a:hover { color: var(--accent); }
-	.mailing-meta { font-size: 0.75rem; color: var(--text-muted); }
+	.mailing-item a:hover { color: var(--accent-dark); }
+	.mailing-meta {
+		font: 400 10.5px/1 var(--font-mono);
+		color: var(--text-faint);
+		white-space: nowrap;
+	}
 
-	.rots-inline-section { margin: 32px 0 24px; padding-bottom: 16px; }
-	.rots-inline-section .section-label { color: #b45309; }
+	.weekly-pin {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		padding: 11px 14px;
+		margin: 18px 0 0;
+		background: var(--bg-card);
+		border: 1px solid var(--border);
+		border-left: 3px solid var(--rots);
+		border-radius: var(--radius);
+		font-size: 12.5px;
+		color: var(--text-2);
+		text-decoration: none;
+	}
+	.weekly-pin:hover { background: var(--rots-bg); text-decoration: none; color: var(--text); }
+	.weekly-pin .label {
+		font: 600 9.5px/1 var(--font-mono);
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		color: var(--rots);
+		white-space: nowrap;
+	}
+	.weekly-pin .arrow { margin-left: auto; color: var(--rots); }
 
-	.archive-section { margin-top: 32px; }
-	.archive-section .section-label { color: var(--text-muted); }
+	.rots-inline-section { margin: 0 0 24px; padding-bottom: 16px; }
 
-	.tweet-card { border-bottom: 1px solid var(--border); padding: 14px 0; }
-	.tweet-header { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
-	.tweet-header a { font-size: 0.85rem; color: var(--text-secondary); text-decoration: none; }
-	.tweet-header a:hover { color: var(--accent); }
-	.tweet-text { color: var(--text-secondary); font-size: 0.85rem; line-height: 1.65; margin: 0; }
+	.archive-section { margin-top: 0; }
+	.archive-section .section { color: var(--text-faint); }
 
-	@media (max-width: 768px) {
-		.digest-content { padding: 16px; max-width: 100%; overflow-x: hidden; word-wrap: break-word; overflow-wrap: break-word; }
-		.digest-date { font-size: 1.3rem; }
+	.bsky-card {
+		background: var(--bg-card);
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+		padding: 6px 16px;
+		margin-bottom: 8px;
+		box-shadow: var(--shadow-sm);
+	}
+	.bsky-rows .row.social {
+		display: flex;
+		gap: 10px;
+		padding: 9px 0 8px;
+		border-top: 1px solid var(--border-soft);
+		align-items: flex-start;
+	}
+	.bsky-rows .row.social:first-child { border-top: 0; }
+	.bsky-icon {
+		width: 18px; height: 18px;
+		border-radius: 50%;
+		background: var(--src-bsky-bg);
+		color: var(--src-bsky);
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 10px;
+		flex-shrink: 0;
+		margin-top: 2px;
+	}
+	.art-body { flex: 1; min-width: 0; }
+	.bsky-handle {
+		font: 500 11px/1 var(--font-mono);
+		color: var(--text-2);
+		display: inline-block;
+		margin-bottom: 3px;
+		text-decoration: none;
+	}
+	.bsky-handle:hover { color: var(--accent-dark); }
+	.bsky-text {
+		font-size: 13px;
+		line-height: 1.55;
+		color: var(--text);
+		margin: 0 0 6px;
+	}
+
+	@media (max-width: 760px) {
+		.digest-content { padding: 18px 14px 60px; max-width: 100%; overflow-x: hidden; word-wrap: break-word; overflow-wrap: break-word; }
+		.digest-date { font-size: 19px; }
 	}
 </style>
