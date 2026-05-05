@@ -11,23 +11,38 @@
 		jep: 'JEP',
 		markdown_file: 'Local'
 	};
+	const variants: Record<string, string> = {
+		rss: 'rss',
+		reddit: 'reddit',
+		bluesky: 'bsky',
+		github_trending: 'gh',
+		github_release: 'gh',
+		openjdk_mail: 'jdk',
+		hackernews: 'hn',
+		jep: 'jep'
+	};
+	const variant = $derived(variants[sourceType] ?? '');
 </script>
 
-<span class="source-badge source-{sourceType}">{labels[sourceType] || sourceType}</span>
+<span class="src {variant}">{labels[sourceType] || sourceType}</span>
 
 <style>
-	.source-badge {
-		font-size: 0.6rem;
-		font-weight: 600;
+	.src {
+		font: 600 9px/1 var(--font-mono);
 		text-transform: uppercase;
-		letter-spacing: 0.05em;
-		padding: 2px 6px;
+		letter-spacing: 0.08em;
+		padding: 3px 6px 4px;
 		border-radius: 3px;
-		background: var(--badge-count-bg);
-		color: var(--badge-count-text);
+		background: var(--bg-soft);
+		color: var(--text-3);
+		white-space: nowrap;
 	}
-	.source-reddit { color: #ff4500; background: #fff0eb; }
-	.source-bluesky { color: #0085ff; background: #e8f4ff; }
-	.source-github_trending, .source-github_release { color: #555; background: var(--badge-count-bg); }
-	.source-openjdk_mail { color: #e76f00; background: #fff5eb; }
+	.src.reddit { background: var(--src-reddit-bg); color: var(--src-reddit); }
+	.src.bsky   { background: var(--src-bsky-bg);   color: var(--src-bsky); }
+	.src.hn     { background: var(--src-hn-bg);     color: var(--src-hn); }
+	.src.gh     { background: var(--src-gh-bg);     color: var(--src-gh); }
+	.src.jdk    { background: var(--src-jdk-bg);    color: var(--src-jdk); }
+	.src.rss    { background: var(--src-rss-bg);    color: var(--src-rss); }
+	.src.jep    { background: var(--accent-bg);     color: var(--accent-dark); }
+	:global([data-theme="dark"]) .src.gh { color: #c5c2b6; }
 </style>
