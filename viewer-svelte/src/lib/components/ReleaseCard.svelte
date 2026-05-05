@@ -72,8 +72,8 @@
 		border: 1px solid var(--border);
 		border-left: 3px solid var(--accent);
 		border-radius: var(--radius);
-		padding: 14px 16px 12px;
-		margin-bottom: 8px;
+		padding: 18px 20px 16px;
+		margin-bottom: 12px;
 		box-shadow: var(--shadow-sm);
 		transition: box-shadow .12s;
 	}
@@ -84,9 +84,9 @@
 	.cluster-head-text { flex: 1; min-width: 0; }
 
 	.cluster-title {
-		font: 600 14.5px/1.4 var(--font-sans);
+		font: 600 16px/1.4 var(--font-sans);
 		color: var(--text);
-		margin: 0 0 6px;
+		margin: 0 0 8px;
 		letter-spacing: -0.005em;
 	}
 	.cluster-title::before {
@@ -113,8 +113,8 @@
 
 	.cluster-synthesis,
 	.bullets {
-		font-size: 12.5px;
-		line-height: 1.6;
+		font-size: 14px;
+		line-height: 1.7;
 		color: var(--text-2);
 	}
 	.cluster-synthesis :global(p) { margin: 0 0 0.5em; }
@@ -123,9 +123,9 @@
 	.bullets :global(li) {
 		position: relative;
 		padding-left: 16px;
-		margin-bottom: 3px;
-		font-size: 12.5px;
-		line-height: 1.6;
+		margin-bottom: 5px;
+		font-size: 14px;
+		line-height: 1.7;
 		color: var(--text-2);
 	}
 	.bullets :global(li)::before {

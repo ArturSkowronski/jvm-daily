@@ -79,12 +79,12 @@
 <style>
 	.row {
 		display: flex;
-		gap: 10px;
-		padding: 9px 0 8px;
+		gap: 12px;
+		padding: 12px 0 11px;
 		border-top: 1px solid var(--border-soft);
 		align-items: flex-start;
 	}
-	.row:first-child { border-top: 1px solid var(--border); padding-top: 10px; }
+	.row:first-child { border-top: 1px solid var(--border); padding-top: 14px; }
 
 	.fav {
 		width: 16px; height: 16px;
@@ -111,7 +111,7 @@
 	.art-body { flex: 1; min-width: 0; }
 	.art-title-row { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
 	.art-title {
-		font: 500 13px/1.4 var(--font-sans);
+		font: 500 14.5px/1.45 var(--font-sans);
 		color: var(--text);
 		text-decoration: none;
 		flex: 1;
@@ -119,15 +119,15 @@
 	}
 	.art-title:hover { color: var(--accent-dark); text-decoration: underline; text-underline-offset: 2px; }
 	.art-source {
-		font: 400 11px/1 var(--font-mono);
+		font: 400 11.5px/1 var(--font-mono);
 		color: var(--text-faint);
 		white-space: nowrap;
 	}
 	.art-summary {
-		font-size: 12.5px;
-		line-height: 1.6;
+		font-size: 13.5px;
+		line-height: 1.65;
 		color: var(--text-2);
-		margin: 4px 0 6px;
+		margin: 6px 0 8px;
 		max-width: 72ch;
 	}
 	.art-meta { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
@@ -165,9 +165,9 @@
 	}
 	.bsky-handle:hover { color: var(--accent-dark); }
 	.bsky-text {
-		font-size: 13px;
-		line-height: 1.55;
+		font-size: 14px;
+		line-height: 1.6;
 		color: var(--text);
-		margin: 0 0 6px;
+		margin: 0 0 8px;
 	}
 </style>

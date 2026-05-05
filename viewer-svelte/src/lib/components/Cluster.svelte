@@ -77,8 +77,8 @@
 		background: var(--bg-card);
 		border: 1px solid var(--border);
 		border-radius: var(--radius);
-		padding: 14px 16px 12px;
-		margin-bottom: 8px;
+		padding: 18px 20px 16px;
+		margin-bottom: 12px;
 		box-shadow: var(--shadow-sm);
 		border-left: 3px solid var(--border);
 		position: relative;
@@ -92,9 +92,9 @@
 	.cluster-head-text { flex: 1; min-width: 0; }
 
 	.cluster-title {
-		font: 600 14.5px/1.4 var(--font-sans);
+		font: 600 16px/1.4 var(--font-sans);
 		color: var(--text);
-		margin: 0 0 4px;
+		margin: 0 0 6px;
 		letter-spacing: -0.005em;
 		text-wrap: pretty;
 	}
@@ -111,10 +111,10 @@
 	}
 
 	.cluster-synthesis {
-		font-size: 13px;
-		line-height: 1.65;
+		font-size: 14px;
+		line-height: 1.7;
 		color: var(--text-2);
-		margin: 4px 0 8px;
+		margin: 6px 0 10px;
 		max-width: 70ch;
 	}
 	.cluster-synthesis :global(p) { margin: 0 0 0.5em; }
@@ -180,7 +180,7 @@
 	}
 	.act.bookmarked:hover { opacity: 0.92; }
 
-	.articles { margin-top: 8px; }
+	.articles { margin-top: 12px; }
 
 	@media (max-width: 760px) {
 		.cluster { position: relative; padding: 12px 12px 10px; }
