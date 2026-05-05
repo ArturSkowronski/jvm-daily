@@ -321,8 +321,8 @@
 	.digest-content {
 		flex: 1;
 		overflow-y: auto;
-		padding: 24px 32px 80px;
-		max-width: 820px;
+		padding: 32px 40px 96px;
+		max-width: 860px;
 		margin: 0 auto;
 		width: 100%;
 	}
@@ -330,16 +330,16 @@
 	.digest-header {
 		display: flex;
 		align-items: baseline;
-		gap: 14px;
+		gap: 16px;
 		flex-wrap: wrap;
-		padding-bottom: 14px;
+		padding-bottom: 18px;
 		border-bottom: 1px solid var(--border);
-		margin-bottom: 20px;
+		margin-bottom: 24px;
 	}
 	.digest-date {
 		font-family: var(--font-sans);
 		font-weight: 700;
-		font-size: 23px;
+		font-size: 26px;
 		letter-spacing: -0.015em;
 		line-height: 1.2;
 		color: var(--text);
@@ -349,7 +349,7 @@
 		display: flex;
 		gap: 12px;
 		flex-wrap: wrap;
-		font: 500 11.5px/1 var(--font-mono);
+		font: 500 12px/1 var(--font-mono);
 		color: var(--text-3);
 	}
 	.digest-stats span { white-space: nowrap; }
@@ -364,8 +364,8 @@
 		display: flex;
 		align-items: baseline;
 		gap: 10px;
-		margin: 30px 0 12px;
-		font: 600 10px/1 var(--font-mono);
+		margin: 36px 0 16px;
+		font: 600 11px/1 var(--font-mono);
 		letter-spacing: 0.14em;
 		text-transform: uppercase;
 		color: var(--text-3);
@@ -409,7 +409,7 @@
 		border-radius: var(--radius);
 	}
 	.mailing-item {
-		padding: 8px 14px;
+		padding: 10px 16px;
 		border-top: 1px solid var(--border-soft);
 		display: flex;
 		align-items: baseline;
@@ -420,13 +420,13 @@
 	.mailing-item:first-child { border-top: 0; }
 	.mailing-item:hover { background: var(--bg-soft); }
 	.mailing-item a {
-		font-size: 13px;
+		font-size: 14px;
 		font-weight: 500;
 		color: var(--text);
 		text-decoration: none;
 		flex: 1;
 		min-width: 0;
-		line-height: 1.4;
+		line-height: 1.45;
 	}
 	.mailing-item a:hover { color: var(--accent-dark); }
 	.mailing-meta {
@@ -438,14 +438,14 @@
 	.weekly-pin {
 		display: flex;
 		align-items: center;
-		gap: 10px;
-		padding: 11px 14px;
-		margin: 18px 0 0;
+		gap: 12px;
+		padding: 14px 18px;
+		margin: 24px 0 0;
 		background: var(--bg-card);
 		border: 1px solid var(--border);
 		border-left: 3px solid var(--rots);
 		border-radius: var(--radius);
-		font-size: 12.5px;
+		font-size: 13.5px;
 		color: var(--text-2);
 		text-decoration: none;
 	}
@@ -468,14 +468,14 @@
 		background: var(--bg-card);
 		border: 1px solid var(--border);
 		border-radius: var(--radius);
-		padding: 6px 16px;
-		margin-bottom: 8px;
+		padding: 8px 20px;
+		margin-bottom: 12px;
 		box-shadow: var(--shadow-sm);
 	}
 	.bsky-rows .row.social {
 		display: flex;
-		gap: 10px;
-		padding: 9px 0 8px;
+		gap: 12px;
+		padding: 12px 0 11px;
 		border-top: 1px solid var(--border-soft);
 		align-items: flex-start;
 	}

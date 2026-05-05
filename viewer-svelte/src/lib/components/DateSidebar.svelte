@@ -83,13 +83,13 @@
 		justify-content: space-between;
 		gap: 8px;
 		width: 100%;
-		padding: 5px 9px;
-		margin-bottom: 1px;
+		padding: 6px 10px;
+		margin-bottom: 2px;
 		background: transparent;
 		border: 0;
 		border-radius: 5px;
 		cursor: pointer;
-		font: 400 12.5px/1.4 var(--font-sans);
+		font: 400 13.5px/1.4 var(--font-sans);
 		color: var(--text-2);
 		text-align: left;
 		transition: background .12s, color .12s;

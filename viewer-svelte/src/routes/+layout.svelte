@@ -148,8 +148,8 @@
 		font-family: var(--font-sans);
 		background: var(--bg);
 		color: var(--text);
-		line-height: 1.6;
-		font-size: 14px;
+		line-height: 1.65;
+		font-size: 15px;
 		-webkit-font-smoothing: antialiased;
 	}
 	:global(*) { box-sizing: border-box; }
