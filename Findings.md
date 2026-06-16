@@ -182,3 +182,30 @@
 - When `JOBRUNR_STORE` is an **absolute path** (e.g. `/Users/foo/.jvm-daily/jobrunr`), the URL becomes `jdbc:h2:file:.//Users/foo/.jvm-daily/jobrunr`.
 - On POSIX systems `.//abs` resolves to `/abs`, so H2 should handle this correctly, but it is untested. If the daemon fails to start with H2 errors, the fix is to remove the `./` prefix in `App.kt` or change the URL to use `Path.of(storePath).toAbsolutePath()`.
 - The `launchd` plist sets `JOBRUNR_STORE` to `$HOME/.jvm-daily/jobrunr` (absolute), so this path is exercised when using the local service.
+
+## June 2–8 2026 digest gap — root cause & recovery (investigated 2026-06-16)
+
+**Symptom:** Viewer on Fly had no digests for 2026-06-03..06-08 (last good `daily-2026-06-02.json`, next `daily-2026-06-09.json`).
+
+**Initial wrong hypothesis:** OOM / dead daemon + catch-up not backfilling. Indirect signals (06:22 catch-up timestamp, `/proc/1` restart) pointed here but were misleading. Lesson: get direct evidence (DB) before concluding.
+
+**Actual root cause:** External **LLM billing block**. The pipeline (ingress→enrichment→clustering→outgress) ran every day; ingest worked fine (`ingest_feed_runs` shows 107 feeds/day, articles ingested 06-02..06-08). But **every enrichment LLM call returned HTTP 403**:
+`TRANSPORT: LLM API error 403: "Lightning dunning decision is deny for project: projects/381536636004", PERMISSION_DENIED` — a Google Cloud (Vertex/Gemini) dunning/unpaid-invoice block. All 190 processed_articles in the window are `outcome_status=FAILED`, `summary='[FAILED]'`. Zero successful summaries → no clusters created (clusters jump 06-01→06-10) → outgress wrote nothing. Resolved ~06-09 when billing cleared.
+
+**Recoverability:**
+- Raw `articles` for 06-02..06-08 are intact in the Fly DuckDB (full title+content+url, 190 rows: bluesky 118 / rss 46 / github_releases 16 / openjdk_mail 9 / trending 1). Exported to `recovery/articles-2026-06-*.json`.
+- AI layer (summaries/clusters/digests) was never produced and is NOT in git, snapshots (5-day retention, oldest only ~06-12), or any local copy.
+- Fly volume snapshots have 5-day retention → June 3-8 snapshots already expired; they hold the same raw DB anyway.
+
+**Regeneration path (built-in tooling):** `enrichment-replay` re-runs only FAILED items (`App.kt:271`, selector by `--ids` or `--since-hours`). All 190 FAILED items are exactly this window (no other FAILED in DB), so it's cleanly targetable. Then `clustering` + `outgress` regenerate the digests. Requires LLM spend (~190 calls) and DuckDB is single-writer (daemon must release the prod DB).
+
+**Prevention ideas:** billing/credit alert on the LLM project; alert when a day has 0 SUCCESS enrichments or no digest file; make outgress/quality-gate surface a hard failure instead of silently writing nothing.
+
+### Recovery executed (2026-06-16) — outcome
+
+1. **Raw articles** (190, ingested 06-02..08) exported to `recovery/articles-2026-06-*.json` straight from the live Fly DuckDB.
+2. **Re-enrichment**: ran `enrichment-replay --since-hours 400 --limit 500` on Fly after the 403 billing block cleared → 190/190 processed (107 SUCCESS + 83 SKIPPED off-topic), still-failed=0. NOTE: the 512MB machine OOM-killed the first attempt (daemon JVM + replay JVM). Fix: temporarily `fly machine update --vm-memory 2048`, run, then restore to 512.
+3. **Digest backfill**: existing CLI cannot emit historical-dated JSON digests (OutgressWorkflow.writeDigestJson is anchored to `clock.now()`, always writes `daily-<today>.json`). Added a `backfill-digest --from --to` command (App.kt) that runs ClusteringWorkflow + OutgressWorkflow with the clock pinned to each date at 12:00 UTC — the 24h window then lands exactly on that day's ~04:00 UTC ingestion batch (windows are driven by `ingested_at`, which re-enrichment leaves intact). Ran it locally against a pulled DB copy (so prod's cluster table stays untouched), generating `daily-2026-06-03..08.json` (+ .md), then sftp-uploaded them to `/data/output`.
+4. **Verified live**: `/api/dates` now shows a continuous 06-01..06-16 run; `/api/daily/2026-06-05` serves 19 clusters.
+
+**Gotcha for future backfills:** clustering/outgress windows are anchored to an injectable `clock` but the daily-pipeline CLI doesn't expose it — use `backfill-digest`. Digests window by `ingested_at` (not `published_at`); ingestion fires daily ~04:00 UTC, so anchoring the clock at 12:00 UTC isolates a single day cleanly.
