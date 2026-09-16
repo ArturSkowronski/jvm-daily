@@ -34,3 +34,12 @@ demo-output/
 
 # Git worktrees
 .worktrees/
+
+# local tool state
+.superpowers/
+.playwright-mcp/
+test-results/
+viewer-svelte/test-results/
+Users/
+data/
+*.png

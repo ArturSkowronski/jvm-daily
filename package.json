@@ -1,0 +1,31 @@
+{
+  "name": "jvm-daily",
+  "version": "0.0.1",
+  "description": "[![Build](https://github.com/ArturSkowronski/jvm-daily/actions/workflows/gradle.yml/badge.svg)](https://github.com/ArturSkowronski/jvm-daily/actions/workflows/gradle.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ArturSkowronski/jvm-daily.git"
+  },
+  "keywords": [],
+  "author": "Artur Skowronski <me@arturskowronski.com> (http://arturskowronski.com/)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/ArturSkowronski/jvm-daily/issues"
+  },
+  "homepage": "https://github.com/ArturSkowronski/jvm-daily#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.58.2",
+    "@sveltejs/adapter-static": "^3.0.10",
+    "playwright-narrator": "github:VirtusLab/playwright-narrator"
+  },
+  "dependencies": {
+    "marked": "^17.0.5"
+  }
+}
