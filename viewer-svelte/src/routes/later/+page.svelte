@@ -2,4 +2,4 @@
 	import SavedList from '$lib/components/SavedList.svelte';
 </script>
 
-<SavedList kind="rots" />
+<SavedList kind="later" />

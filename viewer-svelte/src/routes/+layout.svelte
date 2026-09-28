@@ -1,11 +1,14 @@
 <script lang="ts">
-	import { bookmarks, totalBookmarkCount } from '$lib/stores/bookmarks';
+	import { rots, later } from '$lib/stores/lists';
+	import { count } from '$lib/stores/savedList';
+	import Toast from '$lib/components/Toast.svelte';
 	import type { Snippet } from 'svelte';
 
 	let { children }: { children: Snippet } = $props();
 	let currentTab = $state('digest');
 
-	const badgeCount = $derived(totalBookmarkCount($bookmarks));
+	const laterCount = $derived(count($later));
+	const rotsCount = $derived(count($rots));
 </script>
 
 <svelte:head>
@@ -19,13 +22,18 @@
 		<nav class="tabs">
 			<button class="tab" class:active={currentTab === 'digest'}
 				onclick={() => currentTab = 'digest'}>Digest</button>
-			<button class="tab" class:active={currentTab === 'pipeline'}
-				onclick={() => currentTab = 'pipeline'}>Pipeline</button>
+			<button class="tab" class:active={currentTab === 'later'}
+				onclick={() => currentTab = 'later'}>
+				Later
+				{#if laterCount > 0}<span class="tab-badge later-badge">{laterCount}</span>{/if}
+			</button>
 			<button class="tab" class:active={currentTab === 'rots'}
 				onclick={() => currentTab = 'rots'}>
 				ROTS
-				{#if badgeCount > 0}<span class="rots-badge">{badgeCount}</span>{/if}
+				{#if rotsCount > 0}<span class="tab-badge">{rotsCount}</span>{/if}
 			</button>
+			<button class="tab" class:active={currentTab === 'pipeline'}
+				onclick={() => currentTab = 'pipeline'}>Pipeline</button>
 		</nav>
 	</header>
 
@@ -36,12 +44,17 @@
 			{#await import('./pipeline/+page.svelte') then module}
 				<module.default />
 			{/await}
+		{:else if currentTab === 'later'}
+			{#await import('./later/+page.svelte') then module}
+				<module.default />
+			{/await}
 		{:else if currentTab === 'rots'}
 			{#await import('./rots/+page.svelte') then module}
 				<module.default />
 			{/await}
 		{/if}
 	</main>
+	<Toast />
 </div>
 
 <style>
@@ -80,10 +93,11 @@
 	}
 	.tab:hover { background: #f0faf4; color: #00a64e; }
 	.tab.active { background: #00a64e; color: #fff; font-weight: 600; }
-	.rots-badge {
-		font-size: 0.7rem; background: #00a64e; color: #fff; border-radius: 10px;
+	.tab-badge {
+		font-size: 0.7rem; background: #f59e0b; color: #fff; border-radius: 10px;
 		padding: 1px 7px; margin-left: 4px; font-weight: 700;
 	}
+	.tab-badge.later-badge { background: #2563eb; }
 	.main { flex: 1; display: flex; overflow: hidden; width: 100%; min-width: 0; }
 
 	@media (max-width: 768px) {

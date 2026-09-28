@@ -4,10 +4,12 @@
 	let {
 		dates,
 		currentDate,
+		reviewed = new Set<string>(),
 		onSelect
 	}: {
 		dates: string[];
 		currentDate: string;
+		reviewed?: Set<string>;
 		onSelect: (date: string) => void;
 	} = $props();
 </script>
@@ -18,9 +20,11 @@
 		<button
 			class="date-btn"
 			class:active={date === currentDate}
+			class:reviewed={reviewed.has(date)}
+			title={reviewed.has(date) ? 'Reviewed' : 'Not reviewed yet'}
 			onclick={() => onSelect(date)}
 		>
-			{fmtShortDate(date)}
+			{fmtShortDate(date)}{#if reviewed.has(date)}<span class="check">✓</span>{:else}<span class="dot">•</span>{/if}
 		</button>
 	{/each}
 </aside>
@@ -43,6 +47,11 @@
 	}
 	.date-btn:hover { background: #f0faf4; color: #00a64e; }
 	.date-btn.active { background: #00a64e; color: #fff; font-weight: 600; }
+	.date-btn:not(.reviewed):not(.active) { color: #1a1a1a; font-weight: 600; }
+	.date-btn.reviewed:not(.active) { color: #aaa; }
+	.check, .dot { margin-left: 6px; font-size: 0.75rem; }
+	.dot { color: #00a64e; }
+	.active .dot, .active .check { color: #fff; }
 
 	@media (max-width: 768px) {
 		.sidebar {

@@ -1,19 +1,28 @@
 <script lang="ts">
 	import type { DigestCluster } from '$lib/api/types';
 	import { marked } from 'marked';
+	import ItemActions from './ItemActions.svelte';
 
 	let {
 		cluster,
-		bookmarked = false,
-		dismissedState = false,
-		onBookmark,
-		onDismiss
+		done = false,
+		later = false,
+		rots = false,
+		focused = false,
+		dimmed = false,
+		onDone,
+		onLater,
+		onRots
 	}: {
 		cluster: DigestCluster;
-		bookmarked?: boolean;
-		dismissedState?: boolean;
-		onBookmark?: () => void;
-		onDismiss?: () => void;
+		done?: boolean;
+		later?: boolean;
+		rots?: boolean;
+		focused?: boolean;
+		dimmed?: boolean;
+		onDone?: () => void;
+		onLater?: () => void;
+		onRots?: () => void;
 	} = $props();
 
 	function githubSlug(url: string): string | null {
@@ -37,7 +46,7 @@
 	const summaryHtml = $derived(marked.parse(cluster.summary) as string);
 </script>
 
-<div class="release-card" class:dismissed={dismissedState} data-key={cluster.title}>
+<div class="release-card review-item" class:dismissed={dimmed} class:focused data-key={cluster.title}>
 	<div class="cluster-head">
 		<div class="cluster-head-text">
 			<div class="cluster-title">
@@ -50,12 +59,7 @@
 				<div class="cluster-synthesis">{@html summaryHtml}</div>
 			{/if}
 		</div>
-		<div class="cluster-actions">
-			<button class="action-btn bookmark-btn" class:bookmarked title="Bookmark" onclick={onBookmark}>
-				{bookmarked ? '★' : '☆'}
-			</button>
-			<button class="action-btn tick-btn" title="Dismiss" onclick={onDismiss}>✓</button>
-		</div>
+		<ItemActions {done} {later} {rots} {focused} {onDone} {onLater} {onRots} />
 	</div>
 	<div class="release-badges">
 		{#each badges as badge}
@@ -65,10 +69,17 @@
 </div>
 
 <style>
-	.release-card {
+	.release-card.review-item {
 		border-bottom: 1px solid #e0e0e0;
-		padding: 24px 0;
+		padding: 24px 16px 24px 16px;
+		border-left: 3px solid transparent; margin-left: -19px;
+		scroll-margin-top: 84px;
 	}
+	.release-card.focused {
+		border-left-color: #00a64e;
+		background: linear-gradient(to right, #f3fbf6, rgba(255, 255, 255, 0) 70%);
+	}
+	:global(body.compact) .release-card:not(.focused) .cluster-synthesis, :global(body.compact) .release-card:not(.focused) .release-bullets, :global(body.compact) .release-card:not(.focused) .release-badges { display: none; }
 	.release-card.dismissed { opacity: 0.35; }
 	.cluster-head { display: flex; gap: 16px; }
 	.cluster-head-text { flex: 1; }
@@ -87,21 +98,13 @@
 		transition: border-color 0.15s, color 0.15s;
 	}
 	.badge-release:hover { border-color: #00a64e; color: #00a64e; }
-	.cluster-actions { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
-	.action-btn {
-		background: none; border: 1px solid #ddd; border-radius: 50%;
-		width: 34px; height: 34px; cursor: pointer; font-size: 1rem;
-		display: flex; align-items: center; justify-content: center;
-		transition: border-color 0.15s, background 0.15s;
-	}
-	.bookmark-btn:hover { border-color: #00a64e; color: #00a64e; }
-	.bookmark-btn.bookmarked { background: #00a64e; border-color: #00a64e; color: #fff; }
-	.tick-btn:hover { border-color: #00a64e; color: #00a64e; }
 
 	@media (max-width: 768px) {
+		.release-card.review-item { margin-left: 0; padding-left: 0; padding-right: 0; border-left: none; }
+		.release-card.focused { background: none; }
 		.release-card { position: relative; }
 		.cluster-head { display: block; }
 		.cluster-title { font-size: 1.05rem; padding-right: 80px; }
-		.cluster-actions { flex-direction: row; position: absolute; right: 0; top: 24px; }
+		.cluster-head > :global(.item-actions) { position: absolute; right: 0; top: 24px; }
 	}
 </style>

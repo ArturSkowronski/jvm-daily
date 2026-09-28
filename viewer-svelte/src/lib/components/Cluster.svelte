@@ -3,19 +3,28 @@
 	import ArticleRow from './ArticleRow.svelte';
 	import { mergeByTitle } from '$lib/utils/merge';
 	import { marked } from 'marked';
+	import ItemActions from './ItemActions.svelte';
 
 	let {
 		cluster,
-		bookmarked = false,
-		dismissedState = false,
-		onBookmark,
-		onDismiss
+		done = false,
+		later = false,
+		rots = false,
+		focused = false,
+		dimmed = false,
+		onDone,
+		onLater,
+		onRots
 	}: {
 		cluster: DigestCluster;
-		bookmarked?: boolean;
-		dismissedState?: boolean;
-		onBookmark?: () => void;
-		onDismiss?: () => void;
+		done?: boolean;
+		later?: boolean;
+		rots?: boolean;
+		focused?: boolean;
+		dimmed?: boolean;
+		onDone?: () => void;
+		onLater?: () => void;
+		onRots?: () => void;
 	} = $props();
 
 	const mergedArticles = $derived(
@@ -28,7 +37,7 @@
 	const synthesisHtml = $derived(marked.parse(cluster.summary) as string);
 </script>
 
-<div class="cluster" class:dismissed={dismissedState} data-key={cluster.title}>
+<div class="cluster review-item" class:dismissed={dimmed} class:focused data-key={cluster.title}>
 	<div class="cluster-head">
 		<div class="cluster-head-text">
 			<div class="cluster-title">
@@ -39,11 +48,7 @@
 				{@html synthesisHtml}
 			</div>
 		</div>
-		<div class="cluster-actions">
-			<button class="action-btn bookmark-btn" class:bookmarked title="Bookmark for ROTS"
-				onclick={onBookmark}>{bookmarked ? '★' : '☆'}</button>
-			<button class="action-btn tick-btn" title="Dismiss" onclick={onDismiss}>✓</button>
-		</div>
+		<ItemActions {done} {later} {rots} {focused} {onDone} {onLater} {onRots} />
 	</div>
 	{#if isSingle}
 		{#if expanded}
@@ -67,11 +72,17 @@
 </div>
 
 <style>
-	.cluster {
+	.cluster.review-item {
 		border-bottom: 1px solid #e0e0e0;
-		padding: 28px 0;
+		padding: 28px 16px 28px 16px;
+		border-left: 3px solid transparent; margin-left: -19px;
+		scroll-margin-top: 84px;
 	}
-	.cluster:first-child { padding-top: 0; }
+	.cluster.focused {
+		border-left-color: #00a64e;
+		background: linear-gradient(to right, #f3fbf6, rgba(255, 255, 255, 0) 70%);
+	}
+	:global(body.compact) .cluster:not(.focused) .cluster-synthesis, :global(body.compact) .cluster:not(.focused) .article-list, :global(body.compact) .cluster:not(.focused) .expand-btn { display: none; }
 	.cluster.dismissed { opacity: 0.35; }
 	.cluster-head { display: flex; gap: 16px; }
 	.cluster-head-text { flex: 1; min-width: 0; }
@@ -89,16 +100,6 @@
 		background: #f0faf4; padding: 2px 6px; border-radius: 3px; font-size: 0.9rem;
 		word-break: break-all;
 	}
-	.cluster-actions { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
-	.action-btn {
-		background: none; border: 1px solid #ddd; border-radius: 50%;
-		width: 34px; height: 34px; cursor: pointer; font-size: 1rem;
-		display: flex; align-items: center; justify-content: center;
-		transition: border-color 0.15s, background 0.15s;
-	}
-	.bookmark-btn:hover { border-color: #00a64e; color: #00a64e; }
-	.bookmark-btn.bookmarked { background: #00a64e; border-color: #00a64e; color: #fff; }
-	.tick-btn:hover { border-color: #00a64e; color: #00a64e; }
 	.article-list { margin-top: 12px; }
 	.expand-btn {
 		margin-top: 10px; font-size: 0.78rem; color: #888; background: none;
@@ -108,10 +109,12 @@
 	.expand-btn:hover { border-color: #00a64e; color: #00a64e; }
 
 	@media (max-width: 768px) {
+		.cluster.review-item { margin-left: 0; padding-left: 0; padding-right: 0; border-left: none; }
+		.cluster.focused { background: none; }
 		.cluster { position: relative; }
 		.cluster-head { display: block; }
 		.cluster-title { font-size: 1.2rem; padding-right: 76px; }
 		.cluster-synthesis { font-size: 0.95rem; }
-		.cluster-actions { flex-direction: row; position: absolute; right: 0; top: 28px; }
+		.cluster-head > :global(.item-actions) { position: absolute; right: 0; top: 28px; }
 	}
 </style>
