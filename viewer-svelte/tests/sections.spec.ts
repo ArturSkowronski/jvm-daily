@@ -40,7 +40,7 @@ test.describe('Inbox flow per day', () => {
 		await page.keyboard.press('e');
 		await expect(inbox(page)).toHaveCount(keys.length - 1);
 		await expect(focused(page)).toHaveAttribute('data-key', keys[1]!);
-		await expect(page.locator('.archive-section .section-toggle')).toContainText('Reviewed (1)');
+		await expect(page.locator('.archive-section .section-toggle')).toContainText('Reviewed · 1');
 		await expect(page.locator('.toast')).toContainText('Done');
 
 		await page.keyboard.press('u');
@@ -54,8 +54,8 @@ test.describe('Inbox flow per day', () => {
 		const keys = await inbox(page).evaluateAll((els) => els.map((e) => e.getAttribute('data-key')));
 		await page.keyboard.press('s'); // first → Read later
 		await page.keyboard.press('r'); // second → ROTS
-		await expect(page.locator('.tab-badge.later-badge')).toHaveText('1');
-		await expect(page.locator('.tab-badge:not(.later-badge)')).toHaveText('1');
+		await expect(page.locator('.later-count')).toHaveText('1');
+		await expect(page.locator('.rots-count')).toHaveText('1');
 
 		await page.locator('.tab', { hasText: 'Later' }).click();
 		await expect(page.locator('.saved h2')).toContainText('Read later');
@@ -63,9 +63,8 @@ test.describe('Inbox flow per day', () => {
 		await expect(page.locator('.saved .review-item')).toHaveAttribute('data-key', keys[0]!);
 
 		await page.locator('.tab', { hasText: 'ROTS' }).click();
-		await expect(page.locator('.saved h2')).toContainText('Rest of the Story');
-		await expect(page.locator('.saved .review-item')).toHaveCount(1);
-		await expect(page.locator('.saved .review-item')).toHaveAttribute('data-key', keys[1]!);
+		await expect(page.locator('.rots .cluster')).toHaveCount(1);
+		await expect(page.locator('.rots .cluster')).toHaveAttribute('data-key', keys[1]!);
 	});
 
 	test('e on the Later list removes the item, u brings it back', async ({ page }) => {
@@ -141,5 +140,38 @@ test.describe('Help', () => {
 		await expect(page.locator('.help')).toBeVisible();
 		await page.keyboard.press('Escape');
 		await expect(page.locator('.help')).toHaveCount(0);
+	});
+});
+
+test.describe('Dark mode toggle', () => {
+	test.beforeEach(async ({ page }) => {
+		await page.goto('/');
+		await page.evaluate(() => localStorage.clear());
+		await page.reload();
+	});
+
+	test('toggle switches data-theme attribute', async ({ page }) => {
+		await page.goto('/');
+		await page.waitForSelector('.theme-toggle');
+
+		// Initially light
+		await expect(page.locator('html')).not.toHaveAttribute('data-theme', 'dark');
+
+		// Click toggle
+		await page.locator('.theme-toggle').click();
+		await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+
+		// Click again
+		await page.locator('.theme-toggle').click();
+		await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+	});
+
+	test('theme persists in localStorage', async ({ page }) => {
+		await page.goto('/');
+		await page.waitForSelector('.theme-toggle');
+		await page.locator('.theme-toggle').click();
+
+		const theme = await page.evaluate(() => localStorage.getItem('theme'));
+		expect(theme).toBe('dark');
 	});
 });

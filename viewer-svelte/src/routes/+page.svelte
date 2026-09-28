@@ -260,7 +260,7 @@
 
 <svelte:window onkeydown={onKey} />
 
-{#snippet itemView(item: Item, isDone: boolean)}
+{#snippet itemView(item: Item, isDone: boolean, lead = false)}
 	{@const m = marksOf(item.key)}
 	{@const focused = !isDone && focusKey === item.key}
 	{#if item.kind === 'release'}
@@ -271,27 +271,38 @@
 			onRots={() => toggle(item.key, 'rots')}
 		/>
 	{:else if item.kind === 'compact'}
-		<div class="mailing-item review-item" class:focused class:dismissed={isDone} data-key={item.key}>
-			<div class="mailing-text">
-				<a href={item.cluster.articles[0]?.url || '#'} target="_blank" rel="noopener">{item.cluster.title}</a>
-				<span class="mailing-meta">
-					{item.cluster.articles.length} source{item.cluster.articles.length > 1 ? 's' : ''}
-				</span>
-			</div>
+		<li class="mailing-item review-item" class:focused class:dismissed={isDone} data-key={item.key}>
+			<a href={item.cluster.articles[0]?.url || '#'} target="_blank" rel="noopener">{item.cluster.title}</a>
+			<span class="mailing-meta">
+				{item.cluster.articles.length} source{item.cluster.articles.length > 1 ? 's' : ''}
+			</span>
 			<ItemActions
 				inline done={m.done} later={m.later} rots={m.rots} {focused}
 				onDone={() => toggle(item.key, 'done')}
 				onLater={() => toggle(item.key, 'later')}
 				onRots={() => toggle(item.key, 'rots')}
 			/>
-		</div>
+		</li>
 	{:else}
 		<Cluster
-			cluster={item.cluster} done={m.done} later={m.later} rots={m.rots} {focused} dimmed={isDone}
+			cluster={item.cluster} done={m.done} later={m.later} rots={m.rots} {focused} dimmed={isDone} {lead}
 			onDone={() => toggle(item.key, 'done')}
 			onLater={() => toggle(item.key, 'later')}
 			onRots={() => toggle(item.key, 'rots')}
 		/>
+	{/if}
+{/snippet}
+
+{#snippet itemList(list: Item[], isDone: boolean)}
+	{#each list.filter((i) => i.kind !== 'compact') as item (item.cluster.id)}
+		{@render itemView(item, isDone)}
+	{/each}
+	{#if list.some((i) => i.kind === 'compact')}
+		<ul class="mailing-list">
+			{#each list.filter((i) => i.kind === 'compact') as item (item.cluster.id)}
+				{@render itemView(item, isDone)}
+			{/each}
+		</ul>
 	{/if}
 {/snippet}
 
@@ -304,11 +315,11 @@
 	<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
 	<div class="digest-content" onclick={onContentClick}>
 		{#if digest}
-			<div class="digest-header">
+			<header class="digest-header">
 				<div class="digest-nav">
 					<button class="nav-btn" title="Newer day (←)" onclick={() => goDay(-1)}
 						disabled={dates.indexOf(currentDate) <= 0}>←</button>
-					<div class="digest-date">{fmtDigestDate(currentDate)}</div>
+					<h1 class="digest-date">{fmtDigestDate(currentDate)}</h1>
 					<button class="nav-btn" title="Older day (→)" onclick={() => goDay(1)}
 						disabled={dates.indexOf(currentDate) >= dates.length - 1}>→</button>
 				</div>
@@ -325,9 +336,9 @@
 						<button class="bigdone" onclick={markDayReviewed}>✓ Mark day reviewed <kbd>⇧E</kbd></button>
 					{/if}
 					<button class="tool" class:on={$compact} onclick={() => compact.update((v) => !v)}>Compact <kbd>c</kbd></button>
-					<button class="tool" onclick={() => (showHelp = true)}>Keys <kbd>?</kbd></button>
+					<button class="tool keys-btn" onclick={() => (showHelp = true)}>Keys <kbd>?</kbd></button>
 				</div>
-			</div>
+			</header>
 
 			{#if pending.length === 0}
 				<div class="inbox-zero">
@@ -340,52 +351,64 @@
 				</div>
 			{/if}
 
-			{#each pendingOf(['topic']) as item (item.cluster.id)}
-				{@render itemView(item, false)}
-			{/each}
+			{#if pendingOf(['topic']).length > 0}
+				<div class="section">News &amp; topics <span class="count">· {pendingOf(['topic']).length} {pendingOf(['topic']).length === 1 ? 'cluster' : 'clusters'}</span></div>
+				{#each pendingOf(['topic']) as item, i (item.cluster.id)}
+					{@render itemView(item, false, i === 0)}
+				{/each}
+			{/if}
+
+			<a class="weekly-pin" href="https://www.jvm-weekly.com/" target="_blank" rel="noopener">
+				<span class="label">JVM Weekly</span>
+				<span>The deeper read — curated weekly takes on the JVM ecosystem.</span>
+				<span class="arrow">→</span>
+			</a>
 
 			{#if pendingOf(['release']).length > 0}
 				<div class="releases-section">
-					<div class="section-label">Releases</div>
-					{#each pendingOf(['release']) as item (item.cluster.id)}
-						{@render itemView(item, false)}
-					{/each}
+					<div class="section">Releases <span class="count">· {pendingOf(['release']).length} today</span></div>
+					<div class="release-pills">
+						{#each pendingOf(['release']) as item (item.cluster.id)}
+							<button class="release-pill" onclick={() => setFocus(item.key)}>{item.cluster.title}</button>
+						{/each}
+					</div>
+					{@render itemList(pendingOf(['release']), false)}
 				</div>
 			{/if}
 
 			{#if pendingOf(['openjdk', 'compact']).length > 0}
 				<div class="mailing-section">
-					<div class="section-label">OpenJDK</div>
-					{#each pendingOf(['openjdk', 'compact']) as item (item.cluster.id)}
-						{@render itemView(item, false)}
-					{/each}
+					<div class="section">OpenJDK <span class="count">· mailing lists, JEPs, drafts</span></div>
+					{@render itemList(pendingOf(['openjdk', 'compact']), false)}
 				</div>
 			{/if}
 
 			{#if standaloneTweets.length > 0}
 				<div class="tweets-section">
-					<div class="section-label">Tweets</div>
-					{#each standaloneTweets as tweet}
-						<div class="tweet-card">
-							<div class="tweet-header">
-								<span>🦋</span>
-								<a href={tweet.url || '#'} target="_blank" rel="noopener">@{tweet.handle || 'Bluesky'}</a>
-							</div>
-							<p class="tweet-text">{tweet.title}</p>
+					<div class="section">Bluesky <span class="count">· {standaloneTweets.length} standalone {standaloneTweets.length === 1 ? 'post' : 'posts'}</span></div>
+					<article class="bsky-card">
+						<div class="bsky-rows">
+							{#each standaloneTweets as tweet}
+								<div class="row social">
+									<span class="bsky-icon">🦋</span>
+									<div class="art-body">
+										<a class="bsky-handle" href={tweet.url || '#'} target="_blank" rel="noopener">@{tweet.handle || 'Bluesky'}</a>
+										<p class="bsky-text">{tweet.title}</p>
+									</div>
+								</div>
+							{/each}
 						</div>
-					{/each}
+					</article>
 				</div>
 			{/if}
 
 			{#if handled.length > 0}
 				<div class="archive-section">
-					<button class="section-label section-toggle" onclick={() => (showReviewed = !showReviewed)}>
-						{showReviewed ? '▾' : '▸'} Reviewed ({handled.length})
+					<button class="section section-toggle" onclick={() => (showReviewed = !showReviewed)}>
+						{showReviewed ? '▾' : '▸'} Reviewed <span class="count">· {handled.length}</span>
 					</button>
 					{#if showReviewed}
-						{#each handled as item (item.cluster.id)}
-							{@render itemView(item, true)}
-						{/each}
+						{@render itemList(handled, true)}
 					{/if}
 				</div>
 			{/if}
@@ -400,97 +423,240 @@
 {/if}
 
 <style>
-	.loading, .empty { padding: 48px; text-align: center; color: #999; width: 100%; }
+	.loading, .empty { padding: 48px; text-align: center; color: var(--text-3); width: 100%; }
+
 	.digest-content {
-		flex: 1; overflow-y: auto;
-		padding: 40px 48px;
-		max-width: 920px; margin: 0 auto;
+		flex: 1;
+		overflow-y: auto;
+		padding: 32px 40px 96px;
+		max-width: 860px;
+		margin: 0 auto;
+		width: 100%;
 	}
-	.digest-header { margin-bottom: 32px; padding-bottom: 20px; border-bottom: 2px solid #1a1a1a; }
-	.digest-nav { display: flex; align-items: center; gap: 12px; }
-	.digest-date { font-size: 2rem; font-weight: 700; line-height: 1.2; }
+
+	.digest-header {
+		display: flex;
+		align-items: center;
+		gap: 10px 16px;
+		flex-wrap: wrap;
+		padding-bottom: 18px;
+		border-bottom: 1px solid var(--border);
+		margin-bottom: 24px;
+	}
+	.digest-date {
+		font-family: var(--font-sans);
+		font-weight: 700;
+		font-size: 26px;
+		letter-spacing: -0.015em;
+		line-height: 1.2;
+		color: var(--text);
+		margin: 0;
+	}
+	.digest-stats {
+		display: flex;
+		gap: 12px;
+		flex-wrap: wrap;
+		font: 500 12px/1 var(--font-mono);
+		color: var(--text-3);
+	}
+	.digest-stats span { white-space: nowrap; }
+	.digest-stats span::before {
+		content: "·";
+		margin-right: 8px;
+		color: var(--text-faint);
+	}
+	.digest-stats span:first-child::before { content: ""; margin: 0; }
+
+	.section {
+		display: flex;
+		align-items: baseline;
+		gap: 10px;
+		margin: 36px 0 16px;
+		font: 600 11px/1 var(--font-mono);
+		letter-spacing: 0.14em;
+		text-transform: uppercase;
+		color: var(--text-3);
+	}
+	.section .count {
+		font-weight: 400;
+		color: var(--text-faint);
+		letter-spacing: 0.04em;
+		white-space: nowrap;
+	}
+
+	.releases-section,
+	.tweets-section,
+	.mailing-section { margin-top: 0; }
+
+	.release-pills {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 5px;
+		margin-bottom: 10px;
+	}
+	.release-pill {
+		appearance: none;
+		background: var(--accent-bg);
+		border: 1px solid var(--accent-bd);
+		color: var(--accent-dark);
+		font: 500 10.5px/1 var(--font-mono);
+		padding: 4px 10px 5px;
+		border-radius: 10px;
+		cursor: pointer;
+	}
+	.release-pill:hover { background: var(--bg-card); }
+
+	.mailing-list {
+		list-style: none;
+		padding: 0;
+		margin: 6px 0 0;
+		background: var(--bg-card);
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+	}
+	.mailing-item {
+		padding: 10px 16px;
+		border-top: 1px solid var(--border-soft);
+		display: flex;
+		align-items: baseline;
+		gap: 10px;
+		flex-wrap: wrap;
+		transition: background .12s;
+	}
+	.mailing-item:first-child { border-top: 0; }
+	.mailing-item:hover { background: var(--bg-soft); }
+	.mailing-item a {
+		font-size: 14px;
+		font-weight: 500;
+		color: var(--text);
+		text-decoration: none;
+		flex: 1;
+		min-width: 0;
+		line-height: 1.45;
+	}
+	.mailing-item a:hover { color: var(--accent-dark); }
+	.mailing-meta {
+		font: 400 10.5px/1 var(--font-mono);
+		color: var(--text-faint);
+		white-space: nowrap;
+	}
+
+	.weekly-pin {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		padding: 14px 18px;
+		margin: 24px 0 0;
+		background: var(--bg-card);
+		border: 1px solid var(--border);
+		border-left: 3px solid var(--rots);
+		border-radius: var(--radius);
+		font-size: 13.5px;
+		color: var(--text-2);
+		text-decoration: none;
+	}
+	.weekly-pin:hover { background: var(--rots-bg); text-decoration: none; color: var(--text); }
+	.weekly-pin .label {
+		font: 600 9.5px/1 var(--font-mono);
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		color: var(--rots);
+		white-space: nowrap;
+	}
+	.weekly-pin .arrow { margin-left: auto; color: var(--rots); }
+
+
+	.archive-section { margin-top: 0; }
+	.archive-section .section { color: var(--text-faint); }
+
+	.bsky-card {
+		background: var(--bg-card);
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+		padding: 8px 20px;
+		margin-bottom: 12px;
+		box-shadow: var(--shadow-sm);
+	}
+	.bsky-rows .row.social {
+		display: flex;
+		gap: 12px;
+		padding: 12px 0 11px;
+		border-top: 1px solid var(--border-soft);
+		align-items: flex-start;
+	}
+	.bsky-rows .row.social:first-child { border-top: 0; }
+	.bsky-icon {
+		width: 18px; height: 18px;
+		border-radius: 50%;
+		background: var(--src-bsky-bg);
+		color: var(--src-bsky);
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 10px;
+		flex-shrink: 0;
+		margin-top: 2px;
+	}
+	.art-body { flex: 1; min-width: 0; }
+	.bsky-handle {
+		font: 500 11px/1 var(--font-mono);
+		color: var(--text-2);
+		display: inline-block;
+		margin-bottom: 3px;
+		text-decoration: none;
+	}
+	.bsky-handle:hover { color: var(--accent-dark); }
+	.bsky-text {
+		font-size: 13px;
+		line-height: 1.55;
+		color: var(--text);
+		margin: 0 0 6px;
+	}
+
+	.digest-nav { display: flex; align-items: center; gap: 10px; }
 	.nav-btn {
-		background: none; border: 1px solid #ddd; border-radius: 50%; width: 32px; height: 32px;
-		cursor: pointer; color: #555; font-size: 1rem; flex-shrink: 0;
+		appearance: none; width: 28px; height: 28px; flex-shrink: 0;
+		border: 1px solid var(--border); border-radius: 5px; background: transparent;
+		color: var(--text-3); cursor: pointer; font-size: 13px;
 	}
-	.nav-btn:hover:not(:disabled) { border-color: #00a64e; color: #00a64e; }
-	.nav-btn:disabled { opacity: 0.3; cursor: default; }
-	.digest-stats { display: flex; gap: 16px; font-size: 0.85rem; color: #868787; margin-top: 8px; }
-	.progress-label { color: #00a64e; font-weight: 600; }
-	.progress { height: 3px; background: #eee; border-radius: 2px; margin-top: 10px; overflow: hidden; }
-	.progress-bar { height: 100%; background: #00a64e; transition: width 0.25s; }
-	.toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 14px; }
+	.nav-btn:hover:not(:disabled) { border-color: var(--accent-bd); color: var(--accent-dark); background: var(--accent-bg); }
+	.nav-btn:disabled { opacity: 0.35; cursor: default; }
+	.digest-stats .progress-label { color: var(--accent); font-weight: 600; }
+	.progress { width: 100%; height: 3px; background: var(--border-soft); border-radius: 2px; overflow: hidden; }
+	.progress-bar { height: 100%; background: var(--accent); transition: width .25s; }
+	.toolbar { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; width: 100%; }
 	.bigdone {
-		background: #00a64e; color: #fff; border: none; border-radius: 6px;
-		padding: 7px 14px; font-family: inherit; font-size: 0.85rem; font-weight: 600; cursor: pointer;
+		appearance: none; background: var(--accent); color: #fff; border: 0; border-radius: 5px;
+		padding: 6px 12px; font: 600 12px/1 var(--font-sans); cursor: pointer;
 	}
 	.bigdone:hover { filter: brightness(1.08); }
 	.tool {
-		background: #fff; border: 1px solid #ddd; border-radius: 6px; color: #555;
-		padding: 6px 12px; font-family: inherit; font-size: 0.8rem; cursor: pointer;
+		appearance: none; background: transparent; border: 1px solid var(--border); border-radius: 5px;
+		padding: 5px 10px; font: 500 11.5px/1 var(--font-sans); color: var(--text-3); cursor: pointer;
 	}
-	.tool:hover { border-color: #999; }
-	.tool.on { background: #f0faf4; border-color: #00a64e; color: #00a64e; }
+	.tool:hover { border-color: var(--border-strong); color: var(--text-2); }
+	.tool.on { background: var(--accent-bg); border-color: var(--accent-bd); color: var(--accent-dark); }
 	kbd {
-		font-family: ui-monospace, monospace; font-size: 0.7rem; margin-left: 6px;
-		padding: 0 4px; border: 1px solid currentColor; border-radius: 3px; opacity: 0.7;
+		font: 500 9.5px/1 var(--font-mono); margin-left: 6px; padding: 1px 4px;
+		border: 1px solid currentColor; border-radius: 3px; opacity: 0.7;
 	}
 
-	.inbox-zero { padding: 32px 0 40px; color: #555; }
-	.inbox-zero-title { font-size: 1.4rem; font-weight: 700; color: #00a64e; margin-bottom: 12px; }
+	.inbox-zero { padding: 24px 0 8px; color: var(--text-2); font-size: 14px; }
+	.inbox-zero-title { font: 700 20px/1.3 var(--font-sans); color: var(--accent); margin-bottom: 12px; }
 
-	.releases-section, .tweets-section, .mailing-section { margin-top: 40px; }
-	.mailing-item {
-		padding: 10px 16px; margin-left: -19px;
-		border-bottom: 1px solid #f0f0f0; border-left: 3px solid transparent;
-		display: flex; align-items: center; gap: 10px;
-		scroll-margin-top: 84px;
-	}
-	.mailing-item.focused { border-left-color: #00a64e; background: #f3fbf6; }
+	.mailing-item.review-item { align-items: center; border-left: 3px solid transparent; scroll-margin-top: 72px; }
+	.mailing-item.focused { border-left-color: var(--accent); background: var(--accent-bg); }
 	.mailing-item.dismissed { opacity: 0.35; }
-	.mailing-text { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
-	.mailing-item a {
-		font-size: 1rem; font-weight: 600; text-decoration: none;
-		line-height: 1.4;
-	}
-	.mailing-item a:hover { text-decoration: underline; }
-	.mailing-meta {
-		font-size: 0.8rem; color: #868787;
-	}
-	.section-label {
-		font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.12em;
-		color: #868787; margin-bottom: 16px; font-weight: 600;
-		padding-bottom: 8px; border-bottom: 2px solid #00a64e;
-		display: inline-block;
-	}
-	.archive-section {
-		margin-top: 40px; padding-top: 16px;
-	}
-	.archive-section .section-label { border-bottom-color: #d0d0d0; color: #b0b0b0; }
-	.section-toggle {
-		background: none; border-top: none; border-left: none; border-right: none;
-		font-family: inherit; cursor: pointer; padding-left: 0; padding-right: 0;
-	}
-	.section-toggle:hover { color: #555; }
-	.tweet-card {
-		border-bottom: 1px solid #e8e8e8;
-		padding: 16px 0; margin-bottom: 0;
-	}
-	.tweet-header { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
-	.tweet-header a { font-size: 0.85rem; text-decoration: none; }
-	.tweet-header a:hover { text-decoration: underline; }
-	.tweet-text { color: #363737; font-size: 0.95rem; line-height: 1.7; margin: 0; }
 
-	@media (max-width: 768px) {
-		.digest-content {
-			padding: 20px 16px;
-			max-width: 100%;
-			overflow-x: hidden;
-			word-wrap: break-word;
-			overflow-wrap: break-word;
-		}
-		.digest-date { font-size: 1.5rem; }
-		.toolbar kbd, .tool:not(.bigdone):last-child { display: none; }
-		.mailing-item { margin-left: 0; padding-left: 0; padding-right: 0; border-left: none; }
+	.section-toggle {
+		appearance: none; background: none; border: 0; padding: 0; cursor: pointer; width: 100%;
+	}
+	.section-toggle:hover { color: var(--text-3); }
+
+	@media (max-width: 760px) {
+		.keys-btn, .toolbar kbd { display: none; }
+		.mailing-item.review-item { border-left: none; }
+		.digest-content { padding: 18px 14px 60px; max-width: 100%; overflow-x: hidden; word-wrap: break-word; overflow-wrap: break-word; }
+		.digest-date { font-size: 19px; }
 	}
 </style>

@@ -14,12 +14,12 @@
 <style>
 	.toast {
 		position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%); z-index: 50;
-		background: #1a1a1a; color: #fff; padding: 9px 16px; border-radius: 6px;
-		font-size: 0.85rem; display: flex; gap: 14px; align-items: center;
-		max-width: calc(100vw - 32px); box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+		background: var(--text); color: var(--bg); padding: 9px 16px; border-radius: 6px;
+		font: 500 13px/1.4 var(--font-sans); display: flex; gap: 14px; align-items: center;
+		max-width: calc(100vw - 32px); box-shadow: var(--shadow-md);
 	}
 	button {
-		background: none; border: none; color: #fff; font-weight: 700; text-decoration: underline;
-		cursor: pointer; font-family: inherit; font-size: inherit; white-space: nowrap; padding: 0;
+		background: none; border: none; color: var(--bg); font-weight: 700; text-decoration: underline;
+		cursor: pointer; font: inherit; font-weight: 700; white-space: nowrap; padding: 0;
 	}
 </style>

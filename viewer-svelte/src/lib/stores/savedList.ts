@@ -40,6 +40,7 @@ export function createSavedList(storageKey: string) {
 
 	return {
 		subscribe: store.subscribe,
+		update: store.update,
 		set,
 		toggle(date: string, key: string) {
 			set(date, key, !has(get(store), date, key));

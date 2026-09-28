@@ -12,60 +12,122 @@
 		reviewed?: Set<string>;
 		onSelect: (date: string) => void;
 	} = $props();
+
+	const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+	type Item = { kind: 'month'; label: string } | { kind: 'date'; date: string };
+
+	const items = $derived.by(() => {
+		const out: Item[] = [];
+		let lastKey = '';
+		for (const date of dates) {
+			const d = new Date(date);
+			const key = `${d.getFullYear()}-${d.getMonth()}`;
+			if (key !== lastKey && lastKey !== '') {
+				out.push({ kind: 'month', label: MONTHS[d.getMonth()] });
+			}
+			out.push({ kind: 'date', date });
+			lastKey = key;
+		}
+		return out;
+	});
 </script>
 
 <aside class="sidebar">
-	<h2 class="sidebar-title">Archive</h2>
-	{#each dates as date}
-		<button
-			class="date-btn"
-			class:active={date === currentDate}
-			class:reviewed={reviewed.has(date)}
-			title={reviewed.has(date) ? 'Reviewed' : 'Not reviewed yet'}
-			onclick={() => onSelect(date)}
-		>
-			{fmtShortDate(date)}{#if reviewed.has(date)}<span class="check">✓</span>{:else}<span class="dot">•</span>{/if}
-		</button>
+	<div class="sidebar-title">Archive</div>
+	{#each items as item}
+		{#if item.kind === 'month'}
+			<div class="sidebar-month">{item.label}</div>
+		{:else}
+			<button
+				class="date-btn"
+				class:active={item.date === currentDate}
+				class:reviewed={reviewed.has(item.date)}
+				title={reviewed.has(item.date) ? 'Reviewed' : 'Not reviewed yet'}
+				onclick={() => onSelect(item.date)}
+			>
+				<span>{fmtShortDate(item.date)}</span>
+				<span class="mark">{reviewed.has(item.date) ? '✓' : '•'}</span>
+			</button>
+		{/if}
 	{/each}
 </aside>
 
 <style>
 	.sidebar {
-		width: 160px; flex-shrink: 0; padding: 24px 16px;
-		border-right: 1px solid #e8e8e8; overflow-y: auto;
+		width: 168px;
+		flex-shrink: 0;
+		padding: 22px 12px 40px 22px;
+		border-right: 1px solid var(--border);
+		overflow-y: auto;
+		background: var(--bg);
+		position: sticky;
+		top: 50px;
+		align-self: start;
+		max-height: calc(100vh - 50px);
 	}
 	.sidebar-title {
-		font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.12em;
-		color: #868787; margin: 0 0 16px; font-weight: 600;
+		font: 600 9.5px/1 var(--font-mono);
+		text-transform: uppercase;
+		letter-spacing: 0.14em;
+		color: var(--text-3);
+		margin: 0 0 10px;
+		padding-left: 8px;
+	}
+	.sidebar-month {
+		font: 500 9.5px/1 var(--font-mono);
+		text-transform: uppercase;
+		letter-spacing: 0.1em;
+		color: var(--text-faint);
+		margin: 14px 0 6px;
+		padding-left: 8px;
 	}
 	.date-btn {
-		display: block; width: 100%; padding: 9px 12px; margin-bottom: 4px;
-		background: none; border: none; border-radius: 6px; cursor: pointer;
-		font-family: 'Spectral', Georgia, serif;
-		font-size: 0.9rem; color: #555; text-align: left;
-		transition: background 0.15s, color 0.15s;
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+		gap: 8px;
+		width: 100%;
+		padding: 6px 10px;
+		margin-bottom: 2px;
+		background: transparent;
+		border: 0;
+		border-radius: 5px;
+		cursor: pointer;
+		font: 400 13.5px/1.4 var(--font-sans);
+		color: var(--text-2);
+		text-align: left;
+		transition: background .12s, color .12s;
 	}
-	.date-btn:hover { background: #f0faf4; color: #00a64e; }
-	.date-btn.active { background: #00a64e; color: #fff; font-weight: 600; }
-	.date-btn:not(.reviewed):not(.active) { color: #1a1a1a; font-weight: 600; }
-	.date-btn.reviewed:not(.active) { color: #aaa; }
-	.check, .dot { margin-left: 6px; font-size: 0.75rem; }
-	.dot { color: #00a64e; }
-	.active .dot, .active .check { color: #fff; }
+	.date-btn:hover { background: var(--bg-soft); color: var(--text); }
+	.date-btn.active {
+		background: var(--accent);
+		color: #fff;
+		font-weight: 600;
+	}
+	.date-btn:not(.reviewed):not(.active) { color: var(--text); font-weight: 600; }
+	.date-btn.reviewed:not(.active) { color: var(--text-faint); }
+	.mark { font: 500 10px/1 var(--font-mono); color: var(--accent); }
+	.reviewed .mark { color: var(--text-faint); }
+	.active .mark { color: #fff; }
 
-	@media (max-width: 768px) {
+	@media (max-width: 760px) {
 		.sidebar {
-			width: 100%; display: flex; flex-wrap: nowrap; align-items: center;
-			overflow-x: auto; overflow-y: hidden;
-			border-right: none; border-bottom: 1px solid #e8e8e8;
-			padding: 12px 16px; gap: 6px;
+			width: 100%;
+			display: flex;
+			flex-wrap: nowrap;
+			align-items: center;
+			overflow-x: auto;
+			overflow-y: hidden;
+			border-right: none;
+			border-bottom: 1px solid var(--border);
+			padding: 8px 12px;
+			gap: 4px;
+			position: static;
+			max-height: none;
 			-webkit-overflow-scrolling: touch;
 		}
-		.sidebar-title { display: none; }
-		.date-btn {
-			white-space: nowrap; width: auto;
-			padding: 6px 14px; margin-bottom: 0;
-			font-size: 0.85rem; flex-shrink: 0;
-		}
+		.sidebar-title, .sidebar-month { display: none; }
+		.date-btn { white-space: nowrap; width: auto; padding: 5px 12px; margin-bottom: 0; flex-shrink: 0; }
 	}
 </style>

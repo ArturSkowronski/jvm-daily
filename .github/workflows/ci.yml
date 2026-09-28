@@ -69,7 +69,7 @@ jobs:
         run: cd viewer-svelte && npm ci && npm run build
 
       - name: Run viewer unit tests
-        run: cd viewer-svelte && npm run test:unit
+        run: cd viewer-svelte && npm test
 
       - name: Run Playwright tests
         run: npx playwright test --config viewer-svelte/tests/playwright.config.ts

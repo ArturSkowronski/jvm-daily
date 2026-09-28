@@ -7,7 +7,8 @@
 	import { isSocialPost } from '$lib/utils/merge';
 
 	let { article, clusterSize = 1 }: { article: DigestArticle; clusterSize?: number } = $props();
-	const social = clusterSize > 1 && isSocialPost(article);
+	const social = isSocialPost(article);
+	const showSummary = clusterSize > 1;
 	const domain = getDomain(article.url || '');
 	const favicon = faviconUrl(article.url || '');
 
@@ -15,42 +16,58 @@
 		const m = title.match(/^\[.*?\]\s*([\s\S]+)/);
 		return m ? m[1] : title;
 	}
+
+	function favSourceClass(sourceType: string): string {
+		switch (sourceType) {
+			case 'reddit':           return 'fav-reddit';
+			case 'hackernews':       return 'fav-hn';
+			case 'bluesky':          return 'fav-bsky';
+			case 'github_trending':
+			case 'github_release':   return 'fav-gh';
+			case 'openjdk_mail':     return 'fav-jdk';
+			case 'jep':              return 'fav-jdk';
+			case 'rss':              return 'fav-rss';
+			default:                 return '';
+		}
+	}
 </script>
 
 {#if social}
-	<div class="article-row article-row-social">
-		<div class="article-body">
-			<div class="social-card-header">
-				<span class="social-card-icon">🦋</span>
-				<a class="social-card-author" href={article.url || '#'} target="_blank" rel="noopener">
-					@{article.handle || 'Bluesky'}
-				</a>
-			</div>
-			<p class="social-card-text">{extractTweetText(article.title)}</p>
-			<div class="article-meta">
+	<div class="row social">
+		<span class="bsky-icon">🦋</span>
+		<div class="art-body">
+			<a class="bsky-handle" href={article.url || '#'} target="_blank" rel="noopener">
+				@{article.handle || 'Bluesky'}
+			</a>
+			<p class="bsky-text">{extractTweetText(article.title)}</p>
+			<div class="art-meta">
 				<SourceBadge sourceType={article.sourceType} />
 				{#each article.topics as topic}<TopicTag {topic} />{/each}
 			</div>
 		</div>
 	</div>
 {:else}
-	<div class="article-row">
-		{#if favicon}
-			<img class="article-favicon" src={favicon} alt="" loading="lazy"
-				onerror={(e: Event) => { (e.target as HTMLElement).style.display = 'none'; }} />
-		{/if}
-		<div class="article-body">
-			<div class="article-title-row">
-				<a class="article-title" href={article.url || '#'} target="_blank" rel="noopener">
+	<div class="row">
+		<span class="fav {favSourceClass(article.sourceType)}">
+			{#if favicon}
+				<img src={favicon} alt="" loading="lazy"
+					onerror={(e: Event) => { (e.currentTarget as HTMLElement).style.display = 'none'; }} />
+			{/if}
+		</span>
+		<div class="art-body">
+			<div class="art-title-row">
+				<a class="art-title" href={article.url || '#'} target="_blank" rel="noopener">
 					{article.title}
 				</a>
-				<span class="article-source">{domain}</span>
+				<span class="art-source">{domain}</span>
 			</div>
-			<p class="article-summary">{article.summary}</p>
-			<div class="article-meta">
+			{#if showSummary}
+				<p class="art-summary">{article.summary}</p>
+			{/if}
+			<div class="art-meta">
 				<SourceBadge sourceType={article.sourceType} />
 				{#if article.taxonomyArea}
-					<span class="taxonomy-badge">{article.taxonomyArea}{#if article.taxonomySubArea}/{article.taxonomySubArea}{/if}</span>
+					<span class="tax">{article.taxonomyArea}{#if article.taxonomySubArea}/{article.taxonomySubArea}{/if}</span>
 				{/if}
 				{#each article.topics as topic}<TopicTag {topic} />{/each}
 			</div>
@@ -60,32 +77,97 @@
 {/if}
 
 <style>
-	.article-row { display: flex; gap: 12px; padding: 18px 0; border-top: 1px solid #f0f0f0; }
-	.article-row-social { padding: 10px 0; gap: 8px; }
-	.article-favicon { width: 20px; height: 20px; border-radius: 3px; margin-top: 4px; flex-shrink: 0; }
-	.article-body { flex: 1; min-width: 0; }
-	.article-title-row { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
-	.article-title {
-		font-size: 1.05rem; font-weight: 600; color: #1a1a1a;
-		text-decoration: none; line-height: 1.4;
+	.row {
+		display: flex;
+		gap: 12px;
+		padding: 12px 0 11px;
+		border-top: 1px solid var(--border-soft);
+		align-items: flex-start;
 	}
-	.article-title:hover { color: #00a64e; }
-	.article-source { font-size: 0.8rem; color: #999; white-space: nowrap; }
-	.article-summary { color: #363737; font-size: 0.95rem; line-height: 1.7; margin: 8px 0 10px; }
-	.article-meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
-	.taxonomy-badge {
-		font-size: 0.75rem; font-weight: 600; padding: 2px 8px; border-radius: 3px;
-		background: #ecfdf5; color: #065f46; white-space: nowrap;
-	}
-	.social-card-header { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
-	.social-card-icon { font-size: 0.8rem; flex-shrink: 0; }
-	.social-card-author { font-size: 0.85rem; text-decoration: none; white-space: nowrap; }
-	.social-card-author:hover { text-decoration: underline; }
-	.social-card-text { color: #363737; font-size: 0.95rem; line-height: 1.6; margin: 0; }
+	.row:first-child { border-top: 1px solid var(--border); padding-top: 14px; }
 
-	@media (max-width: 768px) {
-		.article-title-row { flex-direction: column; gap: 2px; }
-		.article-title { font-size: 1rem; }
-		.article-summary { font-size: 0.9rem; }
+	.fav {
+		width: 16px; height: 16px;
+		border-radius: 3px;
+		flex-shrink: 0;
+		margin-top: 3px;
+		background: var(--bg-soft);
+		border: 1px solid var(--border-soft);
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		font: 600 9px/1 var(--font-mono);
+		color: var(--text-3);
+		overflow: hidden;
+	}
+	.fav img { width: 100%; height: 100%; object-fit: contain; display: block; }
+	.fav-reddit { background: var(--src-reddit-bg); }
+	.fav-hn     { background: var(--src-hn-bg); }
+	.fav-bsky   { background: var(--src-bsky-bg); }
+	.fav-gh     { background: var(--src-gh-bg); }
+	.fav-jdk    { background: var(--src-jdk-bg); }
+	.fav-rss    { background: var(--src-rss-bg); }
+
+	.art-body { flex: 1; min-width: 0; }
+	.art-title-row { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+	.art-title {
+		font: 500 14.5px/1.45 var(--font-sans);
+		color: var(--text);
+		text-decoration: none;
+		flex: 1;
+		min-width: 0;
+	}
+	.art-title:hover { color: var(--accent-dark); text-decoration: underline; text-underline-offset: 2px; }
+	.art-source {
+		font: 400 11.5px/1 var(--font-mono);
+		color: var(--text-faint);
+		white-space: nowrap;
+	}
+	.art-summary {
+		font-size: 13.5px;
+		line-height: 1.65;
+		color: var(--text-2);
+		margin: 6px 0 8px;
+		max-width: 72ch;
+	}
+	.art-meta { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+	.tax {
+		font: 600 10px/1 var(--font-mono);
+		letter-spacing: 0.02em;
+		color: var(--accent-dark);
+		background: var(--accent-bg);
+		border: 1px solid var(--accent-bd);
+		padding: 2px 7px 3px;
+		border-radius: 3px;
+		white-space: nowrap;
+	}
+
+	/* Social */
+	.row.social { align-items: flex-start; }
+	.bsky-icon {
+		width: 18px; height: 18px;
+		border-radius: 50%;
+		background: var(--src-bsky-bg);
+		color: var(--src-bsky);
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 10px;
+		flex-shrink: 0;
+		margin-top: 2px;
+	}
+	.bsky-handle {
+		font: 500 11px/1 var(--font-mono);
+		color: var(--text-2);
+		display: inline-block;
+		margin-bottom: 3px;
+		text-decoration: none;
+	}
+	.bsky-handle:hover { color: var(--accent-dark); }
+	.bsky-text {
+		font-size: 14px;
+		line-height: 1.6;
+		color: var(--text);
+		margin: 0 0 8px;
 	}
 </style>

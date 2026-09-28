@@ -173,30 +173,30 @@
 </div>
 
 <style>
-	.saved { padding: 32px 48px; flex: 1; max-width: 920px; margin: 0 auto; }
-	.saved-header { margin-bottom: 24px; padding-bottom: 16px; border-bottom: 2px solid #1a1a1a; }
-	h2 { margin: 0; font-size: 1.8rem; }
-	.count { font-size: 1rem; color: #868787; font-weight: 400; margin-left: 6px; }
+	.saved { padding: 32px 40px 96px; flex: 1; max-width: 860px; margin: 0 auto; width: 100%; }
+	.saved-header { margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+	h2 { margin: 0; font: 700 26px/1.2 var(--font-sans); letter-spacing: -0.015em; color: var(--text); }
+	.count { font: 500 12px/1 var(--font-mono); color: var(--text-3); margin-left: 6px; }
 	.saved-toolbar { display: flex; gap: 8px; margin-top: 12px; }
 	.saved-toolbar button {
-		font-size: 0.78rem; padding: 6px 14px; border: 1px solid #ddd; border-radius: 6px;
-		background: #fff; cursor: pointer; color: #555; font-family: inherit;
+		font-size: 0.78rem; padding: 6px 14px; border: 1px solid var(--border); border-radius: 6px;
+		background: var(--bg-card); cursor: pointer; color: var(--text-2); font-family: inherit;
 	}
-	.saved-toolbar button:hover:not(:disabled) { border-color: #999; }
+	.saved-toolbar button:hover:not(:disabled) { border-color: var(--border-strong); color: var(--text); }
 	.saved-toolbar button:disabled { opacity: 0.4; cursor: default; }
-	.hint { margin-top: 10px; font-size: 0.8rem; color: #999; }
+	.hint { margin-top: 10px; font: 400 11px/1.6 var(--font-mono); color: var(--text-faint); }
 	kbd {
-		font-family: ui-monospace, monospace; font-size: 0.7rem;
-		padding: 0 4px; border: 1px solid #ddd; border-radius: 3px;
+		font: 500 10px/1 var(--font-mono); padding: 1px 4px;
+		border: 1px solid var(--border); border-radius: 3px; color: var(--text-3);
 	}
 	.date-header {
-		font-size: 1rem; font-weight: 600; color: #868787;
-		padding: 24px 0 4px; text-transform: uppercase; letter-spacing: 0.06em;
+		font: 600 11px/1 var(--font-mono); letter-spacing: 0.14em; text-transform: uppercase;
+		color: var(--text-3); margin: 28px 0 12px;
 	}
-	.empty { color: #999; padding: 48px 0; text-align: center; }
+	.empty { color: var(--text-faint); padding: 48px 0; text-align: center; }
 
-	@media (max-width: 768px) {
-		.saved { padding: 20px 16px; max-width: 100%; }
+	@media (max-width: 760px) {
+		.saved { padding: 18px 14px 60px; max-width: 100%; }
 		.hint { display: none; }
 	}
 </style>

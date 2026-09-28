@@ -12,6 +12,7 @@
 		rots = false,
 		focused = false,
 		dimmed = false,
+		lead = false,
 		onDone,
 		onLater,
 		onRots
@@ -22,6 +23,7 @@
 		rots?: boolean;
 		focused?: boolean;
 		dimmed?: boolean;
+		lead?: boolean;
 		onDone?: () => void;
 		onLater?: () => void;
 		onRots?: () => void;
@@ -31,90 +33,142 @@
 		mergeByTitle([...cluster.articles]).sort((a, b) => b.engagementScore - a.engagementScore)
 	);
 
-	const isSingle = $derived(mergedArticles.length === 1);
-	let expanded = $state(false);
-
 	const synthesisHtml = $derived(marked.parse(cluster.summary) as string);
+
+	const hnEngagement = $derived.by(() => {
+		const hn = cluster.articles.find(
+			(a) => a.sourceType === 'hackernews' && a.engagementScore > 0
+		);
+		return hn ? hn.engagementScore : 0;
+	});
+	const hasReddit  = $derived(cluster.articles.some((a) => a.sourceType === 'reddit'));
+	const hasBsky    = $derived(cluster.articles.some((a) => a.sourceType === 'bluesky'));
+	const hasGh      = $derived(cluster.articles.some((a) => a.sourceType === 'github_trending' || a.sourceType === 'github_release'));
+	const hasJdk     = $derived(cluster.articles.some((a) => a.sourceType === 'openjdk_mail' || a.sourceType === 'jep'));
+	const hasRss     = $derived(cluster.articles.some((a) => a.sourceType === 'rss'));
 </script>
 
-<div class="cluster review-item" class:dismissed={dimmed} class:focused data-key={cluster.title}>
+<article class="cluster review-item" class:lead class:dismissed={dimmed} class:focused data-key={cluster.title}>
 	<div class="cluster-head">
 		<div class="cluster-head-text">
-			<div class="cluster-title">
+			<h3 class="cluster-title">
 				{cluster.title}
-				<span class="cluster-count">{mergedArticles.length} articles</span>
-			</div>
+				<span class="count-pill">{mergedArticles.length} article{mergedArticles.length !== 1 ? 's' : ''}</span>
+			</h3>
 			<div class="cluster-synthesis">
 				{@html synthesisHtml}
+			</div>
+			<div class="cluster-badges">
+				{#if hnEngagement > 0}<span class="badge badge-hn">HN · {hnEngagement}</span>{/if}
+				{#if hasReddit}<span class="badge badge-reddit">reddit</span>{/if}
+				{#if hasBsky}<span class="badge badge-bsky">bluesky</span>{/if}
+				{#if hasGh}<span class="badge badge-gh">github</span>{/if}
+				{#if hasJdk}<span class="badge badge-jdk">openjdk</span>{/if}
+				{#if hasRss}<span class="badge badge-rss">rss</span>{/if}
 			</div>
 		</div>
 		<ItemActions {done} {later} {rots} {focused} {onDone} {onLater} {onRots} />
 	</div>
-	{#if isSingle}
-		{#if expanded}
-			<div class="article-list">
-				{#each mergedArticles as article}
-					<ArticleRow {article} clusterSize={mergedArticles.length} />
-				{/each}
-			</div>
-		{:else}
-			<button class="expand-btn" onclick={() => expanded = true}>
-				Show source article
-			</button>
-		{/if}
-	{:else}
-		<div class="article-list">
-			{#each mergedArticles as article}
-				<ArticleRow {article} clusterSize={mergedArticles.length} />
-			{/each}
-		</div>
-	{/if}
-</div>
+	<div class="articles">
+		{#each mergedArticles as article}
+			<ArticleRow {article} clusterSize={mergedArticles.length} />
+		{/each}
+	</div>
+</article>
 
 <style>
-	.cluster.review-item {
-		border-bottom: 1px solid #e0e0e0;
-		padding: 28px 16px 28px 16px;
-		border-left: 3px solid transparent; margin-left: -19px;
-		scroll-margin-top: 84px;
+	.cluster {
+		background: var(--bg-card);
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+		padding: 18px 20px 16px;
+		margin-bottom: 12px;
+		box-shadow: var(--shadow-sm);
+		border-left: 3px solid var(--border);
+		position: relative;
+		transition: border-color .12s, box-shadow .12s;
 	}
-	.cluster.focused {
-		border-left-color: #00a64e;
-		background: linear-gradient(to right, #f3fbf6, rgba(255, 255, 255, 0) 70%);
-	}
-	:global(body.compact) .cluster:not(.focused) .cluster-synthesis, :global(body.compact) .cluster:not(.focused) .article-list, :global(body.compact) .cluster:not(.focused) .expand-btn { display: none; }
+	.cluster:hover { box-shadow: var(--shadow-md); }
+	.cluster.lead { border-left-color: var(--accent); }
 	.cluster.dismissed { opacity: 0.35; }
-	.cluster-head { display: flex; gap: 16px; }
+
+	.cluster-head { display: flex; gap: 12px; align-items: flex-start; }
 	.cluster-head-text { flex: 1; min-width: 0; }
+
 	.cluster-title {
-		font-size: 1.4rem; font-weight: 700; line-height: 1.3;
-		margin-bottom: 12px; color: #1a1a1a;
+		font: 600 16px/1.4 var(--font-sans);
+		color: var(--text);
+		margin: 0 0 6px;
+		letter-spacing: -0.005em;
+		text-wrap: pretty;
 	}
-	.cluster-count {
-		font-size: 0.8rem; font-weight: 400; color: #868787; margin-left: 10px;
+	.count-pill {
+		display: inline-block;
+		margin-left: 8px;
+		font: 500 10.5px/1.5 var(--font-mono);
+		color: var(--text-3);
+		background: var(--bg-soft);
+		padding: 1px 8px;
+		border-radius: 10px;
+		vertical-align: 2px;
+		white-space: nowrap;
 	}
-	.cluster-synthesis { font-size: 1rem; color: #363737; line-height: 1.8; }
-	.cluster-synthesis :global(p) { margin: 0 0 12px; }
+
+	.cluster-synthesis {
+		font-size: 14px;
+		line-height: 1.7;
+		color: var(--text-2);
+		margin: 6px 0 10px;
+		max-width: 70ch;
+	}
+	.cluster-synthesis :global(p) { margin: 0 0 0.5em; }
 	.cluster-synthesis :global(p:last-child) { margin-bottom: 0; }
 	.cluster-synthesis :global(code) {
-		background: #f0faf4; padding: 2px 6px; border-radius: 3px; font-size: 0.9rem;
-		word-break: break-all;
+		font-family: var(--font-mono);
+		font-size: 11.5px;
+		background: var(--bg-soft);
+		padding: 1px 5px;
+		border-radius: 3px;
+		border: 1px solid var(--border-soft);
+		color: var(--text);
 	}
-	.article-list { margin-top: 12px; }
-	.expand-btn {
-		margin-top: 10px; font-size: 0.78rem; color: #888; background: none;
-		border: 1px solid #e0e0e0; border-radius: 6px; padding: 4px 12px;
-		cursor: pointer; transition: border-color 0.15s, color 0.15s;
-	}
-	.expand-btn:hover { border-color: #00a64e; color: #00a64e; }
 
-	@media (max-width: 768px) {
-		.cluster.review-item { margin-left: 0; padding-left: 0; padding-right: 0; border-left: none; }
-		.cluster.focused { background: none; }
-		.cluster { position: relative; }
-		.cluster-head { display: block; }
-		.cluster-title { font-size: 1.2rem; padding-right: 76px; }
-		.cluster-synthesis { font-size: 0.95rem; }
-		.cluster-head > :global(.item-actions) { position: absolute; right: 0; top: 28px; }
+	.cluster-badges {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 5px;
+		align-items: center;
+		margin-top: 6px;
+	}
+	.badge {
+		font: 500 10px/1 var(--font-mono);
+		padding: 3px 8px 4px;
+		border-radius: 10px;
+		background: var(--bg-soft);
+		color: var(--text-3);
+		letter-spacing: 0.02em;
+		white-space: nowrap;
+	}
+	.badge-hn      { background: var(--src-hn-bg);     color: var(--src-hn); }
+	.badge-reddit  { background: var(--src-reddit-bg); color: var(--src-reddit); }
+	.badge-bsky    { background: var(--src-bsky-bg);   color: var(--src-bsky); }
+	.badge-gh      { background: var(--src-gh-bg);     color: var(--src-gh); }
+	.badge-jdk     { background: var(--src-jdk-bg);    color: var(--src-jdk); }
+	.badge-rss     { background: var(--src-rss-bg);    color: var(--src-rss); }
+
+
+	.articles { margin-top: 12px; }
+
+	.cluster.review-item { scroll-margin-top: 72px; }
+	.cluster.focused {
+		border-left-color: var(--accent);
+		box-shadow: 0 0 0 1px var(--accent-bd), var(--shadow-md);
+	}
+	:global(body.compact) .cluster:not(.focused) .cluster-synthesis, :global(body.compact) .cluster:not(.focused) .cluster-badges, :global(body.compact) .cluster:not(.focused) .articles { display: none; }
+
+	@media (max-width: 760px) {
+		.cluster { position: relative; padding: 12px 12px 10px; }
+		.cluster-title { font-size: 13.5px; padding-right: 96px; }
+		.cluster-head > :global(.item-actions) { position: absolute; right: 12px; top: 12px; }
 	}
 </style>

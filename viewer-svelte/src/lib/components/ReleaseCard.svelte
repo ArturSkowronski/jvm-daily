@@ -30,10 +30,10 @@
 		return m ? m[1] : null;
 	}
 
-	const badges = $derived(
+	const links = $derived(
 		cluster.articles.map((a) => {
 			const slug = githubSlug(a.url || '');
-			return { url: a.url || '#', label: slug || a.handle || 'Article', source: a.sourceType };
+			return { url: a.url || '#', label: slug || a.handle || 'Article' };
 		})
 	);
 
@@ -46,65 +46,151 @@
 	const summaryHtml = $derived(marked.parse(cluster.summary) as string);
 </script>
 
-<div class="release-card review-item" class:dismissed={dimmed} class:focused data-key={cluster.title}>
+<article class="release release-card review-item" class:dismissed={dimmed} class:focused data-key={cluster.title}>
 	<div class="cluster-head">
 		<div class="cluster-head-text">
-			<div class="cluster-title">
+			<h3 class="cluster-title">
 				{cluster.title}
-				<span class="cluster-count">{badges.length} sources</span>
-			</div>
+				<span class="count-pill">{links.length} source{links.length !== 1 ? 's' : ''}</span>
+			</h3>
 			{#if bulletHtml}
-				<div class="release-bullets">{@html bulletHtml}</div>
+				<div class="bullets">{@html bulletHtml}</div>
 			{:else}
 				<div class="cluster-synthesis">{@html summaryHtml}</div>
+			{/if}
+			{#if links.length > 0}
+				<div class="release-links">
+					{#each links as link}
+						<a class="release-link" href={link.url} target="_blank" rel="noopener">{link.label}</a>
+					{/each}
+				</div>
 			{/if}
 		</div>
 		<ItemActions {done} {later} {rots} {focused} {onDone} {onLater} {onRots} />
 	</div>
-	<div class="release-badges">
-		{#each badges as badge}
-			<a class="badge-release" href={badge.url} target="_blank" rel="noopener">↗ {badge.label}</a>
-		{/each}
-	</div>
-</div>
+</article>
 
 <style>
-	.release-card.review-item {
-		border-bottom: 1px solid #e0e0e0;
-		padding: 24px 16px 24px 16px;
-		border-left: 3px solid transparent; margin-left: -19px;
-		scroll-margin-top: 84px;
+	.release {
+		background: var(--bg-card);
+		border: 1px solid var(--border);
+		border-left: 3px solid var(--accent);
+		border-radius: var(--radius);
+		padding: 18px 20px 16px;
+		margin-bottom: 12px;
+		box-shadow: var(--shadow-sm);
+		transition: box-shadow .12s;
 	}
-	.release-card.focused {
-		border-left-color: #00a64e;
-		background: linear-gradient(to right, #f3fbf6, rgba(255, 255, 255, 0) 70%);
-	}
-	:global(body.compact) .release-card:not(.focused) .cluster-synthesis, :global(body.compact) .release-card:not(.focused) .release-bullets, :global(body.compact) .release-card:not(.focused) .release-badges { display: none; }
-	.release-card.dismissed { opacity: 0.35; }
-	.cluster-head { display: flex; gap: 16px; }
-	.cluster-head-text { flex: 1; }
-	.cluster-title {
-		font-size: 1.2rem; font-weight: 600; margin-bottom: 10px; color: #1a1a1a;
-	}
-	.cluster-count { font-size: 0.8rem; font-weight: 400; color: #868787; margin-left: 10px; }
-	.cluster-synthesis, .release-bullets { font-size: 0.95rem; color: #363737; line-height: 1.7; }
-	.release-bullets :global(ul) { margin: 0; padding-left: 20px; }
-	.release-bullets :global(li) { margin-bottom: 6px; }
-	.release-badges { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
-	.badge-release {
-		font-size: 0.8rem; font-weight: 500; padding: 4px 12px;
-		border: 1px solid #ddd; border-radius: 14px;
-		color: #555; text-decoration: none; white-space: nowrap;
-		transition: border-color 0.15s, color 0.15s;
-	}
-	.badge-release:hover { border-color: #00a64e; color: #00a64e; }
+	.release:hover { box-shadow: var(--shadow-md); }
+	.release.dismissed { opacity: 0.35; }
 
-	@media (max-width: 768px) {
-		.release-card.review-item { margin-left: 0; padding-left: 0; padding-right: 0; border-left: none; }
-		.release-card.focused { background: none; }
-		.release-card { position: relative; }
+	.cluster-head { display: flex; gap: 12px; align-items: flex-start; }
+	.cluster-head-text { flex: 1; min-width: 0; }
+
+	.cluster-title {
+		font: 600 16px/1.4 var(--font-sans);
+		color: var(--text);
+		margin: 0 0 8px;
+		letter-spacing: -0.005em;
+	}
+	.cluster-title::before {
+		content: "";
+		display: inline-block;
+		width: 6px; height: 6px;
+		background: var(--accent);
+		border-radius: 1px;
+		transform: rotate(45deg);
+		margin-right: 8px;
+		vertical-align: 2px;
+	}
+	.count-pill {
+		display: inline-block;
+		margin-left: 8px;
+		font: 500 10.5px/1.5 var(--font-mono);
+		color: var(--text-3);
+		background: var(--bg-soft);
+		padding: 1px 8px;
+		border-radius: 10px;
+		vertical-align: 2px;
+		white-space: nowrap;
+	}
+
+	.cluster-synthesis,
+	.bullets {
+		font-size: 14px;
+		line-height: 1.7;
+		color: var(--text-2);
+	}
+	.cluster-synthesis :global(p) { margin: 0 0 0.5em; }
+	.cluster-synthesis :global(p:last-child) { margin-bottom: 0; }
+	.bullets :global(ul) { margin: 4px 0 0; padding: 0; list-style: none; }
+	.bullets :global(li) {
+		position: relative;
+		padding-left: 16px;
+		margin-bottom: 5px;
+		font-size: 14px;
+		line-height: 1.7;
+		color: var(--text-2);
+	}
+	.bullets :global(li)::before {
+		content: "";
+		position: absolute;
+		left: 2px; top: 9px;
+		width: 8px; height: 1px;
+		background: var(--accent);
+	}
+	.bullets :global(code), .cluster-synthesis :global(code) {
+		font-family: var(--font-mono);
+		font-size: 11.5px;
+		background: var(--bg-soft);
+		padding: 1px 5px;
+		border-radius: 3px;
+		border: 1px solid var(--border-soft);
+		color: var(--text);
+	}
+
+
+	.release-links {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 5px;
+		margin-top: 10px;
+		padding-top: 9px;
+		border-top: 1px solid var(--border-soft);
+	}
+	.release-link {
+		font: 500 10.5px/1 var(--font-mono);
+		padding: 4px 9px 5px;
+		border: 1px solid var(--border);
+		border-radius: 10px;
+		color: var(--text-2);
+		background: var(--bg-card);
+		white-space: nowrap;
+		transition: all .12s;
+		display: inline-flex;
+		align-items: center;
+		gap: 4px;
+		text-decoration: none;
+	}
+	.release-link::before { content: "↗"; color: var(--accent); }
+	.release-link:hover {
+		border-color: var(--accent-bd);
+		color: var(--accent-dark);
+		background: var(--accent-bg);
+		text-decoration: none;
+	}
+
+	.release.review-item { scroll-margin-top: 72px; }
+	.release.focused {
+		border-left-color: var(--accent);
+		box-shadow: 0 0 0 1px var(--accent-bd), var(--shadow-md);
+	}
+	:global(body.compact) .release:not(.focused) .bullets, :global(body.compact) .release:not(.focused) .cluster-synthesis, :global(body.compact) .release:not(.focused) .release-links { display: none; }
+
+	@media (max-width: 760px) {
+		.release { position: relative; padding: 12px 12px 10px; }
 		.cluster-head { display: block; }
-		.cluster-title { font-size: 1.05rem; padding-right: 80px; }
-		.cluster-head > :global(.item-actions) { position: absolute; right: 0; top: 24px; }
+		.cluster-title { font-size: 13.5px; padding-right: 96px; }
+		.cluster-head > :global(.item-actions) { position: absolute; right: 12px; top: 12px; }
 	}
 </style>

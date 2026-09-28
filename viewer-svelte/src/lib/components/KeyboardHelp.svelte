@@ -49,27 +49,30 @@
 
 <style>
 	.overlay {
-		position: fixed; inset: 0; background: rgba(0, 0, 0, 0.35); z-index: 40;
+		position: fixed; inset: 0; background: rgba(0, 0, 0, 0.4); z-index: 40;
 		display: flex; align-items: center; justify-content: center; padding: 16px;
 	}
 	.help {
-		background: #fff; border-radius: 10px; padding: 24px 28px; max-width: 480px; width: 100%;
-		max-height: calc(100vh - 32px); overflow-y: auto; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+		background: var(--bg-card); color: var(--text); border: 1px solid var(--border);
+		border-radius: var(--radius); padding: 22px 26px; max-width: 480px; width: 100%;
+		max-height: calc(100vh - 32px); overflow-y: auto; box-shadow: var(--shadow-md);
 	}
-	h2 { margin: 0 0 8px; font-size: 1.3rem; }
+	h2 { margin: 0 0 8px; font: 700 18px/1.3 var(--font-sans); }
 	h3 {
-		font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; color: #868787;
-		margin: 18px 0 6px;
+		font: 600 10px/1 var(--font-mono); text-transform: uppercase; letter-spacing: 0.14em;
+		color: var(--text-3); margin: 18px 0 8px;
 	}
-	.lead { font-size: 0.9rem; color: #555; margin: 0; line-height: 1.5; }
-	dl { display: grid; grid-template-columns: 110px 1fr; gap: 4px 12px; margin: 0; font-size: 0.9rem; }
+	.lead { font-size: 13.5px; color: var(--text-2); margin: 0; line-height: 1.55; }
+	dl { display: grid; grid-template-columns: 110px 1fr; gap: 5px 12px; margin: 0; font-size: 13.5px; }
 	dt, dd { margin: 0; }
+	dd { color: var(--text-2); }
 	kbd {
-		font-family: ui-monospace, monospace; font-size: 0.75rem;
-		padding: 1px 5px; border: 1px solid #ccc; border-radius: 3px; background: #f7f7f7;
+		font: 500 11px/1 var(--font-mono); padding: 2px 5px;
+		border: 1px solid var(--border); border-radius: 3px; background: var(--bg-soft); color: var(--text);
 	}
 	.close {
-		margin-top: 20px; background: #fff; border: 1px solid #ddd; border-radius: 6px;
-		padding: 6px 12px; font-family: inherit; cursor: pointer;
+		margin-top: 20px; background: transparent; border: 1px solid var(--border); border-radius: 5px;
+		padding: 6px 12px; font: 500 12px/1 var(--font-sans); color: var(--text-2); cursor: pointer;
 	}
+	.close:hover { border-color: var(--border-strong); }
 </style>

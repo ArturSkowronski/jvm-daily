@@ -2,14 +2,15 @@
 	let { topic }: { topic: string } = $props();
 </script>
 
-<span class="topic-tag">{topic}</span>
+<span class="tag">{topic}</span>
 
 <style>
-	.topic-tag {
-		font-size: 0.75rem;
-		background: #ecfdf5;
-		color: #065f46;
-		padding: 2px 8px;
+	.tag {
+		font: 500 10.5px/1 var(--font-mono);
+		color: var(--accent-dark);
+		background: var(--accent-bg);
+		border: 1px solid var(--accent-bd);
+		padding: 2px 7px 3px;
 		border-radius: 4px;
 		white-space: nowrap;
 	}

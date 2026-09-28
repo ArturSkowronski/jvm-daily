@@ -1,6 +1,17 @@
 import type { DigestArticle } from '$lib/api/types';
 
 /**
+ * Normalize a title for dedup comparison: lowercase, trim, and strip
+ * common site-name suffixes like " | Blog Name" or " - Site Name".
+ */
+function normalizeTitle(title: string): string {
+	let t = (title || '').trim().toLowerCase();
+	// Strip trailing site-name suffix after " | " (e.g. " | The IntelliJ IDEA Blog")
+	t = t.replace(/\s*\|\s*[^|]+$/, '').trim();
+	return t;
+}
+
+/**
  * Merge articles that share the same title (e.g., multiple Bluesky accounts
  * sharing the same blog post via different URLs). Combines social links and
  * sums engagement scores.
@@ -8,7 +19,7 @@ import type { DigestArticle } from '$lib/api/types';
 export function mergeByTitle(articles: DigestArticle[]): DigestArticle[] {
 	const groups = new Map<string, DigestArticle[]>();
 	for (const a of articles) {
-		const key = (a.title || '').trim().toLowerCase();
+		const key = normalizeTitle(a.title || '');
 		if (!groups.has(key)) groups.set(key, []);
 		groups.get(key)!.push(a);
 	}

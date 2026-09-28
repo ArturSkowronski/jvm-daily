@@ -39,28 +39,35 @@
 </div>
 
 <style>
-	.item-actions { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
+	.item-actions { display: flex; flex-direction: column; gap: 4px; flex-shrink: 0; }
 	.action-btn {
 		position: relative;
-		background: #fff; border: 1px solid #ddd; border-radius: 50%;
-		width: 34px; height: 34px; cursor: pointer; font-size: 1rem; color: #555;
-		display: flex; align-items: center; justify-content: center;
-		transition: border-color 0.15s, background 0.15s, color 0.15s;
+		appearance: none;
+		width: 26px; height: 26px;
+		border: 1px solid var(--border);
+		border-radius: 5px;
+		background: transparent;
+		color: var(--text-faint);
+		cursor: pointer;
+		font-size: 12px;
+		display: inline-flex; align-items: center; justify-content: center;
+		transition: all .12s;
 	}
-	.action-btn:hover { border-color: #00a64e; color: #00a64e; }
-	.tick-btn.on { background: #00a64e; border-color: #00a64e; color: #fff; }
-	.later-btn.on { background: #2563eb; border-color: #2563eb; color: #fff; }
-	.bookmark-btn.on { background: #f59e0b; border-color: #f59e0b; color: #fff; }
+	.action-btn:hover { border-color: var(--border-strong); color: var(--text-2); background: var(--bg-soft); }
+	.tick-btn.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+	.later-btn.on { background: var(--src-bsky); border-color: var(--src-bsky); color: #fff; }
+	.bookmark-btn.on { background: var(--rots); border-color: var(--rots); color: #fff; }
+	.action-btn.on:hover { opacity: 0.92; }
+	svg { width: 12px; height: 12px; }
 	kbd {
-		display: none; position: absolute; right: -18px; top: 50%; transform: translateY(-50%);
-		font-family: ui-monospace, monospace; font-size: 0.65rem; color: #999;
+		display: none; position: absolute; right: -15px; top: 50%; transform: translateY(-50%);
+		font: 500 9.5px/1 var(--font-mono); color: var(--text-faint);
 	}
 	.focused kbd { display: inline; }
-	.inline { flex-direction: row; gap: 4px; }
-	.inline .action-btn { width: 28px; height: 28px; font-size: 0.85rem; }
+	.inline { flex-direction: row; }
 	.inline kbd, .inline.focused kbd { display: none; }
 
-	@media (max-width: 768px) {
+	@media (max-width: 760px) {
 		.item-actions { flex-direction: row; }
 		.focused kbd { display: none; }
 	}
