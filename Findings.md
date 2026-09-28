@@ -182,3 +182,11 @@
 - When `JOBRUNR_STORE` is an **absolute path** (e.g. `/Users/foo/.jvm-daily/jobrunr`), the URL becomes `jdbc:h2:file:.//Users/foo/.jvm-daily/jobrunr`.
 - On POSIX systems `.//abs` resolves to `/abs`, so H2 should handle this correctly, but it is untested. If the daemon fails to start with H2 errors, the fix is to remove the `./` prefix in `App.kt` or change the URL to use `Path.of(storePath).toAbsolutePath()`.
 - The `launchd` plist sets `JOBRUNR_STORE` to `$HOME/.jvm-daily/jobrunr` (absolute), so this path is exercised when using the local service.
+
+## 2026-09-28 — Viewer: Instapaper-style review flow (UI only)
+
+- Patterns taken from `newsletter-ingest`'s UI: each day is an inbox; `e` done / `s` read later / `r` ROTS all take the focused cluster out of it and move focus to the next one; `u` undo stack (30 entries) with an Undo button in the toast; `⇧E` whole day; `o` open changes nothing; `c` compact; `?` help; `e.repeat` guard so a held key doesn't act on the next item.
+- Read later (`jvm-daily-later`) and ROTS (`jvm-daily-rots`, old key kept) are separate localStorage lists with separate tabs. "Done" is still `jvm-daily-dismissed-<date>`. A cluster is "handled" if any of the three marks is set, so old ROTS bookmarks show as reviewed.
+- Reviewed days live in `jvm-daily-reviewed`, recomputed whenever a day's digest is shown. Emptying a day jumps to the next unreviewed day (older first, then newer); a visit without `?date=` opens the newest unreviewed day. Undo after the jump goes back to the previous day.
+- Date order is newest first, so `→`/`n` = older, `←`/`p` = newer, `⇧→`/`N` = next unreviewed.
+- Pure logic lives in `src/lib/utils/review.ts`, tested with vitest (`npm test`, now also run in CI). The ROTS page keeps its checkbox select/copy/clear flow; `bookmarks.ts` was replaced by `lists.ts` (`rots`, `later`) built on `createSavedList`.
