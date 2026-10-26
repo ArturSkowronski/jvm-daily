@@ -217,3 +217,8 @@
 - Reviewed days live in `jvm-daily-reviewed`, recomputed whenever a day's digest is shown. Emptying a day jumps to the next unreviewed day (older first, then newer); a visit without `?date=` opens the newest unreviewed day. Undo after the jump goes back to the previous day.
 - Date order is newest first, so `→`/`n` = older, `←`/`p` = newer, `⇧→`/`N` = next unreviewed.
 - Pure logic lives in `src/lib/utils/review.ts`, tested with vitest (`npm test`, now also run in CI). The ROTS page keeps its checkbox select/copy/clear flow; `bookmarks.ts` was replaced by `lists.ts` (`rots`, `later`) built on `createSavedList`.
+
+## 2026-10-26 — `playwright-narrator` stays out of root `package.json`
+
+- `playwright-narrator` comes from a private GitHub repo (`github:VirtusLab/playwright-narrator`, fetched over SSH). Having it in the root `devDependencies` broke the CI "Viewer Tests" job: `npm install -D @playwright/test` resolves the whole root `package.json` and fails with `Permission denied (publickey)`.
+- For local demo recording (`narrator.config.mjs`, `demo/`), install it ad hoc: `npm install --no-save github:VirtusLab/playwright-narrator`.
