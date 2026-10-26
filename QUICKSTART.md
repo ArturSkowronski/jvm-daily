@@ -111,7 +111,7 @@ In Airflow UI:
 |-----|-------|---------|
 | `llm_provider` | Provider name | `mock` (or `openai`, `anthropic`) |
 | `llm_api_key` | Your API key | `sk-...` (leave empty for mock) |
-| `llm_model` | Model to use | `gpt-4` |
+| `llm_model` | Model to use | `gpt-6-luna` |
 
 ### 5. Enable and Run DAG
 
@@ -204,7 +204,7 @@ export LLM_PROVIDER="mock"
 ```bash
 export LLM_PROVIDER="openai"
 export LLM_API_KEY="sk-..."
-export LLM_MODEL="gpt-4"
+export LLM_MODEL="gpt-6-luna"
 ./gradlew run --args="enrichment"
 ```
 

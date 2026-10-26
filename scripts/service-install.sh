@@ -8,8 +8,8 @@ PLIST_DEST="$HOME/Library/LaunchAgents/com.local.jvm-daily.plist"
 DATA_DIR="$HOME/.jvm-daily"
 
 # ── Validate required env vars ────────────────────────────────────────────────
-if [[ -z "${GEMINI_API_KEY:-}" ]]; then
-    echo "ERROR: GEMINI_API_KEY is not set" >&2
+if [[ -z "${LLM_API_KEY:-}" ]]; then
+    echo "ERROR: LLM_API_KEY is not set" >&2
     exit 1
 fi
 if [[ -z "${GITHUB_TOKEN:-}" ]]; then
@@ -31,7 +31,7 @@ mkdir -p "$DATA_DIR/logs" "$DATA_DIR/output" "$DATA_DIR/jobrunr"
 sed \
     -e "s|__HOME__|$HOME|g" \
     -e "s|__REPO__|$ROOT_DIR|g" \
-    -e "s|__GEMINI_API_KEY__|$GEMINI_API_KEY|g" \
+    -e "s|__LLM_API_KEY__|$LLM_API_KEY|g" \
     -e "s|__GITHUB_TOKEN__|$GITHUB_TOKEN|g" \
     "$PLIST_TEMPLATE" > "$PLIST_DEST"
 

@@ -197,7 +197,7 @@ internal fun runIngress(dbPath: String) {
         val splitter = if (config.rss.any { it.splitRoundups }) {
             val llmProvider = System.getenv("LLM_PROVIDER") ?: "mock"
             val llmApiKey = System.getenv("LLM_API_KEY")
-            val llmModel = System.getenv("LLM_MODEL") ?: "gpt-4"
+            val llmModel = System.getenv("LLM_MODEL") ?: DEFAULT_LLM_MODEL
             if (llmProvider != "mock") {
                 RoundupSplitter(createLLMClient(llmProvider, llmApiKey, llmModel))
             } else null
@@ -213,7 +213,7 @@ internal fun runIngress(dbPath: String) {
 internal fun runEnrichment(dbPath: String, domain: DomainProfile? = null) {
     val llmProvider = System.getenv("LLM_PROVIDER") ?: "mock"
     val llmApiKey   = System.getenv("LLM_API_KEY")
-    val llmModel    = System.getenv("LLM_MODEL") ?: "gpt-4"
+    val llmModel    = System.getenv("LLM_MODEL") ?: DEFAULT_LLM_MODEL
 
     println("LLM Provider: $llmProvider / Model: $llmModel")
     if (llmProvider != "mock" && llmProvider != "groq" && llmProvider != "gemini" && llmApiKey == null) {
@@ -274,7 +274,7 @@ internal data class InspectQualityOptions(
 internal fun runEnrichmentReplay(dbPath: String, args: List<String>, domain: DomainProfile? = null) {
     val llmProvider = System.getenv("LLM_PROVIDER") ?: "mock"
     val llmApiKey   = System.getenv("LLM_API_KEY")
-    val llmModel    = System.getenv("LLM_MODEL") ?: "gpt-4"
+    val llmModel    = System.getenv("LLM_MODEL") ?: DEFAULT_LLM_MODEL
 
     if (llmProvider != "mock" && llmProvider != "groq" && llmProvider != "gemini" && llmApiKey == null) {
         error("LLM_API_KEY required for provider '$llmProvider'")
@@ -323,7 +323,7 @@ internal fun runEnrichmentReplay(dbPath: String, args: List<String>, domain: Dom
 internal fun runReprocess(dbPath: String, args: List<String>, domain: DomainProfile? = null) {
     val llmProvider = System.getenv("LLM_PROVIDER") ?: "mock"
     val llmApiKey   = System.getenv("LLM_API_KEY")
-    val llmModel    = System.getenv("LLM_MODEL") ?: "gpt-4"
+    val llmModel    = System.getenv("LLM_MODEL") ?: DEFAULT_LLM_MODEL
 
     var sinceHours = 2
     var index = 0
@@ -642,7 +642,7 @@ private fun buildInspectionReport(
 internal fun runClustering(dbPath: String, args: List<String> = emptyList(), domain: DomainProfile? = null) {
     val llmProvider = System.getenv("LLM_PROVIDER") ?: "mock"
     val llmApiKey   = System.getenv("LLM_API_KEY")
-    val llmModel    = System.getenv("LLM_MODEL") ?: "gpt-4"
+    val llmModel    = System.getenv("LLM_MODEL") ?: DEFAULT_LLM_MODEL
 
     if (llmProvider != "mock" && llmProvider != "groq" && llmProvider != "gemini" && llmApiKey == null) {
         error("LLM_API_KEY required for provider '$llmProvider'")
@@ -692,7 +692,7 @@ internal fun runOutgress(dbPath: String, domain: DomainProfile? = null) {
 internal fun runBackfillDigest(dbPath: String, args: List<String>, domain: DomainProfile? = null) {
     val llmProvider = System.getenv("LLM_PROVIDER") ?: "mock"
     val llmApiKey   = System.getenv("LLM_API_KEY")
-    val llmModel    = System.getenv("LLM_MODEL") ?: "gpt-4"
+    val llmModel    = System.getenv("LLM_MODEL") ?: DEFAULT_LLM_MODEL
 
     if (llmProvider != "mock" && llmProvider != "groq" && llmProvider != "gemini" && llmApiKey == null) {
         error("LLM_API_KEY required for provider '$llmProvider'")
@@ -835,6 +835,8 @@ internal fun runIngressPush(dbPath: String) {
         exitProcess(1)
     }
 }
+
+internal const val DEFAULT_LLM_MODEL = "gpt-6-luna"
 
 internal fun createLLMClient(provider: String, apiKey: String?, model: String): LLMClient =
     when (provider) {

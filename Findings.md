@@ -222,3 +222,9 @@
 
 - `playwright-narrator` comes from a private GitHub repo (`github:VirtusLab/playwright-narrator`, fetched over SSH). Having it in the root `devDependencies` broke the CI "Viewer Tests" job: `npm install -D @playwright/test` resolves the whole root `package.json` and fails with `Permission denied (publickey)`.
 - For local demo recording (`narrator.config.mjs`, `demo/`), install it ad hoc: `npm install --no-save github:VirtusLab/playwright-narrator`.
+
+## 2026-10-26 — Migration to OpenAI Luna (`gpt-6-luna`)
+
+- The OpenAI API exposes two Luna models: `gpt-5.6-luna` (created 2026-06) and `gpt-6-luna` (created 2026-09). Both work over plain `/v1/chat/completions` with only `model` + `messages`, so vived-engine's `OpenAiCompatibleLLMClient` needs no changes. Luna is a reasoning model: a short enrichment prompt used ~50 reasoning tokens and took ~3 s (`gpt-5.6-luna`: ~2 s).
+- `DEFAULT_LLM_MODEL = "gpt-6-luna"` in `App.kt` replaces the old `gpt-4` default (6 places). Config: `LLM_PROVIDER=openai LLM_API_KEY=<openai key>` (`LLM_MODEL` optional). Gemini/Groq stay as options; the June 2026 outage came from a GCP billing block on Gemini (see above).
+- Locally `$OPENAI_API_KEY` from the shell was revoked (401); the working key is in `~/.config/openai/key`.

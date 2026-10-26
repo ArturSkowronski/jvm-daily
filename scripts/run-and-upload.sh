@@ -2,8 +2,8 @@
 # Run the full pipeline locally (Reddit works here, not on fly.io) then upload to fly.io.
 #
 # Usage:
-#   LLM_PROVIDER=gemini GEMINI_API_KEY=<key> ./scripts/run-and-upload.sh
-#   LLM_PROVIDER=gemini GEMINI_API_KEY=<key> GITHUB_TOKEN=<token> ./scripts/run-and-upload.sh
+#   LLM_PROVIDER=openai LLM_API_KEY=<openai-key> ./scripts/run-and-upload.sh
+#   LLM_PROVIDER=openai LLM_API_KEY=<openai-key> GITHUB_TOKEN=<token> ./scripts/run-and-upload.sh
 
 set -euo pipefail
 

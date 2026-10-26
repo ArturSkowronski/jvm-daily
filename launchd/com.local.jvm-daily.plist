@@ -36,8 +36,9 @@
         <key>OUTGRESS_DAYS</key>    <string>30</string>
         <key>DASHBOARD_PORT</key>   <string>8000</string>
         <key>VIEWER_PORT</key>      <string>8888</string>
-        <key>LLM_PROVIDER</key>     <string>gemini</string>
-        <key>GEMINI_API_KEY</key>   <string>__GEMINI_API_KEY__</string>
+        <key>LLM_PROVIDER</key>     <string>openai</string>
+        <key>LLM_MODEL</key>        <string>gpt-6-luna</string>
+        <key>LLM_API_KEY</key>      <string>__LLM_API_KEY__</string>
         <key>GITHUB_TOKEN</key>     <string>__GITHUB_TOKEN__</string>
     </dict>
 </dict>
