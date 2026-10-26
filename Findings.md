@@ -209,3 +209,11 @@
 4. **Verified live**: `/api/dates` now shows a continuous 06-01..06-16 run; `/api/daily/2026-06-05` serves 19 clusters.
 
 **Gotcha for future backfills:** clustering/outgress windows are anchored to an injectable `clock` but the daily-pipeline CLI doesn't expose it — use `backfill-digest`. Digests window by `ingested_at` (not `published_at`); ingestion fires daily ~04:00 UTC, so anchoring the clock at 12:00 UTC isolates a single day cleanly.
+
+## 2026-09-28 — Viewer: Instapaper-style review flow (UI only)
+
+- Patterns taken from `newsletter-ingest`'s UI: each day is an inbox; `e` done / `s` read later / `r` ROTS all take the focused cluster out of it and move focus to the next one; `u` undo stack (30 entries) with an Undo button in the toast; `⇧E` whole day; `o` open changes nothing; `c` compact; `?` help; `e.repeat` guard so a held key doesn't act on the next item.
+- Read later (`jvm-daily-later`) and ROTS (`jvm-daily-rots`, old key kept) are separate localStorage lists with separate tabs. "Done" is still `jvm-daily-dismissed-<date>`. A cluster is "handled" if any of the three marks is set, so old ROTS bookmarks show as reviewed.
+- Reviewed days live in `jvm-daily-reviewed`, recomputed whenever a day's digest is shown. Emptying a day jumps to the next unreviewed day (older first, then newer); a visit without `?date=` opens the newest unreviewed day. Undo after the jump goes back to the previous day.
+- Date order is newest first, so `→`/`n` = older, `←`/`p` = newer, `⇧→`/`N` = next unreviewed.
+- Pure logic lives in `src/lib/utils/review.ts`, tested with vitest (`npm test`, now also run in CI). The ROTS page keeps its checkbox select/copy/clear flow; `bookmarks.ts` was replaced by `lists.ts` (`rots`, `later`) built on `createSavedList`.

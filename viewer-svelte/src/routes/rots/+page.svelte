@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { bookmarks, clearAllBookmarks } from '$lib/stores/bookmarks';
+	import { rots } from '$lib/stores/lists';
+	import { pushUndo } from '$lib/stores/toast';
 	import { fetchDigest } from '$lib/api/client';
 	import type { DigestCluster } from '$lib/api/types';
 	import { fmtDigestDate } from '$lib/utils/format';
@@ -30,14 +31,14 @@
 
 	async function loadRots() {
 		loading = true;
-		const rots = $bookmarks;
+		const saved = $rots;
 		const result: RotsEntry[] = [];
-		const dates = Object.keys(rots).filter((d) => rots[d].length > 0).sort().reverse();
+		const dates = Object.keys(saved).filter((d) => saved[d].length > 0).sort().reverse();
 		await Promise.all(
 			dates.map(async (date) => {
 				const digest = await fetchDigest(date);
 				if (!digest) return;
-				const keys = new Set(rots[date]);
+				const keys = new Set(saved[date]);
 				const clusters = digest.clusters.filter((c) => keys.has(c.title));
 				if (clusters.length > 0) {
 					result.push({ date, clusters });
@@ -57,7 +58,7 @@
 
 	// Reload when bookmarks change
 	$effect(() => {
-		$bookmarks; // track
+		$rots; // track
 		loadRots();
 	});
 
@@ -98,8 +99,8 @@
 		});
 		if (toRemove.length === 0) return;
 		if (!confirm(`Remove ${toRemove.length} selected bookmark${toRemove.length > 1 ? 's' : ''}?`)) return;
-		bookmarks.update((rots) => {
-			const updated = { ...rots };
+		rots.update((all) => {
+			const updated = { ...all };
 			for (const { date, title } of toRemove) {
 				updated[date] = (updated[date] || []).filter((k) => k !== title);
 			}
@@ -109,7 +110,7 @@
 
 	function clearAll() {
 		if (confirm('Clear all ROTS bookmarks?')) {
-			clearAllBookmarks();
+			rots.clear();
 		}
 	}
 
@@ -161,7 +162,14 @@
 						/>
 					</label>
 					<div class="rots-cluster" class:dimmed={!selected.has(entryKey(entry.date, cluster.title))}>
-						<Cluster {cluster} bookmarked={true} />
+						<Cluster
+							{cluster}
+							rots={true}
+							onRots={() => {
+								rots.set(entry.date, cluster.title, false);
+								pushUndo('Removed from Rest of the Story', () => rots.set(entry.date, cluster.title, true));
+							}}
+						/>
 					</div>
 				</div>
 			{/each}

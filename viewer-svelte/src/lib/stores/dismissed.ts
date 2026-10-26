@@ -1,4 +1,4 @@
-import { writable, get } from 'svelte/store';
+import { writable } from 'svelte/store';
 import { browser } from '$app/environment';
 
 function storageKey(date: string) {
@@ -32,16 +32,13 @@ export function ensureDismissedLoaded(date: string) {
 	});
 }
 
-export function toggleDismiss(date: string, clusterKey: string) {
+export function setDismissed(date: string, clusterKey: string, on: boolean) {
 	dismissed.update((state) => {
-		const keys = state[date] || loadDismissed(date);
-		if (keys.has(clusterKey)) {
-			keys.delete(clusterKey);
-		} else {
-			keys.add(clusterKey);
-		}
+		const keys = new Set(state[date] || loadDismissed(date));
+		if (on) keys.add(clusterKey);
+		else keys.delete(clusterKey);
 		saveDismissed(date, keys);
-		return { ...state, [date]: new Set(keys) };
+		return { ...state, [date]: keys };
 	});
 }
 

@@ -1,5 +1,7 @@
 <script lang="ts">
-	import { bookmarks, totalBookmarkCount } from '$lib/stores/bookmarks';
+	import { rots, later } from '$lib/stores/lists';
+	import { count } from '$lib/stores/savedList';
+	import Toast from '$lib/components/Toast.svelte';
 	import type { Snippet } from 'svelte';
 	import { onMount } from 'svelte';
 
@@ -20,7 +22,8 @@
 		document.documentElement.dataset.theme = theme;
 	}
 
-	const badgeCount = $derived(totalBookmarkCount($bookmarks));
+	const laterCount = $derived(count($later));
+	const rotsCount = $derived(count($rots));
 </script>
 
 <svelte:head>
@@ -40,13 +43,18 @@
 			<nav class="tabs" aria-label="Sections">
 				<button class="tab" class:active={currentTab === 'digest'}
 					onclick={() => currentTab = 'digest'}>Digest</button>
-				<button class="tab" class:active={currentTab === 'pipeline'}
-					onclick={() => currentTab = 'pipeline'}>Pipeline</button>
+				<button class="tab" class:active={currentTab === 'later'}
+					onclick={() => currentTab = 'later'}>
+					Later
+					{#if laterCount > 0}<span class="count later-count">{laterCount}</span>{/if}
+				</button>
 				<button class="tab" class:active={currentTab === 'rots'}
 					onclick={() => currentTab = 'rots'}>
 					ROTS
-					{#if badgeCount > 0}<span class="count">{badgeCount}</span>{/if}
+					{#if rotsCount > 0}<span class="count rots-count">{rotsCount}</span>{/if}
 				</button>
+				<button class="tab" class:active={currentTab === 'pipeline'}
+					onclick={() => currentTab = 'pipeline'}>Pipeline</button>
 				<button class="theme-btn theme-toggle" onclick={toggleTheme} title="Toggle dark mode">
 					{dark ? '☀️' : '🌙'}
 				</button>
@@ -61,12 +69,17 @@
 			{#await import('./pipeline/+page.svelte') then module}
 				<module.default />
 			{/await}
+		{:else if currentTab === 'later'}
+			{#await import('./later/+page.svelte') then module}
+				<module.default />
+			{/await}
 		{:else if currentTab === 'rots'}
 			{#await import('./rots/+page.svelte') then module}
 				<module.default />
 			{/await}
 		{/if}
 	</main>
+	<Toast />
 </div>
 
 <style>

@@ -3,21 +3,30 @@
 	import ArticleRow from './ArticleRow.svelte';
 	import { mergeByTitle } from '$lib/utils/merge';
 	import { marked } from 'marked';
+	import ItemActions from './ItemActions.svelte';
 
 	let {
 		cluster,
-		bookmarked = false,
-		dismissedState = false,
+		done = false,
+		later = false,
+		rots = false,
+		focused = false,
+		dimmed = false,
 		lead = false,
-		onBookmark,
-		onDismiss
+		onDone,
+		onLater,
+		onRots
 	}: {
 		cluster: DigestCluster;
-		bookmarked?: boolean;
-		dismissedState?: boolean;
+		done?: boolean;
+		later?: boolean;
+		rots?: boolean;
+		focused?: boolean;
+		dimmed?: boolean;
 		lead?: boolean;
-		onBookmark?: () => void;
-		onDismiss?: () => void;
+		onDone?: () => void;
+		onLater?: () => void;
+		onRots?: () => void;
 	} = $props();
 
 	const mergedArticles = $derived(
@@ -39,7 +48,7 @@
 	const hasRss     = $derived(cluster.articles.some((a) => a.sourceType === 'rss'));
 </script>
 
-<article class="cluster" class:lead class:dismissed={dismissedState} data-key={cluster.title}>
+<article class="cluster review-item" class:lead class:dismissed={dimmed} class:focused data-key={cluster.title}>
 	<div class="cluster-head">
 		<div class="cluster-head-text">
 			<h3 class="cluster-title">
@@ -58,12 +67,7 @@
 				{#if hasRss}<span class="badge badge-rss">rss</span>{/if}
 			</div>
 		</div>
-		<div class="cluster-actions">
-			<button class="act bm bookmark-btn" class:bookmarked title="Save for ROTS" onclick={onBookmark}>
-				{bookmarked ? '★' : '☆'}
-			</button>
-			<button class="act tick-btn" title="Dismiss" onclick={onDismiss}>✓</button>
-		</div>
+		<ItemActions {done} {later} {rots} {focused} {onDone} {onLater} {onRots} />
 	</div>
 	<div class="articles">
 		{#each mergedArticles as article}
@@ -152,39 +156,19 @@
 	.badge-jdk     { background: var(--src-jdk-bg);    color: var(--src-jdk); }
 	.badge-rss     { background: var(--src-rss-bg);    color: var(--src-rss); }
 
-	.cluster-actions {
-		display: flex;
-		flex-direction: column;
-		gap: 4px;
-		flex-shrink: 0;
-	}
-	.act {
-		appearance: none;
-		width: 26px; height: 26px;
-		border: 1px solid var(--border);
-		border-radius: 5px;
-		background: transparent;
-		color: var(--text-faint);
-		cursor: pointer;
-		font-size: 12px;
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		transition: all .12s;
-	}
-	.act:hover { border-color: var(--border-strong); color: var(--text-2); background: var(--bg-soft); }
-	.act.bookmarked {
-		background: var(--rots);
-		border-color: var(--rots);
-		color: #fff;
-	}
-	.act.bookmarked:hover { opacity: 0.92; }
 
 	.articles { margin-top: 12px; }
 
+	.cluster.review-item { scroll-margin-top: 72px; }
+	.cluster.focused {
+		border-left-color: var(--accent);
+		box-shadow: 0 0 0 1px var(--accent-bd), var(--shadow-md);
+	}
+	:global(body.compact) .cluster:not(.focused) .cluster-synthesis, :global(body.compact) .cluster:not(.focused) .cluster-badges, :global(body.compact) .cluster:not(.focused) .articles { display: none; }
+
 	@media (max-width: 760px) {
 		.cluster { position: relative; padding: 12px 12px 10px; }
-		.cluster-title { font-size: 13.5px; padding-right: 70px; }
-		.cluster-actions { flex-direction: row; position: absolute; right: 12px; top: 12px; }
+		.cluster-title { font-size: 13.5px; padding-right: 96px; }
+		.cluster-head > :global(.item-actions) { position: absolute; right: 12px; top: 12px; }
 	}
 </style>
