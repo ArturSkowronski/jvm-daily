@@ -39,21 +39,21 @@ Sources → Ingress → Enrichment (LLM) → Clustering (LLM) → Outgress → R
 
 ## Quick Start
 
-**Prerequisites:** JDK 21+, an LLM API key (Gemini, OpenAI, or Groq)
+**Prerequisites:** JDK 21+, an OpenAI API key (default model: `gpt-6-luna`; Gemini and Groq still work)
 
 ```bash
 # Run the full pipeline once
-LLM_PROVIDER=gemini GEMINI_API_KEY=<key> ./gradlew run --args="pipeline"
+LLM_PROVIDER=openai LLM_API_KEY=<openai-key> ./gradlew run --args="pipeline"
 
 # Start the daemon (scheduler + REST API + viewer on :8888)
-LLM_PROVIDER=gemini GEMINI_API_KEY=<key> ./gradlew run
+LLM_PROVIDER=openai LLM_API_KEY=<openai-key> ./gradlew run
 ```
 
 Or build and run the distribution:
 
 ```bash
 ./gradlew installDist
-LLM_PROVIDER=gemini GEMINI_API_KEY=<key> ./app/build/install/app/bin/app pipeline
+LLM_PROVIDER=openai LLM_API_KEY=<openai-key> ./app/build/install/app/bin/app pipeline
 ```
 
 ## REST API
@@ -113,8 +113,9 @@ fly auth login
 fly volumes create jvm_daily_data --size 5 --region fra
 
 fly secrets set \
-  LLM_PROVIDER=gemini \
-  GEMINI_API_KEY=<key> \
+  LLM_PROVIDER=openai \
+  LLM_API_KEY=<openai-key> \
+  LLM_MODEL=gpt-6-luna \
   GITHUB_TOKEN=<token> \
   INGEST_API_KEY=<secret> \
   REDDIT_ENABLED=false
@@ -137,7 +138,7 @@ Pi runs `ingress-push` via cron at 5:30 AM Warsaw time, pushing Reddit articles 
 | `LLM_PROVIDER` | `mock` | `mock` / `gemini` / `openai` / `groq` / `openai-compatible` |
 | `GEMINI_API_KEY` | — | Required when `LLM_PROVIDER=gemini` |
 | `LLM_API_KEY` | — | Required for `openai` / `groq` / `openai-compatible` |
-| `LLM_MODEL` | `gpt-4` | Model name passed to the provider |
+| `LLM_MODEL` | `gpt-6-luna` | Model name passed to the provider (`openai`, `openai-compatible`) |
 | `DUCKDB_PATH` | `~/.jvm-daily/jvm-daily.duckdb` | Database file path |
 | `CONFIG_PATH` | `config/sources.yml` | Sources configuration |
 | `OUTPUT_DIR` | `output` | Directory for generated digests |
@@ -289,7 +290,7 @@ bluesky:
 ```bash
 DOMAIN_CONFIG_PATH=config/domain-ai.json \
 CONFIG_PATH=config/sources-ai.yml \
-LLM_PROVIDER=gemini GEMINI_API_KEY=<key> \
+LLM_PROVIDER=openai LLM_API_KEY=<openai-key> \
 ./app/build/install/app/bin/app pipeline
 ```
 
