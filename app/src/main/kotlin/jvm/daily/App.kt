@@ -32,6 +32,8 @@ import dev.vived.engine.workflow.TaxonomyClassifier
 import dev.vived.engine.model.ProcessedArticle
 import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.Clock
+import kotlinx.datetime.Instant
+import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import org.h2.jdbcx.JdbcDataSource
@@ -84,12 +86,13 @@ fun main(args: Array<String>) {
         "inspect-quality" -> { println("${domain.name} — inspect-quality"); runInspectQuality(dbPath, args.drop(1)) }
         "clustering"  -> { println("${domain.name} — clustering");  runClustering(dbPath, args.drop(1), domain) }
         "outgress"    -> { println("${domain.name} — outgress");     runOutgress(dbPath, domain) }
+        "backfill-digest" -> { println("${domain.name} — backfill-digest"); runBackfillDigest(dbPath, args.drop(1), domain) }
         "reprocess"   -> { println("${domain.name} — reprocess");    runReprocess(dbPath, args.drop(1), domain) }
         "validate-raw-ids" -> { println("${domain.name} — validate-raw-ids"); runValidateRawIds(dbPath, args.drop(1)) }
         "ingress-push" -> { println("${domain.name} — ingress-push (Reddit → remote)"); runIngressPush(dbPath) }
         else -> {
             System.err.println("Unknown command: $cmd")
-            System.err.println("Valid: pipeline | ingress | enrichment | enrichment-replay | reprocess | quality-report | inspect-quality | clustering | outgress | validate-raw-ids | ingress-push")
+            System.err.println("Valid: pipeline | ingress | enrichment | enrichment-replay | reprocess | quality-report | inspect-quality | clustering | outgress | backfill-digest | validate-raw-ids | ingress-push")
             exitProcess(1)
         }
     }
@@ -675,6 +678,68 @@ internal fun runOutgress(dbPath: String, domain: DomainProfile? = null) {
             ).execute()
         }
     }
+}
+
+/**
+ * Backfill digests for a past date range that the daily pipeline missed.
+ *
+ * For each date D, runs clustering + outgress with the clock pinned to D at 12:00 UTC.
+ * That anchors both workflows' 24h window on D's ingestion batch (ingested ~04:00 UTC daily),
+ * regenerating output/daily-D.json exactly as the daily run would have produced it.
+ *
+ * Usage: backfill-digest --from YYYY-MM-DD [--to YYYY-MM-DD]
+ */
+internal fun runBackfillDigest(dbPath: String, args: List<String>, domain: DomainProfile? = null) {
+    val llmProvider = System.getenv("LLM_PROVIDER") ?: "mock"
+    val llmApiKey   = System.getenv("LLM_API_KEY")
+    val llmModel    = System.getenv("LLM_MODEL") ?: "gpt-4"
+
+    if (llmProvider != "mock" && llmProvider != "groq" && llmProvider != "gemini" && llmApiKey == null) {
+        error("LLM_API_KEY required for provider '$llmProvider'")
+    }
+
+    val from = args.argValue("--from") ?: error("--from YYYY-MM-DD required")
+    val to   = args.argValue("--to") ?: from
+    val dates = backfillDates(from, to)
+
+    val outputDir = Path.of(System.getenv("OUTPUT_DIR") ?: "output")
+    println("Backfilling digests for ${dates.size} date(s): ${dates.joinToString(", ")}")
+
+    DuckDbConnectionFactory.persistent(dbPath).use { connection ->
+        val processedRepo = DuckDbProcessedArticleRepository(connection)
+        val clusterRepo   = DuckDbClusterRepository(connection)
+        val llmClient     = createLLMClient(llmProvider, llmApiKey, llmModel)
+
+        for (date in dates) {
+            val anchor = Instant.parse("${date}T12:00:00Z")
+            val clock = object : Clock { override fun now(): Instant = anchor }
+            println("[backfill] $date — clustering + outgress (anchor=$anchor)")
+            runBlocking {
+                ClusteringWorkflow(
+                    processedRepo, clusterRepo, llmClient,
+                    clock = clock, sinceHours = 24, domainProfile = domain,
+                ).execute()
+                OutgressWorkflow(
+                    processedRepo, outputDir,
+                    outgressDays = 1, clock = clock,
+                    clusterRepository = clusterRepo, domainProfile = domain,
+                ).execute()
+            }
+        }
+    }
+    println("[backfill] Done.")
+}
+
+/** Reads the value following a `--flag` token, or null if absent. */
+internal fun List<String>.argValue(flag: String): String? =
+    indexOf(flag).takeIf { it >= 0 && it + 1 < size }?.let { this[it + 1] }
+
+/** Inclusive list of ISO dates from [from] to [to]. */
+internal fun backfillDates(from: String, to: String): List<String> {
+    val start = LocalDate.parse(from)
+    val end = LocalDate.parse(to)
+    require(start <= end) { "--from ($from) must be on or before --to ($to)" }
+    return (start.toEpochDays()..end.toEpochDays()).map { LocalDate.fromEpochDays(it).toString() }
 }
 
 internal fun runValidateRawIds(dbPath: String, args: List<String>) {

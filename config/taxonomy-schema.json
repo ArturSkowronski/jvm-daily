@@ -1,0 +1,135 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jvm-daily.fly.dev/taxonomy/schema.json",
+  "title": "Universal Taxonomy for Article Classification",
+  "description": "Hierarchical taxonomy with LLM-optimized classification hints. Used by TaxonomyClassifier to tag articles against a controlled vocabulary.",
+  "type": "object",
+  "required": ["version", "meta", "nodes"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "version": {
+      "type": "string",
+      "description": "Taxonomy version. Change triggers re-classification of existing articles."
+    },
+    "meta": { "$ref": "#/$defs/Meta" },
+    "nodes": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/Node" },
+      "description": "Top-level taxonomy nodes (areas). The classifier's coarse pass selects among these."
+    },
+    "tag_sets": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": { "$ref": "#/$defs/Tag" }
+      },
+      "description": "Orthogonal tag dimensions applied independently of the node tree. Key = dimension name (e.g., 'impact')."
+    }
+  },
+  "$defs": {
+    "Meta": {
+      "type": "object",
+      "required": ["name"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "domain": { "type": "string" },
+        "classification": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "ordered_children_at_depth": {
+              "type": "array",
+              "items": { "type": "integer" },
+              "description": "Depths where children have semantic ordering (e.g., maturity levels). Empty = all unordered."
+            },
+            "range_window": {
+              "type": "integer",
+              "description": "For ordered children: applicable range = primary ± this value."
+            },
+            "coarse_threshold": { "type": "number", "minimum": 0, "maximum": 1 },
+            "fine_threshold": { "type": "number", "minimum": 0, "maximum": 1 },
+            "allow_multi_area": { "type": "boolean" },
+            "max_areas": { "type": "integer", "minimum": 1 }
+          }
+        }
+      }
+    },
+    "Node": {
+      "type": "object",
+      "required": ["slug", "title", "classification_hints"],
+      "additionalProperties": false,
+      "properties": {
+        "slug": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$"
+        },
+        "title": { "type": "string" },
+        "classification_hints": { "$ref": "#/$defs/NodeHints" },
+        "children": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/Node" },
+          "description": "Sub-nodes. Empty array or omitted = leaf node."
+        }
+      }
+    },
+    "NodeHints": {
+      "type": "object",
+      "required": ["summary"],
+      "additionalProperties": false,
+      "description": "LLM-optimized classification hints. All fields are natural language, designed for direct prompt injection.",
+      "properties": {
+        "summary": {
+          "type": "string",
+          "description": "What articles in this node are about. Used in coarse and fine pass prompts."
+        },
+        "topics": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Specific topics covered. Helps LLM recognize matching content."
+        },
+        "not_this_node": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Topics commonly confused with this node. Format: 'Topic — why it belongs elsewhere → correct_node'."
+        },
+        "signals": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Observable signals in article content that indicate this node."
+        },
+        "boundary": {
+          "type": "string",
+          "description": "When to classify at the parent level vs. this child node."
+        }
+      }
+    },
+    "Tag": {
+      "type": "object",
+      "required": ["slug", "name", "classification_hints"],
+      "additionalProperties": false,
+      "properties": {
+        "slug": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$"
+        },
+        "name": { "type": "string" },
+        "classification_hints": {
+          "type": "object",
+          "required": ["description"],
+          "additionalProperties": false,
+          "properties": {
+            "description": { "type": "string" },
+            "signals": {
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

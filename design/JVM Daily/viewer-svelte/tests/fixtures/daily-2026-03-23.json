@@ -1,0 +1,151 @@
+{
+  "date": "2026-03-23",
+  "generatedAt": "2026-03-23T06:15:00.000000Z",
+  "windowHours": 24,
+  "totalArticles": 12,
+  "clusters": [
+    {
+      "id": "c1-quarkus-benchmark",
+      "title": "Quarkus Benchmarking Shifts Focus to RSS and First Response",
+      "summary": "Quarkus is formalizing a benchmarking methodology that moves beyond vanity metrics like raw process startup time, focusing instead on \"Time to First Request\" and Resident Set Size (RSS). This shift addresses the practical requirements of dense Kubernetes environments.\n\nThe methodology targets Quarkus 3.x on OpenJDK 21 and Mandrel, leveraging Build-Time Optimization to eliminate runtime reflection. For \"Peanut\" configurations (0.5 vCPU and 256MB RAM), native image footprints drop to ~20MB RSS with sub-100ms first-response times.",
+      "engagementScore": 141.5,
+      "type": "topic",
+      "articles": [
+        {
+          "id": "https://bsky.app/profile/quarkus.io/post/3mhmyqoxy7c2a",
+          "title": "Quarkus Benchmarks Explained for Java Developers",
+          "url": "https://www.the-main-thread.com/p/quarkus-performance-benchmarks-java-developers",
+          "summary": "Quarkus benchmarks prioritize 'First Response Time' over traditional 'Startup Time.' Memory measurement focuses on Resident Set Size (RSS) instead of heap metrics. GraalVM Native mode demonstrates sub-100ms first response times and ~20MB RSS footprints.",
+          "topics": ["cloud-native", "benchmarking", "native-image", "performance-optimization"],
+          "entities": ["Quarkus 3.x", "GraalVM", "Hibernate ORM", "RESTEasy Reactive"],
+          "engagementScore": 70.6,
+          "publishedAt": "2026-03-22T08:15:00.000000Z",
+          "ingestedAt": "2026-03-22T08:15:00.000000Z",
+          "sourceType": "bluesky",
+          "handle": "quarkus.io",
+          "socialLinks": [
+            {"source": "bluesky", "url": "https://bsky.app/profile/quarkus.io/post/3mhmyqoxy7c2a", "handle": "quarkus.io"}
+          ]
+        },
+        {
+          "id": "https://bsky.app/profile/myfear.com/post/3mhmyqprnga2s",
+          "title": "Quarkus Benchmarks Explained for Java Developers",
+          "url": "https://buff.ly/RjdXcuY",
+          "summary": "Quarkus benchmarking methodology prioritizes \"Time to First Request\" and Resident Set Size under load over raw process start times. Tests utilize Hyperfoil for load generation and Mandrel for native image evaluation.",
+          "topics": ["benchmarking", "native-image", "performance-tuning", "cloud-native"],
+          "entities": ["Quarkus 3.x", "Mandrel", "GraalVM", "Hyperfoil", "OpenJDK 21"],
+          "engagementScore": 70.9,
+          "publishedAt": "2026-03-22T08:14:56.000000Z",
+          "ingestedAt": "2026-03-22T08:14:56.000000Z",
+          "sourceType": "bluesky",
+          "handle": "myfear.com",
+          "socialLinks": [
+            {"source": "bluesky", "url": "https://bsky.app/profile/myfear.com/post/3mhmyqprnga2s", "handle": "myfear.com"}
+          ]
+        }
+      ],
+      "bullets": []
+    },
+    {
+      "id": "c2-kotlin-reddit",
+      "title": "AI-Driven Spec Workflows Challenge Kotlin Multiplatform Abstractions",
+      "summary": "A new proposal for spec-driven development is stirring debate in the Kotlin community by suggesting that AI-generated code could replace traditional KMP abstractions. Community reaction remains heavily skeptical.",
+      "engagementScore": 85.0,
+      "type": "topic",
+      "articles": [
+        {
+          "id": "reddit:Kotlin/1s0t4dr",
+          "title": "[Kotlin] My Journey from Kotlin to AI-Driven Development",
+          "url": "https://www.reddit.com/r/Kotlin/comments/1s0t4dr/my_journey_from_kotlin_to_aidriven_development/",
+          "summary": "The proposed workflow replaces KMP abstractions with AI-generated code derived from YAML semantic schemas. Community critics dismiss the approach as 'AI slop,' arguing that spec-driven models historically fail.",
+          "topics": ["ai-assisted-coding", "code-generation", "kotlin-multiplatform", "mcp"],
+          "entities": ["Kotlin Multiplatform", "Claude", "OpenAI Codex", "MCP"],
+          "engagementScore": 85.0,
+          "publishedAt": "2026-03-22T14:30:00.000000Z",
+          "ingestedAt": "2026-03-22T14:30:00.000000Z",
+          "sourceType": "reddit",
+          "handle": "r/Kotlin",
+          "socialLinks": []
+        }
+      ],
+      "bullets": []
+    },
+    {
+      "id": "c3-jsonspotter",
+      "title": "JsonSpotter: Robust JSON Extraction for Java-Based LLM Workflows",
+      "summary": "Guillaume Laforge's new Java utility addresses the chatter problem where LLMs wrap structured data in Markdown code blocks. JsonSpotter acts as a pre-processor for parsers like Jackson and Gson.",
+      "engagementScore": 72.0,
+      "type": "topic",
+      "articles": [
+        {
+          "id": "https://glaforge.dev/posts/2026/03/22/extracting-json-from-llm-chatter-with-jsonspotter/",
+          "title": "Extracting JSON from LLM chatter with JsonSpotter",
+          "url": "https://glaforge.dev/posts/2026/03/22/extracting-json-from-llm-chatter-with-jsonspotter/",
+          "summary": "JsonSpotter is a Java utility library designed to isolate and extract valid JSON objects from conversational LLM outputs containing markdown code blocks or preamble text.",
+          "topics": ["llm-integration", "json-parsing", "structured-output"],
+          "entities": ["JsonSpotter", "Jackson", "Gson", "LLM"],
+          "engagementScore": 72.0,
+          "publishedAt": "2026-03-22T09:00:00.000000Z",
+          "ingestedAt": "2026-03-22T09:00:00.000000Z",
+          "sourceType": "bluesky",
+          "handle": "glaforge.dev",
+          "socialLinks": [
+            {"source": "bluesky", "url": "https://bsky.app/profile/glaforge.dev/post/3mho2blzouk2a", "handle": "glaforge.dev"}
+          ]
+        }
+      ],
+      "bullets": []
+    },
+    {
+      "id": "c4-spring-release",
+      "title": "Spring Boot 4.0 Milestone 3",
+      "summary": "Spring Boot 4.0 M3 brings Jakarta EE 11 baseline, virtual threads by default, and improved AOT compilation. This milestone establishes the API surface for the GA release.",
+      "engagementScore": 95.0,
+      "type": "release",
+      "articles": [
+        {
+          "id": "https://spring.io/blog/2026/03/22/spring-boot-4-0-m3",
+          "title": "Spring Boot 4.0.0-M3 Released",
+          "url": "https://spring.io/blog/2026/03/22/spring-boot-4-0-m3",
+          "summary": "Spring Boot 4.0 M3 introduces Jakarta EE 11 as the new baseline, enables virtual threads by default, and significantly improves AOT compilation for GraalVM native image support.",
+          "topics": ["spring-boot", "jakarta-ee", "virtual-threads", "aot-compilation"],
+          "entities": ["Spring Boot 4.0", "Jakarta EE 11", "GraalVM", "Virtual Threads"],
+          "engagementScore": 95.0,
+          "publishedAt": "2026-03-22T10:00:00.000000Z",
+          "ingestedAt": "2026-03-22T10:00:00.000000Z",
+          "sourceType": "rss",
+          "handle": null,
+          "socialLinks": []
+        }
+      ],
+      "bullets": [
+        "Jakarta EE 11 is now the baseline, replacing Jakarta EE 10.",
+        "Virtual threads enabled by default for all @Async and WebFlux operations.",
+        "AOT processing now handles @ConditionalOnProperty and @Profile annotations.",
+        "New spring-boot-docker-compose module for seamless local development.",
+        "Micrometer 2.0 integration with OpenTelemetry-native metrics pipeline."
+      ]
+    }
+  ],
+  "unclustered": [
+    {
+      "id": "standalone-tweet-1",
+      "title": "Just released a new version of my Kotlin multiplatform library for working with JNI. Feedback welcome!",
+      "url": "https://bsky.app/profile/kousenit.com/post/3mhohkhifts2v",
+      "summary": "Just released a new version of my Kotlin multiplatform library for working with JNI. Feedback welcome!",
+      "topics": ["kotlin-multiplatform", "jni"],
+      "entities": ["Kotlin", "JNI"],
+      "engagementScore": 30.0,
+      "publishedAt": "2026-03-23T03:00:00.000000Z",
+      "ingestedAt": "2026-03-23T03:00:00.000000Z",
+      "sourceType": "bluesky",
+      "handle": "kousenit.com",
+      "socialLinks": []
+    }
+  ],
+  "debug": [
+    {"title": "My cat learned Kotlin today", "url": "https://bsky.app/profile/random/post/123", "sourceType": "bluesky", "reason": "relevance_gate"},
+    {"title": "Generic tech hot take", "url": null, "sourceType": "bluesky", "reason": "relevance_gate"},
+    {"title": "Broken article with no content", "url": "https://example.com/broken", "sourceType": "rss", "reason": "enrichment_failed"}
+  ]
+}
