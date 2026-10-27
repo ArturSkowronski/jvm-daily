@@ -18,6 +18,12 @@ repositories {
     }
 }
 
+// vived-engine is consumed as a SNAPSHOT: always re-resolve it so a fresh publish
+// reaches CI/Docker builds immediately (Gradle's default TTL is 24h)
+configurations.all {
+    resolutionStrategy.cacheChangingModulesFor(0, "seconds")
+}
+
 dependencies {
     implementation("dev.vived:vived-engine:0.1.0-SNAPSHOT")
     implementation(libs.jobrunr)

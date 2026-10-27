@@ -228,3 +228,10 @@
 - The OpenAI API exposes two Luna models: `gpt-5.6-luna` (created 2026-06) and `gpt-6-luna` (created 2026-09). Both work over plain `/v1/chat/completions` with only `model` + `messages`, so vived-engine's `OpenAiCompatibleLLMClient` needs no changes. Luna is a reasoning model: a short enrichment prompt used ~50 reasoning tokens and took ~3 s (`gpt-5.6-luna`: ~2 s).
 - `DEFAULT_LLM_MODEL = "gpt-6-luna"` in `App.kt` replaces the old `gpt-4` default (6 places). Config: `LLM_PROVIDER=openai LLM_API_KEY=<openai key>` (`LLM_MODEL` optional). Gemini/Groq stay as options; the June 2026 outage came from a GCP billing block on Gemini (see above).
 - Locally `$OPENAI_API_KEY` from the shell was revoked (401); the working key is in `~/.config/openai/key`.
+
+## 2026-10-27 — Luna collapsed every digest into one cluster
+
+- Symptom: from the first day on `gpt-6-luna`, the digest had 1 cluster with every article (10-26: 1×10, 10-27: 1×25; before that, 17–26 clusters a day on Gemini). There was no warning in the logs.
+- Cause: Luna copies the format template `INDICES: [comma-separated indices]` literally and writes `INDICES: [0, 1]`. The parser in vived-engine `ClusteringWorkflow.parseGroupResponse` ran `toIntOrNull()` on `"[0"` → `null`, so nothing was assigned and every article fell into the catch-all group. Fixed in vived-engine #6 (regex `\d+` + a warning when the catch-all is used).
+- Lesson: after switching models, compare the *shape* of the output (cluster count per day), not just the absence of errors. Each model reads format templates differently.
+- vived-engine is a `0.1.0-SNAPSHOT`: Gradle caches snapshots for 24h, and the Fly Docker build caches the dependencies layer until `app/build.gradle.kts` changes. `cacheChangingModulesFor(0, "seconds")` forces a fresh SNAPSHOT on every build.
